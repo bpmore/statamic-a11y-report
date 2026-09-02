@@ -69,6 +69,10 @@ the PDF when Chrome is found and says so when it is not. The file declares
 PDF/UA-1, and the suite validates that declaration with veraPDF wherever it
 is installed, CI included: a real report passes every check.
 
+**The chart keeps its shape.** Text and markers are no longer stretched to
+the panel's width; scans within a day of each other are spaced evenly and
+labelled with the time; the latest value no longer sits on its marker.
+
 **The stale scan warning.** The overview says when a scan has been queued or
 running with nothing read for longer than `scan.stale_after_minutes`, the
 likely cause, and what to run. 

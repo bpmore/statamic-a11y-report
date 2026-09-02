@@ -66,7 +66,7 @@
             <div class="space-y-4">
                 <div>
                     <div class="text-4xl font-semibold">{{ $openTotal }}</div>
-                    <ui-description text="open {{ $openTotal === 1 ? 'issue' : 'issues' }}@if ($oldestOpenDays !== null && $openTotal > 0), the oldest open for {{ $oldestOpenDays }} {{ $oldestOpenDays === 1 ? 'day' : 'days' }}@endif" />
+                    <ui-description text="open {{ $openTotal === 1 ? 'issue' : 'issues' }}{{ $oldestOpenDays === null || $openTotal === 0 ? '' : ($oldestOpenDays === 0 ? ', the oldest opened today' : ', the oldest open for '.$oldestOpenDays.' '.($oldestOpenDays === 1 ? 'day' : 'days')) }}" />
                 </div>
                 <div class="flex flex-wrap gap-2">
                     @foreach ($byImpact as $impact => $count)

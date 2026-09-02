@@ -143,6 +143,7 @@ class ServiceProvider extends AddonServiceProvider
             'indexUrl' => cp_route('utilities.a11y-report.issues'),
             'criteriaUrl' => cp_route('utilities.a11y-report.criteria'),
             'overviewUrl' => cp_route('utilities.index').'/a11y-report',
+            'settingsUrl' => Addon::get(Settings::PACKAGE)?->settingsUrl(),
             'canGenerate' => (bool) User::current()?->can('generate accessibility reports'),
             'generateUrl' => cp_route('utilities.a11y-report.reports.generate'),
             'hasCompleteScan' => $installed && $overview->history(1)->first()?->status === \Bpmore\A11yReport\Models\Scan::COMPLETE,
@@ -179,9 +180,11 @@ class ServiceProvider extends AddonServiceProvider
             );
         });
 
+        $this->app->bind(Settings::class, fn () => new Settings);
+
         $this->app->bind(ReportBuilder::class, fn ($app) => new ReportBuilder(
             $app->make(ScanEngine::class),
-            (array) config('statamic-a11y-report.report', []),
+            $app->make(Settings::class)->block('report'),
         ));
 
         $this->app->bind(\Bpmore\A11yReport\Pdf\ChromePrinter::class, fn () => new \Bpmore\A11yReport\Pdf\ChromePrinter(
@@ -202,14 +205,14 @@ class ServiceProvider extends AddonServiceProvider
         $this->app->bind(StatementBuilder::class, fn ($app) => new StatementBuilder(
             $app->make(ReportDatabase::class),
             $app->make(ReportWriter::class),
-            (array) config('statamic-a11y-report.statement', []),
+            $app->make(Settings::class)->block('statement'),
         ));
 
         $this->app->bind(Scans::class, fn ($app) => new Scans(
             $app->make(ScanEngine::class),
             $app->make(EntryRenderer::class),
             $app->make(GateSettings::class)->standard->value,
-            (array) config('statamic-a11y-report', []),
+            $app->make(Settings::class)->effective(),
         ));
     }
 }

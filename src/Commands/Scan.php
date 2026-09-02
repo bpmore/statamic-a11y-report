@@ -35,7 +35,7 @@ class Scan extends Command
 
     protected $description = 'Scan every page, keep what was found, and track each problem across scans.';
 
-    public function handle(Scans $scans, ReportDatabase $database): int
+    public function handle(Scans $scans, ReportDatabase $database, \Bpmore\A11yReport\Settings $settings): int
     {
         if (! $this->ensureInstalled($database)) {
             return 1;
@@ -65,7 +65,7 @@ class Scan extends Command
             $scan = $scans->resume($scan, $sync);
         } else {
             $scope = ScanScope::fromConfig(
-                (array) config('statamic-a11y-report.scan', []),
+                $settings->block('scan'),
                 (array) $this->option('site'),
                 (array) $this->option('collection'),
                 $this->option('since'),

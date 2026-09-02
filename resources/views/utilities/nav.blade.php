@@ -3,4 +3,5 @@
     <ui-button size="sm" href="@plain($overviewUrl)" text="Overview" @if ($active === 'overview') variant="primary" @endif />
     <ui-button size="sm" href="@plain($indexUrl)" text="Issues" @if ($active === 'issues') variant="primary" @endif />
     <ui-button size="sm" href="@plain($criteriaUrl)" text="Criteria" @if ($active === 'criteria') variant="primary" @endif />
+    @if (! empty($settingsUrl))<ui-button size="sm" variant="ghost" href="@plain($settingsUrl)" text="Settings" />@endif
 </div>

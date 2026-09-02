@@ -51,6 +51,16 @@ The queue needs Laravel's `job_batches` table. The install creates it through
 your site's own jobs migration when you have one, so `php artisan migrate`
 keeps working afterwards.
 
+## Settings
+
+Addons, then Accessibility Report, then Settings: the WCAG version to
+report against, who evaluated the site, the remediation plan, everything the
+public statement says about you, and which collections, sites and addresses
+a scan covers. The screen wins once it has been saved; until then the config
+file answers. The database, engine, browser, queue and deploy thresholds stay
+in the config file and `.env`, because a wrong value for any of them stops
+scans rather than changing a sentence.
+
 ## The conformance report
 
 ```

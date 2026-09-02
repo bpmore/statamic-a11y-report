@@ -86,10 +86,6 @@ it('filters the queue to one page, and lets it go again', function () {
 });
 
 it('reaches the panel through the gate\'s seam', function () {
-    if (! class_exists(\Bpmore\A11yGate\Panel\PanelExtensions::class)) {
-        test()->markTestSkipped('This gate has no panel extension point yet; the sidebar needs the gate at 0.7 or later.');
-    }
-
     page('one', '<img src="/a.jpg">');
     runScan();
 

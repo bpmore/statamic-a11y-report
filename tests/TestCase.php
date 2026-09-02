@@ -73,6 +73,11 @@ abstract class TestCase extends AddonTestCase
 
     protected function setUp(): void
     {
+        // The gate's panel providers are process-wide, and this addon's
+        // provider registers one every time an application boots. Cleared
+        // before the boot below, so every test has exactly one.
+        \Bpmore\A11yGate\Panel\PanelExtensions::flush();
+
         parent::setUp();
 
         config()->set('statamic-a11y-report.connection', 'a11y_testing');

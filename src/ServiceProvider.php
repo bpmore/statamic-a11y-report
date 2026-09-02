@@ -94,11 +94,8 @@ class ServiceProvider extends AddonServiceProvider
 
         // The gate's sidebar panel, with this page's open issues from the last
         // scan beneath the gate's own result, so the two agree in the one
-        // place an author looks. The seam arrived in the gate after 0.6.0,
-        // so it is used when it is there and nothing happens when it is not.
-        if (class_exists(\Bpmore\A11yGate\Panel\PanelExtensions::class)) {
-            \Bpmore\A11yGate\Panel\PanelExtensions::register(new Panel\OpenIssuesForEntry($this->app->make(ReportDatabase::class)));
-        }
+        // place an author looks.
+        \Bpmore\A11yGate\Panel\PanelExtensions::register(new Panel\OpenIssuesForEntry($this->app->make(ReportDatabase::class)));
 
         Utility::extend(fn () => Utility::register(
             Utility::make('a11y-report')

@@ -401,3 +401,84 @@ it('creates its own tables when the connection is its own file, and asks otherwi
         ->expectsOutputToContain('Status: complete')
         ->assertExitCode(0);
 });
+
+it('marks an issue on a page that is no longer served as page removed, not fixed, and reopens it if the page returns', function () {
+    page('one', '<img src="/a.jpg">');
+    page('two', '<img src="/b.jpg">');
+    runScan();
+
+    $gone = IssueState::where('path', '/one')->first();
+
+    // Deleted: the page is not served, so a full scan does not meet it.
+    removePage('one');
+    $scan = runScan();
+
+    $gone->refresh();
+    expect($gone->status)->toBe(IssueState::PAGE_REMOVED);
+    expect($gone->resolved_at)->not->toBeNull();
+    expect($gone->last_scan_id)->toBe($scan->id);
+    expect(IssueState::where('path', '/two')->first()->status)->toBe(IssueState::OPEN);
+    expect(IssueState::where('status', IssueState::FIXED)->count())->toBe(0);
+
+    // Back at the same address with the problem still there: so is the issue.
+    page('one', '<img src="/a.jpg">');
+    runScan();
+    expect($gone->fresh()->status)->toBe(IssueState::OPEN);
+    expect($gone->fresh()->resolved_at)->toBeNull();
+});
+
+it('marks a moved page as removed and its new address as new', function () {
+    page('old-address', '<img src="/a.jpg">');
+    $first = runScan();
+    expect($first->issues_total)->toBe(1);
+
+    removePage('old-address');
+    page('new-address', '<img src="/a.jpg">');
+    $second = runScan();
+
+    expect(IssueState::where('path', '/old-address')->first()->status)->toBe(IssueState::PAGE_REMOVED);
+    expect(IssueState::where('path', '/new-address')->first()->status)->toBe(IssueState::OPEN);
+    expect($second->diff)->toMatchArray(['new' => 1, 'fixed' => 0, 'unchanged' => 0]);
+});
+
+it('does not call a page removed when the scan could not have met it', function () {
+    page('one', '<img src="/a.jpg">');
+    page('post', '<img src="/b.jpg">', collection: 'posts');
+    page('printable', '<img src="/c.jpg">');
+    runScan();
+
+    removePage('one');
+    removePage('post', 'posts');
+    removePage('printable');
+
+    // Narrowed by a change date: nothing unchanged is enumerated, so nothing is removed.
+    runScan(since: '1 day ago');
+    expect(IssueState::where('status', IssueState::PAGE_REMOVED)->count())->toBe(0);
+
+    // Narrowed to one collection: only that collection's pages can be removed.
+    runScan(collections: ['posts']);
+    expect(IssueState::where('path', '/blog/post')->first()->status)->toBe(IssueState::PAGE_REMOVED);
+    expect(IssueState::where('path', '/one')->first()->status)->toBe(IssueState::OPEN);
+
+    // An excluded URL was left out on purpose, not removed.
+    config()->set('statamic-a11y-report.scan.exclude_urls', ['*/printable']);
+    runScan();
+    expect(IssueState::where('path', '/one')->first()->status)->toBe(IssueState::PAGE_REMOVED);
+    expect(IssueState::where('path', '/printable')->first()->status)->toBe(IssueState::OPEN);
+});
+
+it('does not call a page removed when it errored, and leaves a person\'s decision alone', function () {
+    page('one', '<img src="/a.jpg">');
+    page('broken', '<img src="/b.jpg">');
+    runScan();
+
+    IssueState::where('path', '/one')->update(['status' => IssueState::WONT_FIX]);
+    removePage('one');
+
+    test()->viewShouldReturnRaw('default', '{{ if slug == "broken" }}{{ else }}'.PLAIN.'{{ /if }}');
+    $scan = runScan();
+
+    expect($scan->pages_errored)->toBe(1);
+    expect(IssueState::where('path', '/broken')->first()->status)->toBe(IssueState::OPEN);
+    expect(IssueState::where('path', '/one')->first()->status)->toBe(IssueState::WONT_FIX);
+});

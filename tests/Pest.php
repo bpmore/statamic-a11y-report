@@ -29,6 +29,12 @@ function page(string $slug, string $body, string $collection = 'pages', bool $pu
     $entry->published($published)->data(array_merge(['title' => ucfirst($slug), 'body' => $body], $extra))->saveQuietly();
 }
 
+/** Remove a page from the site entirely, as an author deleting it would. */
+function removePage(string $slug, string $collection = 'pages'): void
+{
+    Entry::query()->where('collection', $collection)->where('slug', $slug)->first()?->delete();
+}
+
 function runScan(array $sites = [], array $collections = [], ?string $since = null): Scan
 {
     $scans = app(Scans::class);

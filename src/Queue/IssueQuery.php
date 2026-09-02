@@ -21,7 +21,7 @@ use Illuminate\Support\Collection;
  */
 final class IssueQuery
 {
-    public const STATUSES = [IssueState::OPEN, IssueState::IN_PROGRESS, IssueState::FIXED, IssueState::WONT_FIX, IssueState::FALSE_POSITIVE];
+    public const STATUSES = [IssueState::OPEN, IssueState::IN_PROGRESS, IssueState::FIXED, IssueState::PAGE_REMOVED, IssueState::WONT_FIX, IssueState::FALSE_POSITIVE];
 
     public const PER_PAGE = 50;
 

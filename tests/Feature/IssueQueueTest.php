@@ -74,6 +74,15 @@ it('filters by status, impact, criterion, collection, and assignee', function ()
     expect(queuePage(['status' => 'bogus']))->toContain('3 issues match');
 });
 
+it('lists page removed as its own status, out of the default view', function () {
+    seedQueue();
+    IssueState::where('rule_id', 'image-missing-alt')->update(['status' => IssueState::PAGE_REMOVED]);
+
+    expect(queuePage())->toContain('3 issues match');
+    expect(queuePage(['status' => 'page_removed']))->toContain('1 issue match');
+    expect(queuePage(['status' => 'page_removed']))->toContain('Page removed');
+});
+
 it('changes the ticked issues and records who did it', function () {
     seedQueue();
     $fp = IssueState::where('rule_id', 'image-missing-alt')->first()->fingerprint;

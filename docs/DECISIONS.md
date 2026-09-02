@@ -37,6 +37,46 @@ onto the point.
 
 **Checked.** The suite, 136 tests, and the live chart from the test site
 rasterised with headless Chrome and looked at.
+## 2026-09-02: An issue on a page that is no longer served is "page removed", not fixed and not open forever
+
+Found on the test site: the home page moved from `/home` to `/` when its
+collection got its page tree back, and the footer issue on `/home` stayed
+open with nothing that would ever close it. "Fixed means gone from a page
+this scan read" was the rule, and a page nobody can read any more is never
+read, so its issues were immortal.
+
+**A sixth state, set only by a scan that could have met the page.** A scan
+that enumerated everything the page could have been among, and did not meet
+it, marks the issue "page removed" with a resolved time. Not "fixed", because
+nothing was fixed: the page was unpublished, deleted, or moved. If the page
+comes back at the same address with the problem, the issue reopens, exactly
+as a fixed one does.
+
+**What "could have met it" excludes, each with a test.** A scan narrowed by
+`--since` never enumerates unchanged pages, so absence means nothing there
+and nothing is closed. A scan narrowed to a site or a collection speaks only
+for those. A page matching an excluded URL was left out on purpose. A page
+that errored has a row and is unknown, and unknown is not removed. A
+person's "won't fix" or "false positive" is never touched.
+
+**The page's collection comes from the issue the state last saw.** States
+carry a site and a path but no collection, and the collection is what a
+scoped scan is narrowed by, so the state is joined to its last issue's page
+row. A moved page therefore shows as one issue removed and one new, which is
+what happened; a diff that called it unchanged would be guessing.
+
+**Rejected.** *Deleting the state*, which loses the record of a problem that
+existed and who looked at it. *Marking it fixed*, which is the overstatement
+this product refuses in miniature. *Closing on any scan that did not meet the
+page*, which would let an incremental scan close half the site.
+
+**A harness lesson.** Unpublishing an entry the scan had already rendered did
+not always reach the query index in the test harness, because the renderer
+registers the instance with the repository. The tests delete the entry
+instead, which is the realistic case anyway.
+
+**Checked.** The suite, 138 tests. On the test site, a rescan marked the old
+`/home` issue "page removed" and left the `/` one open.
 
 ---
 

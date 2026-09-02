@@ -1,0 +1,61 @@
+{
+    "name": "bpmore/statamic-a11y-report",
+    "description": "Scans every page of a Statamic site over time and keeps the evidence: findings, coverage, and the state of each problem from one scan to the next.",
+    "keywords": ["statamic", "accessibility", "a11y", "wcag", "report", "acr"],
+    "license": "proprietary",
+    "type": "statamic-addon",
+    "homepage": "https://hada.farm",
+    "authors": [
+        {
+            "name": "Brent Passmore",
+            "homepage": "https://hada.farm"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "bpmore/statamic-a11y-gate": "^0.6",
+        "statamic/cms": "^6.27"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.0"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/bpmore/statamic-a11y-gate.git"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Bpmore\\A11yReport\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Bpmore\\A11yReport\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "pest"
+    },
+    "extra": {
+        "statamic": {
+            "name": "Accessibility Report",
+            "slug": "statamic-a11y-report"
+        },
+        "laravel": {
+            "providers": [
+                "Bpmore\\A11yReport\\ServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

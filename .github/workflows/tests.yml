@@ -1,0 +1,72 @@
+# The suite, on every pull request. Copied from Accessibility Gate, whose suite
+# this one boots alongside: the gate is a dependency, resolved from GitHub by
+# the repository entry in composer.json.
+#
+# Two jobs for the same reason the gate has two: ext-intl is a `suggest` there,
+# and the checker this addon runs behaves differently without it. A scan on a
+# host with no intl must still run.
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only. Nothing here writes to the repository, comments on a pull request,
+# or touches a package registry, so it should not be able to.
+permissions:
+  contents: read
+
+# A second push to the same branch cancels the first. The suite takes seconds
+# and the answer for an overwritten commit is worth nothing.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: PHP 8.4, ${{ matrix.name }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      # Both jobs run to completion. Knowing that only the no-intl one broke is
+      # most of the diagnosis, and cancelling it to save a minute throws that
+      # away.
+      fail-fast: false
+      matrix:
+        include:
+          - name: with ext-intl
+            extensions: dom, libxml, mbstring, intl
+          # The leading colon is how setup-php removes an extension it would
+          # otherwise ship by default. Without it this job would silently be a
+          # duplicate of the one above.
+          - name: without ext-intl
+            extensions: dom, libxml, mbstring, :intl
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: ${{ matrix.extensions }}
+          coverage: none
+
+      # Before installing, because a malformed manifest on a published package
+      # is otherwise found by Packagist, which is later and in front of an
+      # audience. Publish checks left on for the same reason.
+      - name: Check the manifest is well formed
+        run: composer validate --strict
+
+      # There is no composer.lock in this repository and there should not be:
+      # this is a package an application installs, so the application's lock is
+      # the one that matters. That makes every run here a fresh resolve against
+      # the current Statamic, which is worth having. When this goes red on a
+      # commit that changed nothing, a dependency moved, and that is a finding
+      # rather than a nuisance.
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run the suite
+        run: ./vendor/bin/pest

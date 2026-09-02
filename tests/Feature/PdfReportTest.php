@@ -68,8 +68,10 @@ it('prints a tagged PDF with a structure tree, headings, tables, a language, an 
     }
 })->group('pdf');
 
-it('passes veraPDF checks on tagging, title and language when veraPDF is installed', function () {
-    [, , $path] = pdfBytes();
+it('is PDF/UA-1 compliant according to veraPDF, when veraPDF is installed', function () {
+    [, $pdf, $path] = pdfBytes();
+
+    expect(str_contains($pdf, '<pdfuaid:part>1</pdfuaid:part>'))->toBeTrue('the file declares PDF/UA-1, which the rest of this test is what makes true');
 
     $verapdf = trim((string) shell_exec('command -v verapdf 2>/dev/null'));
 
@@ -78,17 +80,21 @@ it('passes veraPDF checks on tagging, title and language when veraPDF is install
     }
 
     $xml = (string) shell_exec(escapeshellarg($verapdf).' --flavour ua1 --format xml '.escapeshellarg($path).' 2>/dev/null');
-    expect($xml)->toContain('<validationReport', 'veraPDF produced a report');
+    expect(str_contains($xml, '<validationReport'))->toBeTrue('veraPDF produced a report');
 
-    preg_match_all('/<rule\s[^>]*clause="([^"]+)"[^>]*status="failed"/', $xml, $failed);
-    $clauses = array_unique($failed[1]);
+    preg_match_all('/<rule\s[^>]*clause="([^"]+)"[^>]*status="failed"[^>]*>(.*?)<\/rule>/s', $xml, $failed, PREG_SET_ORDER);
+    $failures = array_map(function ($f) {
+        preg_match('/<description>(.*?)<\/description>/s', $f[2], $d);
 
-    // The clauses that are this addon's to get right: the structure tree,
-    // the metadata title, the language. Anything else Chrome's output fails
-    // is reported in CI's summary and is Chrome's, until it is not.
-    $ours = array_filter($clauses, fn ($c) => str_starts_with($c, '7.1') || str_starts_with($c, '7.2'));
+        return $f[1].': '.trim($d[1] ?? '');
+    }, $failed);
 
-    expect(array_values($ours))->toBe([], 'veraPDF failed clauses this addon controls: '.implode(', ', $ours));
+    // Full compliance, not a chosen subset. The identifier above is a claim,
+    // and this assertion is what keeps it true: a template change that
+    // breaks any PDF/UA rule fails here before a file that still declares
+    // conformance can be generated.
+    expect($failures)->toBe([], 'veraPDF failed: '.implode(' | ', $failures));
+    expect(preg_match('/isCompliant="true"/', $xml))->toBe(1);
 })->group('pdf');
 
 it('says plainly when there is no Chrome, and still writes the document', function () {

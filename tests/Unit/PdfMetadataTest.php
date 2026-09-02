@@ -38,11 +38,11 @@ function tinyPdf(string $catalogExtra = ''): string
     return $pdf;
 }
 
-function stamped(string $catalogExtra = '', string $title = 'Accessibility Conformance Report: Example, 2 September 2026'): string
+function stamped(string $catalogExtra = '', string $title = 'Accessibility Conformance Report: Example, 2 September 2026', bool $declare = false): string
 {
     $path = tempnam(sys_get_temp_dir(), 'a11y-pdf');
     file_put_contents($path, tinyPdf($catalogExtra));
-    PdfMetadata::stamp($path, $title, 'en', 'Test producer');
+    PdfMetadata::stamp($path, $title, 'en', 'Test producer', $declare);
     $out = file_get_contents($path);
     unlink($path);
 
@@ -93,4 +93,28 @@ it('refuses a file it does not understand instead of guessing', function () {
 
     expect(fn () => PdfMetadata::stamp($path, 'x'))->toThrow(RuntimeException::class);
     unlink($path);
+});
+
+it('declares PDF/UA only when told to', function () {
+    expect(stamped())->not->toContain('pdfuaid');
+    expect(stamped(declare: true))->toContain('<pdfuaid:part>1</pdfuaid:part>');
+    expect(stamped(declare: true))->toContain('xmlns:pdfuaid="http://www.aiim.org/pdfua/ns/id/"');
+});
+
+it('maps a non-standard structure type in the role map and leaves a standard one alone', function () {
+    // A structure tree root with a Strong element, the shape Chrome writes
+    // for <strong>, and a P, which is standard.
+    $extra = ' /StructTreeRoot 6 0 R';
+    $path = tempnam(sys_get_temp_dir(), 'a11y-pdf');
+    $pdf = tinyPdf($extra);
+    $pdf = str_replace("trailer\n<</Size 5", "6 0 obj\n<</Type /StructTreeRoot /K [7 0 R]>>\nendobj\n7 0 obj\n<</S /Strong /P 6 0 R>>\nendobj\n8 0 obj\n<</S /P /P 6 0 R>>\nendobj\ntrailer\n<</Size 9", $pdf);
+    file_put_contents($path, $pdf);
+
+    PdfMetadata::stamp($path, 'T');
+    $out = file_get_contents($path);
+    unlink($path);
+
+    expect($out)->toContain('/RoleMap <</Strong /Span>>');
+    expect(substr_count($out, '/Type /StructTreeRoot'))->toBe(2);
+    expect($out)->not->toContain('/P /Span');
 });

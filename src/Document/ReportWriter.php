@@ -57,7 +57,12 @@ final class ReportWriter
         if (in_array('pdf', $formats, true)) {
             $pdf = $this->app->storagePath('a11y-report/reports/'.$data['uuid'].'.pdf');
             $this->printer->print($this->app->storagePath($paths['html_path']), $pdf);
-            PdfMetadata::stamp($pdf, self::pdfTitle($data), $data['lang'], $data['generator']);
+            // The PDF/UA identifier is written because the output has been
+            // validated against PDF/UA-1 with veraPDF, which the suite
+            // repeats wherever veraPDF is installed, CI included. A change to
+            // the template that breaks a rule turns that test red before it
+            // ships a file that declares what it no longer has.
+            PdfMetadata::stamp($pdf, self::pdfTitle($data), $data['lang'], $data['generator'], declarePdfUa: true);
             $paths['pdf_path'] = 'a11y-report/reports/'.$data['uuid'].'.pdf';
         }
 

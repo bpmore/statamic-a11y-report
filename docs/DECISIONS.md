@@ -12,6 +12,53 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The PDF declares PDF/UA-1, because it now validates
+
+Reverses one paragraph of the entry below it, written the same afternoon:
+"No PDF/UA identifier". The reasoning there was right and its premise
+changed within the hour. veraPDF was installed here, and the file was
+validated rather than assumed.
+
+**What veraPDF found on the first run, and what was done about each.** Five
+rules failed. Two link annotations had no alternate description: the one
+cross-reference link on the cover, which is now plain text, since a document
+of eight pages does not need a hyperlink to its own third section. Five
+structure elements were of a type ISO 32000 does not define: Chrome writes
+`Strong` for an HTML strong element. The metadata update now re-declares the
+structure tree root with a role map for every non-standard type it finds in
+the file, mapped to the nearest standard one, and a unit test hands it a
+tree with a `Strong` and a `P` and checks only the first is mapped. Ten
+content items were neither tagged nor marked as artifacts, one per page and
+one per section heading: CSS borders and the page background fill, which
+Chrome prints as untagged paths. The print stylesheet drops them; the paper
+is white and the headings are headings without a rule under them. After
+those three, the only failure was the missing identifier.
+
+**So the identifier is written, and the test demands full compliance.** A
+file that declares conformance it has not been shown to have is the failure
+this product exists to refuse. A file that declares conformance the suite
+proves on every run, wherever veraPDF is installed, is the opposite of that:
+the declaration and the validation travel together, and a template change
+that breaks any PDF/UA rule turns the test red before a file that still
+declares conformance can be generated. Not a subset of clauses, as the first
+version of the test asserted. All of them, because "the ones this addon
+controls" was a line drawn before anyone knew whether the rest passed.
+
+**A test that was passing vacuously.** `expect($pdf)->toContain($needle,
+'message')` searches the PDF for the message as a second needle. The gate's
+`CLAUDE.md` says so in as many words and it was written here anyway. Every
+such call in the suite was replaced with an explicit boolean assertion.
+
+**Checked.** The suite, 133 tests, with veraPDF installed: the generated PDF
+is PDF/UA-1 compliant. On hada.farm: the regenerated report's PDF passes
+50,059 checks with none failed.
+
+**Not checked.** The PDF read by a screen reader, which is what the tagging
+is for; veraPDF checks the structure, not the experience. The CI install
+step for veraPDF, which has still not run.
+
+---
+
 ## 2026-09-02: The PDF is Chrome's own command line, plus one incremental update
 
 The last pillar of the brief: the conformance document as a tagged PDF,

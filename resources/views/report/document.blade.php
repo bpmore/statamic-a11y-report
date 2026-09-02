@@ -38,14 +38,26 @@
         .notice { border: 1px solid #999; padding: 0.75em 1em; background: #fafafa; }
         footer { margin-top: 3em; border-top: 1px solid #ccc; padding-top: 1em; font-size: 0.9em; color: #444; }
         @page { margin: 18mm; }
-        @media print { body { padding: 0; max-width: none; } h2 { break-after: avoid; } tr { break-inside: avoid; } }
+        /* No CSS borders on print except in tables. Chrome prints a border
+           as an untagged path, which PDF/UA reads as content nobody can
+           reach; table borders it marks as artifacts, the rest it does not. */
+        @media print {
+            /* The paper is white. A background fill is the first thing drawn on
+               every page, as an untagged path, and PDF/UA reads it as content. */
+            html, body { background: none; }
+            body { padding: 0; max-width: none; }
+            h2 { break-after: avoid; border-bottom: 0; }
+            tr { break-inside: avoid; }
+            .notice { border: 0; padding: 0; background: none; font-weight: 600; }
+            footer { border-top: 0; }
+        }
     </style>
 </head>
 <body>
 <main>
     <header id="cover">
         <h1>{{ $r['title'] }}</h1>
-        <p class="notice">A self-assessment against {{ $r['standard_label'] }}. It is not a certification and not a third-party audit. See <a href="#scope-and-limits">Scope and limits</a> before reading the conformance table.</p>
+        <p class="notice">A self-assessment against {{ $r['standard_label'] }}. It is not a certification and not a third-party audit. Read the section called Scope and limits before reading the conformance table.</p>
         <dl class="cover">
             <dt>Site</dt>
             <dd>{{ $r['subject']['name'] }}@if ($r['subject']['url'] !== ''), {{ $r['subject']['url'] }}@endif</dd>

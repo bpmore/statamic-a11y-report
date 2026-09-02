@@ -62,10 +62,12 @@ criteria` permission.
 
 **The tagged PDF.** `a11y:report --format=pdf` (or `all`) prints the
 document with headless Chrome, which tags it, and adds the XMP title and the
-display-title preference as an incremental update. Set `A11Y_CHROME_PATH` if
-Chrome is not on the path. The control panel produces the PDF when Chrome is
-found and says so when it is not. No PDF/UA conformance is declared in the
-file; CI validates the tagging, title and language with veraPDF.
+display-title preference as an incremental update, with a role map for the
+structure types Chrome writes that the standard does not name. Set
+`A11Y_CHROME_PATH` if Chrome is not on the path. The control panel produces
+the PDF when Chrome is found and says so when it is not. The file declares
+PDF/UA-1, and the suite validates that declaration with veraPDF wherever it
+is installed, CI included: a real report passes every check.
 
 **The stale scan warning.** The overview says when a scan has been queued or
 running with nothing read for longer than `scan.stale_after_minutes`, the

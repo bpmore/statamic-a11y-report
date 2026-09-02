@@ -69,6 +69,9 @@ the PDF when Chrome is found and says so when it is not. The file declares
 PDF/UA-1, and the suite validates that declaration with veraPDF wherever it
 is installed, CI included: a real report passes every check.
 
+**The chart keeps its shape.** Text and markers are no longer stretched to
+the panel's width; scans within a day of each other are spaced evenly and
+labelled with the time; the latest value no longer sits on its marker.
 **Issues on removed pages close.** An open issue on a page that a full scan
 of its site and collection did not meet is marked "page removed", with a
 resolved time, and reopens if the page comes back with the problem. A scan

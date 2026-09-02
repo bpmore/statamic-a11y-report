@@ -53,6 +53,40 @@ it('spaces points by time, not by scan number', function () {
     expect($xs[1] - $xs[0])->toBeLessThan(($xs[2] - $xs[1]) / 10);
 });
 
+it('keeps its aspect ratio so text and markers are not stretched', function () {
+    $svg = TrendChart::render([point('2026-08-01', 4), point('2026-09-01', 7)]);
+
+    expect($svg)->not->toContain('preserveAspectRatio="none"');
+    expect($svg)->toContain('height:auto');
+});
+
+it('spaces scans within a day evenly and labels them with the time', function () {
+    // Three scans in one afternoon. On a time axis two of them would sit on
+    // top of each other at the right edge, which is what a screenshot of the
+    // first version showed.
+    $svg = TrendChart::render([
+        ['at' => new DateTimeImmutable('2026-09-02 13:41'), 'value' => 93, 'label' => '2 Sep'],
+        ['at' => new DateTimeImmutable('2026-09-02 13:42'), 'value' => 90, 'label' => '2 Sep'],
+        ['at' => new DateTimeImmutable('2026-09-02 13:59'), 'value' => 94, 'label' => '2 Sep'],
+    ]);
+
+    $xs = circleXs($svg);
+    expect(round($xs[1] - $xs[0]))->toBe(round($xs[2] - $xs[1]));
+    expect($svg)->toContain('>2 Sep 13:41</text>');
+    expect($svg)->toContain('>2 Sep 13:59</text>');
+    expect($svg)->toContain('<title>2 Sep 13:42: 90 issues</title>');
+});
+
+it('puts the latest value label below its marker when the marker is at the top', function () {
+    $svg = TrendChart::render([point('2026-08-01', 4), point('2026-09-01', 7)]);
+
+    preg_match_all('/<circle cx="([\d.]+)" cy="([\d.]+)"/', $svg, $m);
+    $lastY = (float) end($m[2]);
+    preg_match('/<text x="[\d.]+" y="([\d.]+)" [^>]*font-weight="600"[^>]*>7<\/text>/', $svg, $t);
+
+    expect((float) $t[1])->toBeGreaterThan($lastY, 'the label is below the marker, not on it');
+});
+
 it('labels the axes in text and the latest value directly, and colours nothing by hue', function () {
     $svg = TrendChart::render([point('2026-08-01', 4), point('2026-09-01', 7)]);
 

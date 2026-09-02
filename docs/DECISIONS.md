@@ -12,6 +12,31 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The chart keeps its shape, and one afternoon's scans are spaced evenly
+
+The first screenshot of the overview showed the chart stretched: letters
+twice their width, markers as ellipses, and two of the three points on top
+of each other at the right edge with the latest value written across them.
+
+**Aspect ratio kept.** The SVG had `preserveAspectRatio="none"` so it would
+fill the panel's width, which scaled x and y independently. It now scales
+with its box and keeps its proportions; the nominal drawing is wider than
+before so it fills a wide panel without growing tall.
+
+**Scans within a day are spaced evenly.** The entry below that decided on a
+time axis still stands for anything longer: a scan a day apart and a scan a
+month apart should look different. But every scan on a test site happens in
+one afternoon, and on a time axis of one afternoon the points land on top of
+each other. Under a day's span the points are spaced evenly and the labels
+carry the time of day, and the description says which. Rejected: a minimum
+gap between points on the time axis, which would lie about time either way.
+
+**The latest value is never on its marker.** Above and to the left, or below
+when the marker is at the top of the plot, where the old placement clamped it
+onto the point.
+
+**Checked.** The suite, 136 tests, and the live chart from the test site
+rasterised with headless Chrome and looked at.
 ## 2026-09-02: An issue on a page that is no longer served is "page removed", not fixed and not open forever
 
 Found on the test site: the home page moved from `/home` to `/` when its

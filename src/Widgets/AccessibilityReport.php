@@ -29,7 +29,7 @@ class AccessibilityReport extends Widget
             'overview' => $overview,
             'byImpact' => $overview->installed() ? $overview->openByImpact() : [],
             'latest' => $overview->installed() ? $overview->latest() : null,
-            'chart' => TrendChart::render($trend, 320, 56, sparkline: true),
+            'chart' => TrendChart::render($trend, 320, 64, sparkline: true),
             'url' => Utility::find('a11y-report')?->url(),
         ]);
     }

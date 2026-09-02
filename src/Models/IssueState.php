@@ -25,6 +25,15 @@ final class IssueState extends ReportModel
 
     public const FALSE_POSITIVE = 'false_positive';
 
+    /**
+     * The page the problem was on is no longer served: unpublished, deleted,
+     * or moved to another address. Not "fixed", because nothing was fixed,
+     * and set only by a scan that enumerated every page the problem's page
+     * could have been among and did not meet it. If the page comes back
+     * with the problem, the issue reopens.
+     */
+    public const PAGE_REMOVED = 'page_removed';
+
     protected $table = 'a11y_issue_states';
 
     protected $primaryKey = 'fingerprint';
@@ -46,5 +55,11 @@ final class IssueState extends ReportModel
     public static function closableByScan(): array
     {
         return [self::OPEN, self::IN_PROGRESS];
+    }
+
+    /** The states a scan reopens when it finds the problem again. */
+    public static function reopenableByScan(): array
+    {
+        return [self::FIXED, self::PAGE_REMOVED];
     }
 }

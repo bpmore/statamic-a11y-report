@@ -20,4 +20,11 @@ one process and exits non-zero above the thresholds in config, or on any page
 that could not be read. `--site`, `--collection` and `--since` narrow it;
 `--resume` picks up a scan that stalled.
 
-Nothing is reported or drawn yet.
+**The overview.** A utility under Tools, "Accessibility Report": open issues
+by impact and how long the oldest has been open, the last scan, a line of
+issues per scan over the last 90 days, and every scan so far. A "run a scan"
+button behind its own permission, `run accessibility scans`. A dashboard
+widget, `accessibility_report`, with the open count by impact and a 30-day
+line; add it to the widgets in `config/statamic/cp.php`.
+
+Nothing is generated yet: no document, no statement page, no issue queue.

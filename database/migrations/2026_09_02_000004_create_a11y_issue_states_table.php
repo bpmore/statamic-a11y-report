@@ -30,6 +30,9 @@ return new class extends Migration
             $table->string('site')->index();
             $table->string('path', 2048);
             $table->string('rule_id', 64)->index();
+            // As last reported by the engine, so "open issues by impact" is one
+            // query on this table rather than a join to the latest scan.
+            $table->string('impact', 16)->index();
             $table->string('assigned_to')->nullable()->index();
             $table->text('note')->nullable();
             $table->timestamp('first_seen_at');

@@ -12,6 +12,71 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The overview and the history are one page, drawn server-side, in Statamic's own components
+
+The first thing anybody sees of the report: a utility under Tools with what is
+open now, the last scan, a line of issues per scan over 90 days, and every scan
+so far, plus a dashboard widget with the open count by impact and a 30-day
+line. Nothing here is a document yet; it is the credibility base for one.
+
+**One page, not tabs, for now.** The brief sketched a tabbed utility. Statamic's
+`ui-tabs` is a controlled component whose selected tab is state, and a utility
+view is a static Vue template compiled by `DynamicHtmlRenderer` with no state
+to bind to. The page is sections in `ui-card-panel` instead, and gains tabs
+when the issues queue and the criteria worksheet exist and need them, at which
+point a small script alongside the view is the right shape (the gate's panel
+is the pattern).
+
+**The chart is inline SVG built in PHP, not a charting library.** The rule
+against hand-rolling controls inside an accessibility product is about
+controls; this is a data graphic, and the alternatives were a JavaScript
+library the addon would have to ship a build step for, or nothing. It is one
+series, so there is no legend; time is on the x axis, so scans a day apart and
+a month apart look different; every point carries its own `<title>`; it is
+`role="img"` with a title and description; colour is `currentColor`
+throughout, so nothing is encoded by hue and dark mode needs no second
+palette; and the full data is in the table underneath. The status colours on
+the impact badges are Statamic's own badge colours and appear next to the
+word, never alone.
+
+**Values that reach a Vue-compiled view go through `@plain`.** Blade's escaping
+is not enough there: a `{{` in an error message or a URL is an interpolation to
+Vue, and the whole page compiles to nothing, with no exception on the server.
+Vue finds its delimiters before decoding entities, so the brace is written as
+one. A test puts `{{ boom }}` in a scan error and reads the entity back.
+
+**A test parses each rendered view as XML.** There is no browser in the suite
+and the extension for one was not connected this session, so the failure that
+matters most, an unclosed tag that blanks the page, is caught by strict
+parsing of the markup Vue will receive, with Blade's `<input>` made
+self-closing and bare boolean attributes given a value. It is not a Vue
+compile, and says so. What was checked outside the suite: the page and the
+dashboard fetched over HTTP from a scratch site with a logged-in session,
+every panel present, the widget present, and the run button creating a scan
+attributed to the user who pressed it.
+
+**Running a scan is its own permission.** Seeing the report is Statamic's own
+"access utility" permission. `run accessibility scans` is separate because
+the button makes the site render every page, and a reader of the numbers is
+not necessarily somebody who should be able to do that. The button is not
+drawn without it and the route refuses without it.
+
+**The open count comes from the issue states, which now carry the impact.**
+"Open issues by impact" is one query on `a11y_issue_states` rather than a join
+to the latest scan, and a scan writes the impact as it last reported it. The
+migration was edited in place: nothing has been released, so there is nobody
+to migrate. The scratch site's stale file, made before the column existed,
+was the 500 that proved the point.
+
+**Rejected.** *An Inertia page with a Vue component*, which is the fuller
+answer and needs a build step this addon does not have. *Reading the site from
+`Site::selected()` for the widget*, which would silently narrow a dashboard
+number on a multisite install; the widget takes an explicit `site` config or
+shows every site. *Auto-refreshing the page while a scan runs*, which is a
+script, and the page says to reload instead.
+
+---
+
 ## 2026-09-02: A second addon, depending on the gate, and the scan layer inside it
 
 The first code in this repository: the scan layer of Accessibility Report. The

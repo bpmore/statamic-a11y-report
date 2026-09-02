@@ -11,8 +11,17 @@ use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Scan\Scans;
 use Bpmore\A11yReport\Storage\ReportDatabase;
+use Bpmore\A11yReport\Support\VueSafe;
+use Bpmore\A11yReport\Trends\Overview;
+use Bpmore\A11yReport\Trends\TrendChart;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
 use Statamic\Facades\Addon;
+use Statamic\Facades\Permission;
+use Statamic\Facades\Site;
+use Statamic\Facades\User;
+use Statamic\Facades\Utility;
 use Statamic\Providers\AddonServiceProvider;
 
 /**
@@ -39,11 +48,77 @@ class ServiceProvider extends AddonServiceProvider
         Commands\Scan::class,
     ];
 
+    protected $widgets = [
+        Widgets\AccessibilityReport::class,
+    ];
+
+    protected $viewNamespace = 'a11y-report';
+
     public function bootAddon()
     {
         // After the config file has merged, which is what decides whether
         // the addon's own SQLite connection is wanted at all.
         $this->app->make(ReportDatabase::class)->defineDefaultConnection();
+
+        // `@plain($x)` for any value that reaches a view Vue will compile. See
+        // `VueSafe` for why Blade's own escaping is not enough there.
+        Blade::directive('plain', fn ($expression) => "<?php echo \\Bpmore\\A11yReport\\Support\\VueSafe::text({$expression}); ?>");
+
+        // Seeing the report is Statamic's own "access utility" permission.
+        // Running a scan is separate: it makes the site render every page.
+        Permission::extend(function () {
+            Permission::group('a11y-report', 'Accessibility Report', function () {
+                Permission::register('run accessibility scans')
+                    ->label('Run accessibility scans')
+                    ->description('Start a scan of every page from the control panel. Scans render the whole site on the queue.');
+            });
+        });
+
+        Utility::extend(fn () => Utility::register(
+            Utility::make('a11y-report')
+                ->title('Accessibility Report')
+                ->navTitle('Accessibility Report')
+                ->icon('pulse')
+                ->description('Every scan, what it found, and how that is changing.')
+                ->view('a11y-report::utilities.report', fn (Request $request) => $this->utilityData($request))
+                ->routes(function ($router) {
+                    $router->post('run', Http\Controllers\RunScanController::class)->name('run');
+                })
+        ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function utilityData(Request $request): array
+    {
+        $sites = Site::all()->map(fn ($site) => ['handle' => $site->handle(), 'name' => $site->name()])->values()->all();
+        $site = $request->query('site');
+        $site = is_string($site) && Site::get($site) ? $site : null;
+
+        $overview = new Overview($this->app->make(ReportDatabase::class), $site);
+        $installed = $overview->installed();
+        $trend = $installed ? $overview->trend(90) : [];
+
+        return [
+            'installed' => $installed,
+            'ownsConnection' => $this->app->make(ReportDatabase::class)->ownsConnection(),
+            'connection' => ReportDatabase::connectionName(),
+            'sites' => $sites,
+            'site' => $site,
+            'overview' => $overview,
+            'latest' => $installed ? $overview->latest() : null,
+            'history' => $installed ? $overview->history(20) : collect(),
+            'byImpact' => $installed ? $overview->openByImpact() : [],
+            'openTotal' => $installed ? $overview->openTotal() : 0,
+            'oldestOpenDays' => $installed ? $overview->oldestOpenDays() : null,
+            'trend' => $trend,
+            'chart' => TrendChart::render($trend),
+            'canRun' => (bool) User::current()?->can('run accessibility scans'),
+            'runUrl' => cp_route('utilities.a11y-report.run'),
+            'queueIsSync' => config('queue.default') === 'sync',
+            'engine' => (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY),
+        ];
     }
 
     public function register()

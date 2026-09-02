@@ -10,14 +10,11 @@ use Bpmore\A11yReport\Scan\Scans;
 use Bpmore\A11yReport\Scan\ScanScope;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Statamic\Facades\Collection;
-use Statamic\Facades\Entry;
 
 /**
  * The scan, end to end, on the sync queue: enumerate, batch, read, roll up,
  * and track a problem from one scan to the next.
  */
-const PLAIN = '<html lang="en"><body><h1>{{ title }}</h1>{{ body }}</body></html>';
-
 beforeEach(function () {
     $this->withStandardFakeViews();
     test()->viewShouldReturnRaw('default', PLAIN);
@@ -27,22 +24,6 @@ beforeEach(function () {
 
     app(ReportDatabase::class)->install();
 });
-
-function page(string $slug, string $body, string $collection = 'pages', bool $published = true, array $extra = []): void
-{
-    $entry = Entry::find(Entry::query()->where('collection', $collection)->where('slug', $slug)->first()?->id())
-        ?? Entry::make()->collection($collection)->slug($slug);
-
-    $entry->published($published)->data(array_merge(['title' => ucfirst($slug), 'body' => $body], $extra))->saveQuietly();
-}
-
-function runScan(array $sites = [], array $collections = [], ?string $since = null): Scan
-{
-    $scans = app(Scans::class);
-    $scope = ScanScope::fromConfig((array) config('statamic-a11y-report.scan'), $sites, $collections, $since);
-
-    return $scans->start($scans->create($scope, Scan::TRIGGER_CI, 'test'), sync: true);
-}
 
 it('reads every published page and keeps what it found, page by page', function () {
     test()->viewShouldReturnRaw('default', '<html lang="en"><body><h1>{{ title }}</h1>{{ body }}<a href="/x">Read more</a></body></html>');

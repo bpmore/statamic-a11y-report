@@ -8,14 +8,13 @@ which stays free. The report is a paid addon.
 
 ## Status
 
-The scan layer is built. Nothing is drawn or generated yet.
+The scan layer and the overview are built. Nothing is generated yet.
 
 `php please a11y:scan` reads every published page on the queue, keeps every
 finding, records how much of each page the engine could see, and follows each
 problem from one scan to the next by a fingerprint of rule, target, site and
-path. The conformance report, the trend dashboard, the accessibility statement
-page, the triage queue, and the tagged PDF are built on these tables and are
-not here yet.
+path. The conformance report, the accessibility statement page, the triage queue,
+and the tagged PDF are built on these tables and are not here yet.
 
 ## Install
 
@@ -49,6 +48,24 @@ than no check at all.
 The queue needs Laravel's `job_batches` table. The install creates it through
 your site's own jobs migration when you have one, so `php artisan migrate`
 keeps working afterwards.
+
+## In the control panel
+
+Tools, then Accessibility Report: what is open now by impact, the last scan, a
+line of issues per scan over 90 days, and every scan so far. A button runs a
+scan on the queue; it needs the `run accessibility scans` permission, which is
+separate from seeing the page because it makes the site render every page.
+
+A dashboard widget shows the open count by impact and a 30-day line. Add it to
+`config/statamic/cp.php`:
+
+```php
+'widgets' => [
+    'accessibility_report',
+    // or, on a multisite install, one site:
+    ['type' => 'accessibility_report', 'site' => 'default'],
+],
+```
 
 ## What it reads with
 

@@ -22,7 +22,9 @@ use Statamic\Testing\Concerns\PreventsSavingStacheItemsToDisk;
  */
 abstract class TestCase extends AddonTestCase
 {
-    use FakesViews;
+    use FakesViews {
+        withStandardFakeViews as private fakeStandardViews;
+    }
     use PreventsSavingStacheItemsToDisk;
 
     protected string $addonServiceProvider = ServiceProvider::class;
@@ -39,6 +41,10 @@ abstract class TestCase extends AddonTestCase
         // Testbench ships no app key, and Statamic's boot goes through the
         // session middleware, which encrypts.
         $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
+
+        // Two users is a Pro feature, and one test needs a second user to
+        // prove the permission check refuses somebody who cannot run a scan.
+        $app['config']->set('statamic.editions.pro', true);
 
         $gate = dirname((new ReflectionClass(\Bpmore\A11yGate\ServiceProvider::class))->getFileName());
 
@@ -70,5 +76,23 @@ abstract class TestCase extends AddonTestCase
         parent::setUp();
 
         config()->set('statamic-a11y-report.connection', 'a11y_testing');
+    }
+
+    /**
+     * The fake view finder the scans render entries through starts with no
+     * view namespaces at all, so a test that fakes the site's templates and
+     * then opens the report's own page would get "no hint path", first for
+     * this addon's views and then for Statamic's control panel layout. Every
+     * namespace the real finder knew is put back on the fake one here.
+     */
+    public function withStandardFakeViews()
+    {
+        $hints = $this->app['view']->getFinder()->getHints();
+
+        $this->fakeStandardViews();
+
+        foreach ($hints as $namespace => $paths) {
+            $this->fakeViewFinder->addNamespace($namespace, $paths);
+        }
     }
 }

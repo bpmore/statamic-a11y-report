@@ -8,13 +8,14 @@ which stays free. The report is a paid addon.
 
 ## Status
 
-The scan layer, the overview and the HTML conformance report are built.
+The scan layer, the overview, the HTML conformance report and the
+accessibility statement are built.
 
 `php please a11y:scan` reads every published page on the queue, keeps every
 finding, records how much of each page the engine could see, and follows each
 problem from one scan to the next by a fingerprint of rule, target, site and
-path. The accessibility statement page, the triage queue, the criteria worksheet
-in the control panel, and the tagged PDF are not here yet.
+path. The triage queue, the criteria worksheet in the control panel, and the
+tagged PDF are not here yet.
 
 ## Install
 
@@ -68,6 +69,29 @@ remove it.
 
 Reports can also be generated, listed and opened from the control panel, by
 anybody with the `generate accessibility reports` permission.
+
+## The accessibility statement
+
+Every site gets a page at `/accessibility`. What it says about conformance
+comes from the latest report and cannot be configured: partially conformant
+when a criterion failed, not fully evaluated when any criterion has no
+determination, fully conformant only when a person assessed every criterion.
+What it says about you comes from the `statement` block in the config file:
+commitment, feedback, contact, escalation, and the enforcement body, with a
+per-site override for multisite installs. Pick `section508` or `en301549`.
+
+To put the statement inside a page of your own instead, use the tag:
+
+```
+{{ a11y:statement }}                     Antlers, headings from h2
+<s:a11y:statement heading="1" />         Blade
+```
+
+A Blade site whose layout uses `@yield` has no layout Statamic can wrap the
+page in. The page then renders in a plain shell of the addon's own, or set
+`statement.view` to a Blade template of yours that calls the tag. After a new
+report, `php please a11y:statement:refresh` clears the page from the static
+cache.
 
 ## In the control panel
 

@@ -95,9 +95,49 @@ return [
         'appendix_limit' => 1000,
     ],
 
+    /*
+    |---------------------------------------------------------------------------
+    | Accessibility statement
+    |---------------------------------------------------------------------------
+    |
+    | A public page at 'route' on every site, and an `{{ a11y:statement }}`
+    | tag for putting the same statement inside a page of your own. What it
+    | says about conformance comes from the latest report and cannot be set
+    | here. What it says about you comes from here.
+    |
+    | 'template' is 'section508' (US) or 'en301549' (EU public sector, which
+    | always includes an enforcement section). Everything under 'sites' is a
+    | per-site override of the same keys, for a multisite install.
+    |
+    */
+
     'statement' => [
         'route' => '/accessibility',
+        // The template the page renders and the layout it sits in. Null
+        // means this addon's own one-line template, in Statamic's system
+        // layout, or in a plain shell of its own when the site has no such
+        // layout. A Blade site whose layout uses @yield sets 'view' to a
+        // Blade template of its own that calls <s:a11y:statement heading="1" />.
+        'view' => null,
+        'layout' => null,
         'template' => 'section508',
+        'organization' => null,
+        'commitment' => null,
+        'feedback' => null,
+        'contact' => [
+            'email' => null,
+            'phone' => null,
+            'url' => null,
+            'address' => null,
+        ],
+        'escalation' => null,
+        'enforcement' => [
+            'name' => null,
+            'url' => null,
+        ],
+        'sites' => [
+            // 'fr' => ['contact' => ['email' => 'accessibilite@example.fr']],
+        ],
     ],
 
     /*

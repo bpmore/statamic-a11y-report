@@ -84,3 +84,20 @@ function assertNoGluedBladeDirectives(): void
         expect($hits)->toBe(0, basename($file).' has a directive glued to a word: '.implode(', ', $m[0]));
     }
 }
+
+/**
+ * A temporary storage path for reports, with the folders Laravel itself
+ * needs there, so nothing lands in the harness's own storage directory.
+ */
+function tempStorage(): string
+{
+    $dir = sys_get_temp_dir().'/a11y-report-'.uniqid();
+
+    foreach (['framework/cache', 'framework/views', 'framework/sessions'] as $sub) {
+        mkdir($dir.'/'.$sub, 0755, true);
+    }
+
+    app()->useStoragePath($dir);
+
+    return $dir;
+}

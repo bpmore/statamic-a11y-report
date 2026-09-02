@@ -1,0 +1,20 @@
+{{# The shell used when the site has no layout Statamic can wrap a template in. Plain on purpose: readable, with a way home, and nothing to maintain. #}}
+<!DOCTYPE html>
+<html lang="{{ site:short_locale }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} | {{ site:name }}</title>
+    <style>
+        body { margin: 0 auto; max-width: 42em; padding: 2em 1.25em; font-family: system-ui, sans-serif; line-height: 1.55; color: #1a1a1a; background: #fff; }
+        a { color: #1a4fa3; }
+        nav { margin-bottom: 2em; }
+    </style>
+</head>
+<body>
+    <nav aria-label="Site"><a href="{{ site:url }}">{{ site:name }}</a></nav>
+    <main id="main-content">
+        {{ template_content }}
+    </main>
+</body>
+</html>

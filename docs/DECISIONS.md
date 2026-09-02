@@ -12,6 +12,60 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The public statement reads the latest report and derives its own status
+
+An accessibility statement page at `/accessibility` on every site, and an
+`{{ a11y:statement }}` tag (or `<s:a11y:statement />` from Blade) for putting
+the same statement inside a page of the site's own.
+
+**The conformance status is derived from the latest report and cannot be
+configured.** Three values: partially conformant when any criterion failed or
+partly supports; not fully evaluated when any criterion has no determination;
+fully conformant only when every criterion carries a person's determination
+of supports or not applicable. A test sets a `status` config key to the best
+answer and reads the derived one back. The organisation's own words
+(commitment, feedback, contact, escalation, enforcement) come from config,
+global with a per-site override, because those are its words and not the
+scanner's. No report yet is said plainly: "Not yet evaluated", and no status
+is claimed.
+
+**Two jurisdictions, one template.** The sections follow the EU model
+statement for EN 301 549, which a Section 508 statement also satisfies:
+status, known problems, how to complain, how the statement was made. The
+`en301549` template always has an enforcement section, naming the body or
+saying it has not been named; `section508` has one only when a body is
+configured. Rejected: two separate templates, which is twice the wording to
+keep honest for a difference of one section and two sentences.
+
+**The page decides its layout when asked for, with a shell of its own as the
+last resort.** The first real site this ran on, hada.farm, is a Blade site
+whose layout uses `@yield` and has no `layout` view at all, and the statement
+page returned a 500 there. Now: the configured layout, else Statamic's system
+layout if the finder can find it, else a plain shell this addon ships. A
+Blade site sets `statement.view` to a template of its own that calls the tag.
+The route registers a closure returning a view, because Statamic wants a
+closure for route data and because the template and layout must be read per
+request, not at boot: a test that changes them after boot proved the
+boot-time version wrong.
+
+**Three harness lessons, written down because each cost a round.** Statamic's
+`FakeViewFactory::exists()` answers from its fake engine, so the finder is
+asked instead. The `View` facade keeps the factory it first resolved, so the
+container's is used. And the fake view finder starts with no namespaces, so
+the test case puts every namespace back at the lowest entry point the trait
+offers, `withFakeViews()`, rather than only the standard one.
+
+**Checked.** The suite, 104 tests. On hada.farm over Herd: the page returned
+200 in the fallback shell with one h1, four h2, a language, and the honest
+status, and `a11y:statement:refresh` cleared it from the static cache.
+
+**Not checked.** The page inside a real site layout (hada.farm has none
+Statamic can use), the tag from a real Blade template on a real site, and the
+wording of either jurisdiction's statement against its legal model text by
+anyone qualified to say.
+
+---
+
 ## 2026-09-02: The conformance document, and what it refuses to say
 
 The thing people pay for: an Accessibility Conformance Report as a standalone

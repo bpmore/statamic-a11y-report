@@ -23,7 +23,7 @@ use Statamic\Testing\Concerns\PreventsSavingStacheItemsToDisk;
 abstract class TestCase extends AddonTestCase
 {
     use FakesViews {
-        withStandardFakeViews as private fakeStandardViews;
+        withFakeViews as private fakeTheViews;
     }
     use PreventsSavingStacheItemsToDisk;
 
@@ -81,15 +81,16 @@ abstract class TestCase extends AddonTestCase
     /**
      * The fake view finder the scans render entries through starts with no
      * view namespaces at all, so a test that fakes the site's templates and
-     * then opens the report's own page would get "no hint path", first for
-     * this addon's views and then for Statamic's control panel layout. Every
-     * namespace the real finder knew is put back on the fake one here.
+     * then opens one of this addon's own views would get "no hint path",
+     * first for this addon and then for Statamic's control panel layout.
+     * Every namespace the real finder knew is put back on the fake one here,
+     * at the lowest level the trait offers so both entry points get it.
      */
-    public function withStandardFakeViews()
+    public function withFakeViews()
     {
         $hints = $this->app['view']->getFinder()->getHints();
 
-        $this->fakeStandardViews();
+        $this->fakeTheViews();
 
         foreach ($hints as $namespace => $paths) {
             $this->fakeViewFinder->addNamespace($namespace, $paths);

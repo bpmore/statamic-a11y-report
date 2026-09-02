@@ -12,6 +12,7 @@ use Bpmore\A11yReport\Document\ReportWriter;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Scan\Scans;
+use Bpmore\A11yReport\Statement\StatementBuilder;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Bpmore\A11yReport\Support\VueSafe;
 use Bpmore\A11yReport\Trends\Overview;
@@ -49,6 +50,11 @@ class ServiceProvider extends AddonServiceProvider
         Commands\Install::class,
         Commands\Report::class,
         Commands\Scan::class,
+        Commands\StatementRefresh::class,
+    ];
+
+    protected $tags = [
+        Tags\A11y::class,
     ];
 
     protected $widgets = [
@@ -164,6 +170,12 @@ class ServiceProvider extends AddonServiceProvider
         ));
 
         $this->app->bind(ReportWriter::class, fn ($app) => new ReportWriter($app, $app->make(ReportBuilder::class)));
+
+        $this->app->bind(StatementBuilder::class, fn ($app) => new StatementBuilder(
+            $app->make(ReportDatabase::class),
+            $app->make(ReportWriter::class),
+            (array) config('statamic-a11y-report.statement', []),
+        ));
 
         $this->app->bind(Scans::class, fn ($app) => new Scans(
             $app->make(ScanEngine::class),

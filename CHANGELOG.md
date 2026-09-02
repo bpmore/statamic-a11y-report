@@ -37,6 +37,15 @@ The scope and limits statement is fixed text with no setting to remove it. The
 control panel generates, lists, and serves reports behind a new
 `generate accessibility reports` permission.
 
-Not yet: the PDF, the statement page, the issue queue, and the criteria
-worksheet in the control panel. Manual assessments can be entered in the
+**The accessibility statement.** A page at `/accessibility` on every site
+(configurable route, view and layout, with a plain shell of the addon's own
+when the site has no layout Statamic can wrap), and an `{{ a11y:statement }}`
+tag, or `<s:a11y:statement />` from Blade, for putting it inside a page. The
+conformance status is derived from the latest report and cannot be set;
+the organisation's words come from config with per-site overrides. Section
+508 and EN 301 549 templates. `a11y:statement:refresh` clears the page from
+the static cache.
+
+Not yet: the PDF, the issue queue, and the criteria worksheet in the control
+panel. Manual assessments can be entered in the
 `a11y_criteria_assessments` table until that screen exists.

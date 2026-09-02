@@ -51,6 +51,14 @@ The queue needs Laravel's `job_batches` table. The install creates it through
 your site's own jobs migration when you have one, so `php artisan migrate`
 keeps working afterwards.
 
+## In the entry sidebar
+
+Accessibility Gate's panel on an entry screen shows this page's open issues
+from the last scan beneath its own result, with a link into the queue
+filtered to the page, so the gate and the queue agree in the one place an
+author looks. This needs the gate's panel seam, which arrives after gate
+0.6.0; with an older gate the panel is simply the gate's.
+
 ## Settings
 
 Addons, then Accessibility Report, then Settings: the WCAG version to

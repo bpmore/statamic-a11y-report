@@ -69,6 +69,11 @@ the PDF when Chrome is found and says so when it is not. The file declares
 PDF/UA-1, and the suite validates that declaration with veraPDF wherever it
 is installed, CI included: a real report passes every check.
 
+**The gate's sidebar.** On an entry screen, beneath Accessibility Gate's
+own panel result: this page's open issues from the last scan, and a link
+into the queue filtered to the page. Needs the gate's panel seam, which
+arrives after gate 0.6.0; with an older gate nothing is shown.
+
 **A settings screen.** Addons, Accessibility Report, Settings: the WCAG
 version to report against (2.2 or 2.1 Level AA), the evaluator, the
 remediation plan, everything the public statement says about you, and the

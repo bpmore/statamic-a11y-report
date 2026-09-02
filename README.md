@@ -8,14 +8,14 @@ which stays free. The report is a paid addon.
 
 ## Status
 
-The scan layer, the overview, the HTML conformance report and the
-accessibility statement are built.
+The scan layer, the overview, the HTML conformance report, the accessibility
+statement and the remediation queue are built.
 
 `php please a11y:scan` reads every published page on the queue, keeps every
 finding, records how much of each page the engine could see, and follows each
 problem from one scan to the next by a fingerprint of rule, target, site and
-path. The triage queue, the criteria worksheet in the control panel, and the
-tagged PDF are not here yet.
+path. The criteria worksheet in the control panel and the tagged PDF are not here
+yet.
 
 ## Install
 
@@ -99,6 +99,14 @@ Tools, then Accessibility Report: what is open now by impact, the last scan, a
 line of issues per scan over 90 days, and every scan so far. A button runs a
 scan on the queue; it needs the `run accessibility scans` permission, which is
 separate from seeing the page because it makes the site render every page.
+
+Issues, the second page under the utility, is the remediation queue: every
+problem with its status, filtered by status, impact, criterion, site,
+collection and assignee, oldest and most serious first. Anybody with the
+`manage accessibility issues` permission can tick issues and set a status, an
+assignee and a note, or apply the change to everything the filter matches. A
+scan never reopens an issue marked won't fix or false positive, and reopens a
+fixed one only if the problem comes back.
 
 A dashboard widget shows the open count by impact and a 30-day line. Add it to
 `config/statamic/cp.php`:

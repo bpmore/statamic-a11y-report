@@ -46,6 +46,12 @@ the organisation's words come from config with per-site overrides. Section
 508 and EN 301 549 templates. `a11y:statement:refresh` clears the page from
 the static cache.
 
-Not yet: the PDF, the issue queue, and the criteria worksheet in the control
-panel. Manual assessments can be entered in the
+**The remediation queue.** A second page under the utility: every issue the
+scans know about with its status, filtered by status, impact, criterion,
+site, collection and assignee, oldest and most serious first. Bulk change of
+status, assignee and note for the ticked issues or for everything the filter
+matches, behind a new `manage accessibility issues` permission. A scan never
+reopens an issue marked won't fix or false positive.
+
+Not yet: the PDF, and the criteria worksheet in the control panel. Manual assessments can be entered in the
 `a11y_criteria_assessments` table until that screen exists.

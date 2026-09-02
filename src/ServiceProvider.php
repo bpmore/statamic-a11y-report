@@ -80,6 +80,9 @@ class ServiceProvider extends AddonServiceProvider
                 Permission::register('run accessibility scans')
                     ->label('Run accessibility scans')
                     ->description('Start a scan of every page from the control panel. Scans render the whole site on the queue.');
+                Permission::register('manage accessibility issues')
+                    ->label('Manage accessibility issues')
+                    ->description('Change the status, assignee and notes of issues in the remediation queue.');
                 Permission::register('generate accessibility reports')
                     ->label('Generate accessibility reports')
                     ->description('Produce a conformance document from a completed scan. The document names who generated it.');
@@ -97,6 +100,8 @@ class ServiceProvider extends AddonServiceProvider
                     $router->post('run', Http\Controllers\RunScanController::class)->name('run');
                     $router->post('reports', Http\Controllers\GenerateReportController::class)->name('reports.generate');
                     $router->get('reports/{uuid}/{format}', Http\Controllers\DownloadReportController::class)->name('reports.download');
+                    $router->get('issues', Http\Controllers\IssuesController::class)->name('issues');
+                    $router->post('issues', Http\Controllers\UpdateIssuesController::class)->name('issues.update');
                 })
         ));
     }
@@ -130,6 +135,8 @@ class ServiceProvider extends AddonServiceProvider
             'chart' => TrendChart::render($trend),
             'canRun' => (bool) User::current()?->can('run accessibility scans'),
             'runUrl' => cp_route('utilities.a11y-report.run'),
+            'indexUrl' => cp_route('utilities.a11y-report.issues'),
+            'overviewUrl' => cp_route('utilities.index').'/a11y-report',
             'canGenerate' => (bool) User::current()?->can('generate accessibility reports'),
             'generateUrl' => cp_route('utilities.a11y-report.reports.generate'),
             'hasCompleteScan' => $installed && $overview->history(1)->first()?->status === \Bpmore\A11yReport\Models\Scan::COMPLETE,

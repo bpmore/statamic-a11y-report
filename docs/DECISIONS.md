@@ -12,6 +12,49 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The remediation queue is plain forms over the issue states
+
+A second page under the report utility: every problem the scans know about,
+with what a person decided about it, filtered by status, impact, criterion,
+site, collection and assignee, ordered by impact and then oldest first, with
+a bulk change of status, assignee and note for the ticked rows or for
+everything the filter matches.
+
+**The queue is the issue states, joined to the wording of the scan that last
+saw each one.** The states are the only table keyed on the fingerprint alone,
+which is what makes a decision survive the night. The message, the label and
+the pointer come from the issue row of `last_scan_id`, so the queue says what
+the scanner most recently said rather than what it said first.
+
+**Native form controls, deliberately.** Statamic's select and checkbox are
+Vue components bound to state a static template does not have. A `<select>`
+inside a `<form method="get">` is the most accessible control there is, works
+with no script, and keeps the filter in the URL so a link to a filtered queue
+is a link somebody can send. The one thing this costs is looking slightly less
+like the rest of the control panel, and inside an accessibility product that
+is the right trade. A test asserts every control has a label and every
+checkbox an accessible name.
+
+**"Apply to all matching" instead of "select all".** Select-all needs a
+script. Applying a change to everything the current filter matches needs a
+checkbox and the filter echoed back as hidden fields, and it is the more
+useful operation: the forty "Read more" links on forty pages are one decision.
+
+**Rejected.** *Statamic's Listing component*, which is the fuller answer and
+needs an Inertia page, a Vue component and a build step. *An Antlers-free tab
+control*, for the reason given under the overview. *The gate's entry sidebar
+showing this page's open issues*, which the brief asked for and which belongs
+in the gate's repository as an extension point; not built here.
+
+**Checked.** The suite, 114 tests. And the scratch site over HTTP: the page
+rendered with the filter controls and the bulk form, and a change posted
+from it recorded status, assignee, note and who made the change.
+
+**Not checked.** The page on screen, and how the native controls sit beside
+Statamic's own in light and dark mode.
+
+---
+
 ## 2026-09-02: The public statement reads the latest report and derives its own status
 
 An accessibility statement page at `/accessibility` on every site, and an

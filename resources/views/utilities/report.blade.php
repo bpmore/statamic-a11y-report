@@ -13,6 +13,8 @@
 
 <div class="space-y-6">
 
+    @include('a11y-report::utilities.nav', ['active' => 'overview'])
+
 @if (! $installed)
     <ui-card-panel heading="Not set up yet">
         <div class="space-y-3">
@@ -55,6 +57,7 @@
                     @endforeach
                 </div>
                 <ui-description text="Counted from the last scan that read each page. A problem somebody marked as won't fix or a false positive is not open." />
+                <ui-button size="sm" href="@plain($indexUrl)" text="Open the issue queue" />
             </div>
         </ui-card-panel>
 

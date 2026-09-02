@@ -83,6 +83,9 @@ class ServiceProvider extends AddonServiceProvider
                 Permission::register('manage accessibility issues')
                     ->label('Manage accessibility issues')
                     ->description('Change the status, assignee and notes of issues in the remediation queue.');
+                Permission::register('assess accessibility criteria')
+                    ->label('Assess accessibility criteria')
+                    ->description('Record a manual assessment of a WCAG success criterion on the worksheet. What is recorded is printed in the conformance report under the assessor\'s name.');
                 Permission::register('generate accessibility reports')
                     ->label('Generate accessibility reports')
                     ->description('Produce a conformance document from a completed scan. The document names who generated it.');
@@ -102,6 +105,8 @@ class ServiceProvider extends AddonServiceProvider
                     $router->get('reports/{uuid}/{format}', Http\Controllers\DownloadReportController::class)->name('reports.download');
                     $router->get('issues', Http\Controllers\IssuesController::class)->name('issues');
                     $router->post('issues', Http\Controllers\UpdateIssuesController::class)->name('issues.update');
+                    $router->get('criteria', Http\Controllers\CriteriaController::class)->name('criteria');
+                    $router->post('criteria', Http\Controllers\SaveCriteriaController::class)->name('criteria.save');
                 })
         ));
     }
@@ -136,6 +141,7 @@ class ServiceProvider extends AddonServiceProvider
             'canRun' => (bool) User::current()?->can('run accessibility scans'),
             'runUrl' => cp_route('utilities.a11y-report.run'),
             'indexUrl' => cp_route('utilities.a11y-report.issues'),
+            'criteriaUrl' => cp_route('utilities.a11y-report.criteria'),
             'overviewUrl' => cp_route('utilities.index').'/a11y-report',
             'canGenerate' => (bool) User::current()?->can('generate accessibility reports'),
             'generateUrl' => cp_route('utilities.a11y-report.reports.generate'),
@@ -177,6 +183,10 @@ class ServiceProvider extends AddonServiceProvider
         ));
 
         $this->app->bind(ReportWriter::class, fn ($app) => new ReportWriter($app, $app->make(ReportBuilder::class)));
+
+        $this->app->bind(\Bpmore\A11yReport\Worksheet\Worksheet::class, fn ($app) => new \Bpmore\A11yReport\Worksheet\Worksheet(
+            new \Bpmore\A11yReport\Document\ScanEvidence($app->make(ScanEngine::class)),
+        ));
 
         $this->app->bind(StatementBuilder::class, fn ($app) => new StatementBuilder(
             $app->make(ReportDatabase::class),

@@ -53,5 +53,11 @@ status, assignee and note for the ticked issues or for everything the filter
 matches, behind a new `manage accessibility issues` permission. A scan never
 reopens an issue marked won't fix or false positive.
 
-Not yet: the PDF, and the criteria worksheet in the control panel. Manual assessments can be entered in the
-`a11y_criteria_assessments` table until that screen exists.
+**The criteria worksheet.** A third page under the utility: every success
+criterion with the automated evidence from the latest scan, the result the
+report will print, and a person's own status, method, remarks and lock, per
+site or as a global default. Only rows that changed are written, each with
+the assessor's name and the date, behind a new `assess accessibility
+criteria` permission.
+
+Not yet: the PDF. 

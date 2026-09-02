@@ -22,38 +22,6 @@ beforeEach(function () {
     $this->user->save();
 });
 
-/**
- * The page's text, flattened. A utility's HTML arrives inside Inertia's JSON
- * page object, where every newline is a literal backslash-n.
- */
-function pageText(string $html): string
-{
-    // Inertia puts the page object in an attribute, so the utility's HTML
-    // arrives entity-encoded: `<svg` is `&lt;svg`. Decoded once here.
-    $html = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-    return (string) preg_replace('/\s+/', ' ', str_replace(['\\n', '\\t', '\\r', '\\/'], [' ', ' ', ' ', '/'], $html));
-}
-
-/** The utility's own markup, as Vue will receive it: unpacked from Inertia's page object. */
-function utilityHtml(): string
-{
-    $response = test()->actingAs(test()->user)->get(cp_route('utilities.index').'/a11y-report')->assertOk()->getContent();
-
-    preg_match('/data-page="([^"]+)"/', $response, $m);
-    $page = json_decode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'), true);
-
-    return (string) $page['props']['html'];
-}
-
-/** Point the addon at its own connection name, backed by the in-memory database. */
-function ownConnection(): void
-{
-    config()->set('database.connections.'.ReportDatabase::DEFAULT_CONNECTION, config('database.connections.a11y_testing'));
-    config()->set('statamic-a11y-report.connection', ReportDatabase::DEFAULT_CONNECTION);
-    config()->set('queue.batching.database', ReportDatabase::DEFAULT_CONNECTION);
-}
-
 function reportPage(?string $query = null): string
 {
     return pageText(test()->actingAs(test()->user)->get(cp_route('utilities.index').'/a11y-report'.($query ? '?'.$query : ''))->assertOk()->getContent());

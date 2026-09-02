@@ -32,6 +32,7 @@ class IssuesController extends CpController
             'canManage' => (bool) User::current()?->can('manage accessibility issues'),
             'updateUrl' => cp_route('utilities.a11y-report.issues.update'),
             'indexUrl' => cp_route('utilities.a11y-report.issues'),
+            'criteriaUrl' => cp_route('utilities.a11y-report.criteria'),
             'overviewUrl' => cp_route('utilities.index').'/a11y-report',
             'statuses' => IssueQuery::STATUSES,
         ];

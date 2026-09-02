@@ -30,7 +30,11 @@ final class ReportBuilder
     public function __construct(
         private readonly ScanEngine $engine,
         private readonly array $config,
-    ) {}
+    ) {
+        $this->evidence = new ScanEvidence($engine);
+    }
+
+    private readonly ScanEvidence $evidence;
 
     /**
      * @return array<string, mixed>
@@ -43,8 +47,8 @@ final class ReportBuilder
 
         $standard = $this->standardFor($scan);
         $criteriaList = Wcag::criteria($standard);
-        $automated = $scan->engine === $this->engine->key() ? $this->engine->criteria() : [];
-        $failures = $this->failuresByCriterion($scan);
+        $automated = $this->evidence->automatedCriteria($scan);
+        $failures = $this->evidence->failuresByCriterion($scan);
         $assessments = $this->assessments($scan->site);
         $pagesRead = (int) $scan->pages_scanned;
 
@@ -129,31 +133,6 @@ final class ReportBuilder
         return is_string($configured) && isset(Wcag::STANDARDS[$configured])
             ? $configured
             : Wcag::standardForRuleset((string) $scan->ruleset);
-    }
-
-    /**
-     * @return array<string, array{issues: int, pages: int, rules: array<int, string>}>
-     */
-    private function failuresByCriterion(Scan $scan): array
-    {
-        $failures = [];
-
-        Issue::where('scan_id', $scan->id)->orderBy('id')->chunk(500, function ($issues) use (&$failures) {
-            foreach ($issues as $issue) {
-                foreach ((array) $issue->wcag_criteria as $number) {
-                    $failures[$number] ??= ['issues' => 0, 'pages' => [], 'rules' => []];
-                    $failures[$number]['issues']++;
-                    $failures[$number]['pages'][$issue->page_id] = true;
-                    $failures[$number]['rules'][$issue->rule_id] = true;
-                }
-            }
-        });
-
-        foreach ($failures as $number => $f) {
-            $failures[$number] = ['issues' => $f['issues'], 'pages' => count($f['pages']), 'rules' => array_keys($f['rules'])];
-        }
-
-        return $failures;
     }
 
     /** @return array<string, CriterionAssessment> by criterion number; a site's row beats the global one */

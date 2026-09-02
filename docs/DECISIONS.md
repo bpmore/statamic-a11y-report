@@ -12,6 +12,51 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The criteria worksheet writes only what changed, under a name
+
+A third page under the utility: every success criterion for a site, or for
+the global default, with the automated evidence from the latest complete
+scan, the effective result the report would print, and a person's own
+status, method, remarks and lock.
+
+**The effective result is the report's own merge.** The worksheet calls
+`AssessmentMerger` with the same evidence the report uses, lifted out of the
+report builder into `ScanEvidence` so the two cannot disagree. What a person
+sees as the effective result on the sheet is what the next report prints,
+which is the only reason to have the column.
+
+**Only rows that changed are written, and each carries the assessor and the
+date.** One form, every criterion, one save. The server compares each row
+with what is stored and writes the ones that differ, so pressing save with
+nothing altered attests to nothing and stamps nobody's name on anything. A
+row whose status is set back to "no assessment of your own" is deleted, and
+the automated result returns. Rejected: a save button per row, which is 55
+forms on one page, and an autosave, which needs a script and would write an
+attestation nobody meant to make.
+
+**A site's rows sit apart from the global default, and the sheet shows what a
+site inherits.** The report already read a site's row over the global one;
+the sheet edits either, and a site's page shows the global row a criterion
+would inherit, with who assessed it, so overriding it is a decision made
+with the original in view.
+
+**Its own permission.** "Assess accessibility criteria" is separate from
+managing issues, because a row here ends up in a conformance document with
+a name on it. Somebody who may triage the queue is not thereby somebody who
+may attest that Focus Order is supported.
+
+**Checked.** The suite, 122 tests, including that a scan never touches a
+person's row and that the report prints what the sheet saved. And the
+scratch site over HTTP: 55 rows, 110 selects and 55 textareas each with a
+label, a save that recorded the assessor, and the next report counting one
+criterion assessed by a person.
+
+**Not checked.** On screen. And the page is long: 55 rows with three controls
+each. It is one form on purpose, and whether that is bearable in practice is
+a question for the first person to fill one in.
+
+---
+
 ## 2026-09-02: The remediation queue is plain forms over the issue states
 
 A second page under the report utility: every problem the scans know about,

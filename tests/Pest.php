@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Scan\Scans;
 use Bpmore\A11yReport\Scan\ScanScope;
+use Bpmore\A11yReport\Storage\ReportDatabase;
 use Bpmore\A11yReport\Tests\TestCase;
 use Statamic\Facades\Entry;
 
@@ -101,3 +102,38 @@ function tempStorage(): string
 
     return $dir;
 }
+
+/**
+ * The page's text, flattened. A utility's HTML arrives inside Inertia's JSON
+ * page object, where every newline is a literal backslash-n.
+ */
+function pageText(string $html): string
+{
+    // Inertia puts the page object in an attribute, so the utility's HTML
+    // arrives entity-encoded: `<svg` is `&lt;svg`. Decoded once here.
+    $html = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    // And JSON-escaped: a quote inside an attribute arrives as a backslash
+    // and a quote, so `text="Supports"` would never match without this.
+    return (string) preg_replace('/\s+/', ' ', str_replace(['\\n', '\\t', '\\r', '\\/', '\\"'], [' ', ' ', ' ', '/', '"'], $html));
+}
+
+/** The utility's own markup, as Vue will receive it: unpacked from Inertia's page object. */
+function utilityHtml(): string
+{
+    $response = test()->actingAs(test()->user)->get(cp_route('utilities.index').'/a11y-report')->assertOk()->getContent();
+
+    preg_match('/data-page="([^"]+)"/', $response, $m);
+    $page = json_decode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'), true);
+
+    return (string) $page['props']['html'];
+}
+
+/** Point the addon at its own connection name, backed by the in-memory database. */
+function ownConnection(): void
+{
+    config()->set('database.connections.'.ReportDatabase::DEFAULT_CONNECTION, config('database.connections.a11y_testing'));
+    config()->set('statamic-a11y-report.connection', ReportDatabase::DEFAULT_CONNECTION);
+    config()->set('queue.batching.database', ReportDatabase::DEFAULT_CONNECTION);
+}
+

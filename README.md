@@ -9,13 +9,12 @@ which stays free. The report is a paid addon.
 ## Status
 
 The scan layer, the overview, the HTML conformance report, the accessibility
-statement and the remediation queue are built.
+statement, the remediation queue and the criteria worksheet are built.
 
 `php please a11y:scan` reads every published page on the queue, keeps every
 finding, records how much of each page the engine could see, and follows each
 problem from one scan to the next by a fingerprint of rule, target, site and
-path. The criteria worksheet in the control panel and the tagged PDF are not here
-yet.
+path. The tagged PDF is not here yet.
 
 ## Install
 
@@ -107,6 +106,13 @@ collection and assignee, oldest and most serious first. Anybody with the
 assignee and a note, or apply the change to everything the filter matches. A
 scan never reopens an issue marked won't fix or false positive, and reopens a
 fixed one only if the problem comes back.
+
+Criteria, the third page, is the worksheet: every success criterion with the
+automated evidence from the latest scan, the result the report will print,
+and your own status, remarks and lock, per site or as a global default. This
+is the only way a criterion becomes "Supports". Only rows you change are
+written, with your name and the date, and it needs the `assess accessibility
+criteria` permission. A locked row is never changed by a scan.
 
 A dashboard widget shows the open count by impact and a 30-day line. Add it to
 `config/statamic/cp.php`:

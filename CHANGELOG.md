@@ -71,8 +71,8 @@ is installed, CI included: a real report passes every check.
 
 **The gate's sidebar.** On an entry screen, beneath Accessibility Gate's
 own panel result: this page's open issues from the last scan, and a link
-into the queue filtered to the page. Needs the gate's panel seam, which
-arrives after gate 0.6.0; with an older gate nothing is shown.
+into the queue filtered to the page. The gate is now required at 0.7,
+which has the panel seam this uses.
 
 **A settings screen.** Addons, Accessibility Report, Settings: the WCAG
 version to report against (2.2 or 2.1 Level AA), the evaluator, the

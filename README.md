@@ -3,8 +3,8 @@
 Accessibility Gate stops a bad entry. Accessibility Report proves the site is
 clean, over time, in a document a compliance officer can file.
 
-This addon depends on [Accessibility Gate](https://github.com/bpmore/statamic-a11y-gate),
-which stays free. The report is a paid addon.
+This addon depends on [Accessibility Gate](https://github.com/bpmore/statamic-a11y-gate)
+at 0.7 or later, which stays free. The report is a paid addon.
 
 ## Status
 
@@ -56,8 +56,7 @@ keeps working afterwards.
 Accessibility Gate's panel on an entry screen shows this page's open issues
 from the last scan beneath its own result, with a link into the queue
 filtered to the page, so the gate and the queue agree in the one place an
-author looks. This needs the gate's panel seam, which arrives after gate
-0.6.0; with an older gate the panel is simply the gate's.
+author looks.
 
 ## Settings
 

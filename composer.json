@@ -1,7 +1,14 @@
 {
     "name": "bpmore/statamic-a11y-report",
     "description": "Scans every page of a Statamic site over time and keeps the evidence: findings, coverage, and the state of each problem from one scan to the next.",
-    "keywords": ["statamic", "accessibility", "a11y", "wcag", "report", "acr"],
+    "keywords": [
+        "statamic",
+        "accessibility",
+        "a11y",
+        "wcag",
+        "report",
+        "acr"
+    ],
     "license": "proprietary",
     "type": "statamic-addon",
     "homepage": "https://hada.farm",
@@ -13,7 +20,7 @@
     ],
     "require": {
         "php": "^8.4",
-        "bpmore/statamic-a11y-gate": "^0.6",
+        "bpmore/statamic-a11y-gate": "^0.7",
         "statamic/cms": "^6.27"
     },
     "require-dev": {

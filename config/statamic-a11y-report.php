@@ -59,6 +59,10 @@ return [
     'scan' => [
         'concurrency' => 3,
         'schedule' => 'weekly',
+        // After this many minutes with no page read, the overview says the
+        // scan is not moving and what to run. A queue nobody works looks
+        // exactly like a queue that is about to start, otherwise.
+        'stale_after_minutes' => 10,
         'sites' => ['*'],
         'collections' => ['*'],
         'exclude_urls' => [],

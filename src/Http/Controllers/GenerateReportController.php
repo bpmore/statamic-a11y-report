@@ -31,8 +31,21 @@ class GenerateReportController extends CpController
             return back()->with('error', 'There is no complete scan to report on'.($site ? " for the {$site} site" : '').'. Run a scan first.');
         }
 
-        $report = $writer->write($scan, User::current()?->email());
+        $formats = $writer->pdfAvailable() ? ReportWriter::FORMATS : ReportWriter::DEFAULT_FORMATS;
 
-        return back()->with('success', "Report {$report->uuid} generated. {$report->coverage_note}");
+        try {
+            $report = $writer->write($scan, User::current()?->email(), $formats);
+        } catch (\Bpmore\A11yReport\Pdf\ChromeUnavailable $e) {
+            // Chrome was found and then failed. The document still matters
+            // more than its rendering, so it is written without the PDF and
+            // the person is told.
+            $report = $writer->write($scan, User::current()?->email(), ReportWriter::DEFAULT_FORMATS);
+
+            return back()->with('success', "Report {$report->uuid} generated without a PDF: {$e->getMessage()}");
+        }
+
+        $note = $report->pdf_path ? '' : ' No PDF: no Chrome or Chromium was found on the server.';
+
+        return back()->with('success', "Report {$report->uuid} generated. {$report->coverage_note}{$note}");
     }
 }

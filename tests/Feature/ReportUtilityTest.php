@@ -176,3 +176,32 @@ it('records the impact on the open issue, which is what the overview counts', fu
 
     expect(IssueState::first()->impact)->toBe('serious');
 });
+
+it('says when a scan is not moving, and what to run', function () {
+    app(ReportDatabase::class)->install();
+    page('one', '<p>Fine.</p>');
+    $scan = runScan();
+
+    // A scan that finished is never stale, whatever its age.
+    $scan->update(['started_at' => now()->subHours(3), 'finished_at' => now()->subHours(3)]);
+    expect(reportPage())->not->toContain('This scan is not moving');
+
+    // Queued twenty minutes ago and nothing read: stale, with the cure.
+    $scan->update(['status' => Scan::QUEUED, 'finished_at' => null, 'started_at' => null, 'created_at' => now()->subMinutes(20)]);
+    \Bpmore\A11yReport\Models\ScanPage::where('scan_id', $scan->id)->update(['status' => 'pending', 'scanned_at' => null]);
+    $text = reportPage();
+    expect($text)->toContain('This scan is not moving');
+    expect($text)->toContain('has been <strong>queued</strong> for 20 minutes');
+    expect($text)->toContain('0 of 1 pages read and nothing read at all');
+    expect($text)->toContain('php artisan queue:work sync');
+    expect($text)->toContain('php please a11y:scan --resume='.$scan->uuid.' --sync');
+
+    // Running with a page read two minutes ago: moving, so no warning.
+    $scan->update(['status' => Scan::RUNNING, 'started_at' => now()->subMinutes(20)]);
+    \Bpmore\A11yReport\Models\ScanPage::where('scan_id', $scan->id)->update(['status' => 'scanned', 'scanned_at' => now()->subMinutes(2)]);
+    expect(reportPage())->not->toContain('This scan is not moving');
+
+    // And the wait is configurable.
+    config()->set('statamic-a11y-report.scan.stale_after_minutes', 1);
+    expect(reportPage())->toContain('has been <strong>running</strong> for 2 minutes');
+});

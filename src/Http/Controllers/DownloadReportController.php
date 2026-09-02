@@ -21,13 +21,18 @@ class DownloadReportController extends CpController
         $path = $writer->absolutePath(match ($format) {
             'html' => $report->html_path,
             'json' => $report->json_path,
+            'pdf' => $report->pdf_path,
             default => null,
         });
 
         abort_if($path === null || ! is_file($path), 404);
 
         return response()->file($path, [
-            'Content-Type' => $format === 'json' ? 'application/json' : 'text/html; charset=utf-8',
+            'Content-Type' => match ($format) {
+                'json' => 'application/json',
+                'pdf' => 'application/pdf',
+                default => 'text/html; charset=utf-8',
+            },
             'Content-Disposition' => 'inline; filename="accessibility-conformance-report-'.$uuid.'.'.$format.'"',
         ]);
     }

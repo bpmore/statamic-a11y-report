@@ -12,6 +12,78 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The PDF is Chrome's own command line, plus one incremental update
+
+The last pillar of the brief: the conformance document as a tagged PDF,
+generated from the HTML by headless Chrome and kept beside it.
+
+**Chrome's command line, not the DevTools protocol.** The brief expected
+`Page.printToPDF` with `generateTaggedPDF`, driven over CDP because
+Browsershot does not expose it. That would have meant a WebSocket client in
+PHP or a Node dependency. Tried first instead: `--print-to-pdf` on Chrome 151
+against the real hada.farm report. The output was already tagged with no flag
+at all: a structure tree with Document, H1, H2, P, Table, TR, TH, TD, Caption
+and Link, `/MarkInfo /Marked true`, and `/Lang (en)` from the root element.
+`--generate-pdf-document-outline` added the outline. `--export-tagged-pdf` is
+passed anyway for versions that needed asking. Nothing the protocol offers
+this document is missing from the flags, so the protocol is not used.
+
+**Chrome does not always exit.** The new headless mode kept background
+services alive and the first run hung after writing the file. The printer
+waits for a complete file, one ending in `%%EOF` that has stopped growing,
+and then stops Chrome itself if it is still there, inside the configured
+timeout. Each run gets its own throwaway profile with sync, extensions and
+background networking off.
+
+**The XMP title is an incremental update.** PDF/UA wants the document title
+in XMP metadata and the viewer preference that shows it instead of the file
+name, and Chrome writes neither. Chrome writes a classic cross-reference
+table and a plain-text catalog, so the update is what PDF was designed for:
+append a metadata stream, re-declare the catalog with `/Metadata` and
+`/ViewerPreferences`, add a cross-reference section with `/Prev` back to the
+old one. Nothing Chrome wrote is touched; the original bytes are the prefix
+of the result, which a test asserts, and every new cross-reference entry is
+checked against the byte it points at. A file with any other layout is
+refused with a sentence rather than guessed at.
+
+**No PDF/UA identifier.** The XMP could declare `pdfuaid:part="1"`, and
+veraPDF's PDF/UA profile expects it. It is not written, because Chrome's
+output has not been shown to pass a full PDF/UA validation, and a file that
+declares conformance it has not been shown to have is the failure this
+product exists to refuse, in the one artefact most likely to be forwarded to
+a lawyer. The CI test validates with the flavour forced and fails on the
+clauses this addon controls: the structure tree, the metadata title, the
+language. Everything else Chrome's output fails is reported, and is Chrome's,
+until it is not.
+
+**veraPDF runs in CI and not here.** It needs a Java runtime this machine
+does not have, and installing one is a decision for the machine's owner. The
+test skips without it and says so; the workflow installs it with IzPack's
+unattended answers file. That step was written without a runner to try it
+on, and the first run of the workflow is what proves it.
+
+**The stale scan warning, in the same change because it came from the same
+afternoon.** A scan queued from the control panel sat at "queued" with no
+page read, because the site's only worker was Horizon on the Redis queue and
+the scan was on the database one. The overview said "reload to watch it go".
+It now says how long the scan has been still, how many pages were read, the
+likely cause, and both cures: a worker for that connection, or `--resume
+--sync` from the command line. The wait is configurable and the test covers
+queued, running with recent progress, and finished.
+
+**Checked.** The suite, 130 tests, with the PDF tests running against the
+Chrome on this machine. On hada.farm: `a11y:report --format=all` wrote the
+three files; the PDF is tagged, has an outline, an XMP title, the display
+title preference, two `%%EOF`s, and every cross-reference entry of the update
+points at the object it names.
+
+**Not checked.** A full PDF/UA validation, which needs veraPDF. The PDF
+opened in a viewer, or read by a screen reader. The CI install step. And
+how Chrome behaves on a server with no display, beyond the flags known to
+be needed for that.
+
+---
+
 ## 2026-09-02: The criteria worksheet writes only what changed, under a name
 
 A third page under the utility: every success criterion for a site, or for

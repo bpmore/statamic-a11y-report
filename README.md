@@ -8,13 +8,16 @@ which stays free. The report is a paid addon.
 
 ## Status
 
-The scan layer, the overview, the HTML conformance report, the accessibility
-statement, the remediation queue and the criteria worksheet are built.
+The scan layer, the overview, the HTML and PDF conformance report, the
+accessibility statement, the remediation queue and the criteria worksheet
+are built.
 
 `php please a11y:scan` reads every published page on the queue, keeps every
 finding, records how much of each page the engine could see, and follows each
 problem from one scan to the next by a fingerprint of rule, target, site and
-path. The tagged PDF is not here yet.
+path. Every pillar in the brief is built. What is not: a full PDF/UA validation
+of the PDF outside CI, and the gate's entry sidebar showing a page's open
+issues, which belongs in the gate.
 
 ## Install
 
@@ -68,6 +71,20 @@ remove it.
 
 Reports can also be generated, listed and opened from the control panel, by
 anybody with the `generate accessibility reports` permission.
+
+**The PDF.** `--format=pdf` or `--format=all` prints the document with
+headless Chrome, which produces a tagged PDF with a structure tree, an
+outline, and the document language; the addon adds the title to the XMP
+metadata. Chrome or Chromium is found on the path, or set `A11Y_CHROME_PATH`.
+The file declares no PDF/UA conformance. What it has been checked for is in
+the decision log; what it has not is a full PDF/UA validation, which CI runs
+with veraPDF.
+
+**A scan that does not move.** Scans are queue jobs on the connection the
+site's `QUEUE_CONNECTION` names. If nothing works that connection (a site
+running Horizon works Redis, not the database), a scan sits at "queued". The
+overview says so after ten minutes, with the two cures: a worker for that
+connection, or `php please a11y:scan --resume=<id> --sync`.
 
 ## The accessibility statement
 

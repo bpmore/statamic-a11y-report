@@ -148,6 +148,8 @@ class ServiceProvider extends AddonServiceProvider
             'hasCompleteScan' => $installed && $overview->history(1)->first()?->status === \Bpmore\A11yReport\Models\Scan::COMPLETE,
             'reports' => $installed ? \Bpmore\A11yReport\Models\Report::query()->when($site !== null, fn ($q) => $q->where('site', $site))->with('scan')->orderByDesc('id')->limit(20)->get() : collect(),
             'queueIsSync' => config('queue.default') === 'sync',
+            'queueConnection' => (string) config('queue.default'),
+            'stale' => $installed ? $overview->stale((int) config('statamic-a11y-report.scan.stale_after_minutes', 10)) : null,
             'engine' => (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY),
         ];
     }
@@ -182,7 +184,16 @@ class ServiceProvider extends AddonServiceProvider
             (array) config('statamic-a11y-report.report', []),
         ));
 
-        $this->app->bind(ReportWriter::class, fn ($app) => new ReportWriter($app, $app->make(ReportBuilder::class)));
+        $this->app->bind(\Bpmore\A11yReport\Pdf\ChromePrinter::class, fn () => new \Bpmore\A11yReport\Pdf\ChromePrinter(
+            config('statamic-a11y-report.chrome.binary'),
+            (int) config('statamic-a11y-report.chrome.timeout', 30),
+        ));
+
+        $this->app->bind(ReportWriter::class, fn ($app) => new ReportWriter(
+            $app,
+            $app->make(ReportBuilder::class),
+            $app->make(\Bpmore\A11yReport\Pdf\ChromePrinter::class),
+        ));
 
         $this->app->bind(\Bpmore\A11yReport\Worksheet\Worksheet::class, fn ($app) => new \Bpmore\A11yReport\Worksheet\Worksheet(
             new \Bpmore\A11yReport\Document\ScanEvidence($app->make(ScanEngine::class)),

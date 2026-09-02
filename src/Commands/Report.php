@@ -20,7 +20,7 @@ class Report extends Command
     protected $signature = 'statamic:a11y:report
         {--scan= : The id of the scan to report on. Default is the latest complete scan.}
         {--site= : With no --scan, the latest complete scan of this site.}
-        {--format=all : html, json, or all.}
+        {--format=all : html, json, pdf, or all. The PDF needs Chrome.}
         {--out= : A directory to copy the files into as well.}';
 
     protected $description = 'Generate an accessibility conformance report from a completed scan.';
@@ -43,10 +43,19 @@ class Report extends Command
 
         $format = (string) $this->option('format');
         $formats = $format === 'all' ? ReportWriter::FORMATS : [$format];
+        $pdfWarning = null;
+
+        // "all" means everything this machine can produce. A machine with no
+        // Chrome still gets the document and its data, and is told what it
+        // did not get. Asking for the PDF by name and not getting it fails.
+        if ($format === 'all' && ! $writer->pdfAvailable()) {
+            $formats = array_values(array_diff($formats, ['pdf']));
+            $pdfWarning = 'No PDF: no Chrome or Chromium was found. Set A11Y_CHROME_PATH to produce one.';
+        }
 
         try {
             $report = $writer->write($scan, 'console', $formats);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException|\Bpmore\A11yReport\Pdf\ChromeUnavailable $e) {
             $this->error($e->getMessage());
 
             return 1;
@@ -56,7 +65,7 @@ class Report extends Command
         $this->line("  Report <options=bold>{$report->uuid}</> generated from scan {$scan->uuid}.");
         $this->line("  {$report->coverage_note}");
 
-        foreach (['html_path', 'json_path'] as $column) {
+        foreach (['html_path', 'json_path', 'pdf_path'] as $column) {
             if ($report->{$column}) {
                 $path = $writer->absolutePath($report->{$column});
                 $this->line("  {$path}");
@@ -73,6 +82,10 @@ class Report extends Command
 
         if ($out = $this->option('out')) {
             $this->line("  Copied to {$out}");
+        }
+
+        if ($pdfWarning !== null) {
+            $this->warn("  {$pdfWarning}");
         }
 
         $this->line('');

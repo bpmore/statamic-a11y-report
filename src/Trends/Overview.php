@@ -7,6 +7,7 @@ namespace Bpmore\A11yReport\Trends;
 use Bpmore\A11yReport\Engine\Finding;
 use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Scan;
+use Bpmore\A11yReport\Models\ScanPage;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -35,6 +36,40 @@ final class Overview
     public function latest(): ?Scan
     {
         return $this->scans()->orderByDesc('id')->first();
+    }
+
+    /**
+     * The latest scan, when it is queued or running and nothing has happened
+     * to it for longer than the configured wait.
+     *
+     * A scan on a queue nobody is working looks exactly like a scan that is
+     * about to start, and it looked that way for an afternoon on a site
+     * whose only worker served a different queue. "Reload to watch it go"
+     * was the page's whole advice. Now it says how long it has been, and
+     * what to run.
+     *
+     * @return array{scan: Scan, minutes: int, pages_read: int}|null
+     */
+    public function stale(int $afterMinutes = 10): ?array
+    {
+        $scan = $this->latest();
+
+        if ($scan === null || ! in_array($scan->status, [Scan::QUEUED, Scan::RUNNING], true)) {
+            return null;
+        }
+
+        $lastActivity = ScanPage::where('scan_id', $scan->id)->max('scanned_at');
+        $since = $lastActivity !== null ? Carbon::parse($lastActivity) : ($scan->started_at ?? $scan->created_at);
+
+        if ($since === null || $since->greaterThan(now()->subMinutes($afterMinutes))) {
+            return null;
+        }
+
+        return [
+            'scan' => $scan,
+            'minutes' => (int) $since->diffInMinutes(now()),
+            'pages_read' => (int) ScanPage::where('scan_id', $scan->id)->where('status', ScanPage::SCANNED)->count(),
+        ];
     }
 
     /** @return Collection<int, Scan> newest first */

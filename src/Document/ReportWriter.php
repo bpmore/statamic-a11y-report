@@ -6,6 +6,8 @@ namespace Bpmore\A11yReport\Document;
 
 use Bpmore\A11yReport\Models\Report;
 use Bpmore\A11yReport\Models\Scan;
+use Bpmore\A11yReport\Pdf\ChromePrinter;
+use Bpmore\A11yReport\Pdf\PdfMetadata;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\View;
 
@@ -20,29 +22,43 @@ use Illuminate\Support\Facades\View;
  */
 final class ReportWriter
 {
-    public const FORMATS = ['html', 'json'];
+    public const FORMATS = ['html', 'json', 'pdf'];
+
+    /** What a report is by default: the document and its data. The PDF is asked for. */
+    public const DEFAULT_FORMATS = ['html', 'json'];
 
     public function __construct(
         private readonly Application $app,
         private readonly ReportBuilder $builder,
+        private readonly ChromePrinter $printer,
     ) {}
 
     /**
      * @param  array<int, string>  $formats
      */
-    public function write(Scan $scan, ?string $generatedBy, array $formats = self::FORMATS): Report
+    public function write(Scan $scan, ?string $generatedBy, array $formats = self::DEFAULT_FORMATS): Report
     {
         foreach ($formats as $format) {
             if (! in_array($format, self::FORMATS, true)) {
-                throw new \InvalidArgumentException("There is no [{$format}] format yet. Available: ".implode(', ', self::FORMATS).'.');
+                throw new \InvalidArgumentException("There is no [{$format}] format. Available: ".implode(', ', self::FORMATS).'.');
             }
         }
 
         $data = $this->builder->build($scan, $generatedBy);
         $paths = [];
 
-        if (in_array('html', $formats, true)) {
+        // The PDF is printed from the HTML file, so asking for the PDF is
+        // asking for the HTML too: the document is the source and stays
+        // beside its rendering.
+        if (in_array('html', $formats, true) || in_array('pdf', $formats, true)) {
             $paths['html_path'] = $this->store($data['uuid'].'.html', self::html($data));
+        }
+
+        if (in_array('pdf', $formats, true)) {
+            $pdf = $this->app->storagePath('a11y-report/reports/'.$data['uuid'].'.pdf');
+            $this->printer->print($this->app->storagePath($paths['html_path']), $pdf);
+            PdfMetadata::stamp($pdf, self::pdfTitle($data), $data['lang'], $data['generator']);
+            $paths['pdf_path'] = 'a11y-report/reports/'.$data['uuid'].'.pdf';
         }
 
         if (in_array('json', $formats, true)) {
@@ -69,6 +85,19 @@ final class ReportWriter
     public static function html(array $data): string
     {
         return View::make('a11y-report::report.document', ['r' => $data])->render();
+    }
+
+    public function pdfAvailable(): bool
+    {
+        return $this->printer->available();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public static function pdfTitle(array $data): string
+    {
+        return $data['title'].': '.$data['subject']['name'].', '.\Illuminate\Support\Carbon::parse($data['generated_at'])->format('j F Y');
     }
 
     /** Where a report's file is on disk, from the relative path the row keeps. */

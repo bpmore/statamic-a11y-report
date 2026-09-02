@@ -265,7 +265,7 @@ it('runs as a command and copies the files where asked', function () {
     scannedSite();
     $out = $this->storage.'/out';
 
-    $this->artisan('statamic:a11y:report', ['--out' => $out])
+    $this->artisan('statamic:a11y:report', ['--out' => $out, '--format' => 'html'])
         ->expectsOutputToContain('generated from scan')
         ->expectsOutputToContain('had automated checks')
         ->expectsOutputToContain('A self-assessment, not a certification')
@@ -274,9 +274,9 @@ it('runs as a command and copies the files where asked', function () {
     expect(Report::count())->toBe(1);
     expect(Report::first()->generated_by)->toBe('console');
     expect(glob($out.'/*.html'))->toHaveCount(1);
-    expect(glob($out.'/*.json'))->toHaveCount(1);
+    expect(glob($out.'/*.json'))->toHaveCount(0);
 
-    $this->artisan('statamic:a11y:report', ['--format' => 'pdf'])->expectsOutputToContain('There is no [pdf] format yet')->assertExitCode(1);
+    $this->artisan('statamic:a11y:report', ['--format' => 'docx'])->expectsOutputToContain('There is no [docx] format')->assertExitCode(1);
     $this->artisan('statamic:a11y:report', ['--scan' => 'nope'])->expectsOutputToContain('no complete scan')->assertExitCode(1);
 });
 

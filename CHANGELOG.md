@@ -60,4 +60,13 @@ site or as a global default. Only rows that changed are written, each with
 the assessor's name and the date, behind a new `assess accessibility
 criteria` permission.
 
-Not yet: the PDF. 
+**The tagged PDF.** `a11y:report --format=pdf` (or `all`) prints the
+document with headless Chrome, which tags it, and adds the XMP title and the
+display-title preference as an incremental update. Set `A11Y_CHROME_PATH` if
+Chrome is not on the path. The control panel produces the PDF when Chrome is
+found and says so when it is not. No PDF/UA conformance is declared in the
+file; CI validates the tagging, title and language with veraPDF.
+
+**The stale scan warning.** The overview says when a scan has been queued or
+running with nothing read for longer than `scan.stale_after_minutes`, the
+likely cause, and what to run. 

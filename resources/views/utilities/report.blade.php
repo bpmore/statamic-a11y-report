@@ -43,6 +43,23 @@
         </div>
     @endif
 
+    @if ($stale)
+        <ui-card-panel heading="This scan is not moving">
+            <div class="space-y-2">
+                <p>
+                    Scan <code>@plain($stale['scan']->uuid)</code> has been <strong>@plain($stale['scan']->status)</strong> for {{ $stale['minutes'] }} {{ $stale['minutes'] === 1 ? 'minute' : 'minutes' }}
+                    with {{ $stale['pages_read'] }} of {{ $stale['scan']->pages_total }} pages read{{ $stale['pages_read'] === 0 ? ' and nothing read at all' : '' }}.
+                </p>
+                <p>
+                    Scans run as jobs on the <code>@plain($queueConnection)</code> queue connection. The usual cause is that no worker is processing that connection: a site running Horizon, for example, works the Redis queue and not the database one. Either run a worker for it:
+                </p>
+                <pre class="text-sm">php artisan queue:work @plain($queueConnection)</pre>
+                <p>Or finish this scan in one process from the command line, which needs no worker:</p>
+                <pre class="text-sm">php please a11y:scan --resume=@plain($stale['scan']->uuid) --sync</pre>
+            </div>
+        </ui-card-panel>
+    @endif
+
     <div class="grid gap-6 md:grid-cols-2">
 
         <ui-card-panel heading="Open now">
@@ -200,6 +217,7 @@
                                     <div class="flex gap-2">
                                         @if ($report->html_path)<ui-button size="sm" href="@plain(cp_route('utilities.a11y-report.reports.download', ['uuid' => $report->uuid, 'format' => 'html']))" target="_blank" text="HTML" />@endif
                                         @if ($report->json_path)<ui-button size="sm" href="@plain(cp_route('utilities.a11y-report.reports.download', ['uuid' => $report->uuid, 'format' => 'json']))" target="_blank" text="JSON" />@endif
+                                        @if ($report->pdf_path)<ui-button size="sm" href="@plain(cp_route('utilities.a11y-report.reports.download', ['uuid' => $report->uuid, 'format' => 'pdf']))" target="_blank" text="PDF" />@endif
                                     </div>
                                 </ui-table-cell>
                             </ui-table-row>

@@ -69,6 +69,12 @@ the PDF when Chrome is found and says so when it is not. The file declares
 PDF/UA-1, and the suite validates that declaration with veraPDF wherever it
 is installed, CI included: a real report passes every check.
 
+**Issues on removed pages close.** An open issue on a page that a full scan
+of its site and collection did not meet is marked "page removed", with a
+resolved time, and reopens if the page comes back with the problem. A scan
+narrowed by `--since`, by site or collection, or by an excluded URL closes
+nothing it could not have met.
+
 **The stale scan warning.** The overview says when a scan has been queued or
 running with nothing read for longer than `scan.stale_after_minutes`, the
 likely cause, and what to run. 

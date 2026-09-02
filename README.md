@@ -123,7 +123,9 @@ collection and assignee, oldest and most serious first. Anybody with the
 `manage accessibility issues` permission can tick issues and set a status, an
 assignee and a note, or apply the change to everything the filter matches. A
 scan never reopens an issue marked won't fix or false positive, and reopens a
-fixed one only if the problem comes back.
+fixed one only if the problem comes back. An issue on a page that a full scan
+no longer meets, because the page was unpublished, deleted or moved, is
+marked "page removed" rather than fixed.
 
 Criteria, the third page, is the worksheet: every success criterion with the
 automated evidence from the latest scan, the result the report will print,

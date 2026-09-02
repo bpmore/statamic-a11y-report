@@ -182,7 +182,7 @@
                                 <label class="text-sm"><input type="checkbox" name="all_matching" value="1"> Apply to all {{ $issues->total() }} matching the current filter, not only the ticked ones</label>
                                 <ui-button type="submit" variant="primary" size="sm" text="Apply" />
                             </div>
-                            <ui-description text="A scan never reopens an issue marked won't fix or false positive. It reopens a fixed one only if the problem comes back." />
+                            <ui-description text="A scan never reopens an issue marked won't fix or false positive. It reopens a fixed one, or one whose page was removed, only if the problem comes back." />
                         </fieldset>
                     @endif
                 </form>

@@ -391,11 +391,12 @@ final class Scans
 
                     $changes = ['last_seen_at' => $now, 'last_scan_id' => $scan->id, 'url' => $issue->url, 'impact' => $issue->impact];
 
-                    // Back after being fixed is a regression, and it reopens.
+                    // Back after being fixed is a regression, and back after
+                    // its page was removed is the page returning; both reopen.
                     // "Won't fix" and "false positive" are left exactly as the
                     // person set them: the scanner reports, it does not
                     // overrule.
-                    if ($state->status === IssueState::FIXED) {
+                    if (in_array($state->status, IssueState::reopenableByScan(), true)) {
                         $changes['status'] = IssueState::OPEN;
                         $changes['resolved_at'] = null;
                     }
@@ -423,6 +424,63 @@ final class Scans
                             'last_scan_id' => $scan->id,
                             'updated_by' => null,
                         ]);
+                }
+            });
+
+        $this->closeIssuesOnRemovedPages($scan, $now);
+    }
+
+    /**
+     * An open issue on a page this scan should have met and did not is an
+     * issue on a page that is no longer served: unpublished, deleted, or
+     * moved. It is marked as such, never as fixed.
+     *
+     * Only a scan that enumerated everything the page could have been among
+     * can say that. A scan narrowed by `--since` never enumerates unchanged
+     * pages, so absence means nothing there; a scan narrowed to a site or a
+     * collection can only speak for those; and a page matching an excluded
+     * URL was left out on purpose. A page that errored has a row and is not
+     * absent: it is unknown, and unknown is not removed. Found on a test
+     * site where the home page moved from /home to / and its footer issue
+     * stayed open with nothing that would ever close it.
+     */
+    private function closeIssuesOnRemovedPages(Scan $scan, \Illuminate\Support\Carbon $now): void
+    {
+        $scope = $this->scopeOf($scan);
+
+        if ($scope->since !== null) {
+            return;
+        }
+
+        $met = ScanPage::where('scan_id', $scan->id)
+            ->get(['site', 'path'])
+            ->map(fn (ScanPage $p) => Fingerprint::page($p->site, $p->path))
+            ->flip();
+
+        IssueState::query()
+            ->join('a11y_issues', function ($join) {
+                $join->on('a11y_issues.fingerprint', '=', 'a11y_issue_states.fingerprint')
+                    ->on('a11y_issues.scan_id', '=', 'a11y_issue_states.last_scan_id');
+            })
+            ->join('a11y_scan_pages', 'a11y_scan_pages.id', '=', 'a11y_issues.page_id')
+            ->whereIn('a11y_issue_states.status', IssueState::closableByScan())
+            ->when($scope->sites !== [], fn ($q) => $q->whereIn('a11y_issue_states.site', $scope->sites))
+            ->when($scope->collections !== [], fn ($q) => $q->whereIn('a11y_scan_pages.collection', $scope->collections))
+            ->select(['a11y_issue_states.fingerprint', 'a11y_issue_states.site', 'a11y_issue_states.path', 'a11y_issue_states.url'])
+            ->orderBy('a11y_issue_states.fingerprint')
+            ->chunk(500, function (Collection $states) use ($met, $scope, $scan, $now) {
+                $gone = $states
+                    ->filter(fn ($s) => ! $met->has(Fingerprint::page($s->site, $s->path)))
+                    ->filter(fn ($s) => $scope->excludeUrls === [] || ! Str::is($scope->excludeUrls, $s->url))
+                    ->pluck('fingerprint');
+
+                if ($gone->isNotEmpty()) {
+                    IssueState::whereIn('fingerprint', $gone->all())->update([
+                        'status' => IssueState::PAGE_REMOVED,
+                        'resolved_at' => $now,
+                        'last_scan_id' => $scan->id,
+                        'updated_by' => null,
+                    ]);
                 }
             });
     }

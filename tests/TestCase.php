@@ -76,6 +76,12 @@ abstract class TestCase extends AddonTestCase
         parent::setUp();
 
         config()->set('statamic-a11y-report.connection', 'a11y_testing');
+
+        // The settings screen saves to a real file in the app's resource
+        // path, and a test that saves one would otherwise decide the answer
+        // for every test after it. Cleared before each, so every test starts
+        // from "nobody has opened the settings screen".
+        \Illuminate\Support\Facades\File::delete(resource_path('addons/statamic-a11y-report.yaml'));
     }
 
     /**

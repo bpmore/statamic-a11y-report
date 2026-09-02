@@ -1,0 +1,176 @@
+# The addon's settings, as a form in the control panel, at Addons,
+# Accessibility Report, Settings.
+#
+# Everything here is written for the person who was handed the site: the one
+# who writes the statement and signs the report, and who cannot edit a PHP
+# file. The form wins once it has been saved; the developer's file answers
+# until then. Every default below matches that file, and a test checks it,
+# because a screen showing a state the addon is not in is worse than none.
+#
+# Not here, on purpose: the database, the engine, the browser, the queue, the
+# thresholds a deploy pipeline fails on. Those are a developer's, and a wrong
+# value for any of them stops scans rather than changing a sentence.
+
+tabs:
+  report:
+    display: Report
+    sections:
+      -
+        display: 'The standard'
+        fields:
+          -
+            handle: standard
+            field:
+              type: select
+              display: 'Report against'
+              instructions: 'Which version of WCAG the conformance table lists. 2.2 has 55 Level A and AA success criteria; 2.1 has 50, and is what EN 301 549 still refers to. Level AAA is not offered: most of it is judged on meaning by a person, and a table that lists it invites a claim nothing here can support.'
+              options:
+                wcag22aa: 'WCAG 2.2 Level AA'
+                wcag21aa: 'WCAG 2.1 Level AA'
+              default: wcag22aa
+              clearable: false
+              width: 50
+      -
+        display: 'Who evaluated the site'
+        instructions: 'Printed on the cover of every report. A conformance document with no name on it is worthless as evidence.'
+        fields:
+          -
+            handle: evaluator_name
+            field:
+              type: text
+              display: 'Evaluator'
+              width: 50
+          -
+            handle: evaluator_organization
+            field:
+              type: text
+              display: 'Organisation'
+              width: 50
+          -
+            handle: evaluator_email
+            field:
+              type: text
+              input_type: email
+              display: 'Contact for questions about the report'
+              width: 50
+          -
+            handle: remediation_plan
+            field:
+              type: textarea
+              display: 'Remediation plan'
+              instructions: 'Printed as the last section of the report. What will be fixed, by when. Leave it empty and the report says no plan has been recorded.'
+  statement:
+    display: 'Public statement'
+    sections:
+      -
+        display: 'The accessibility statement'
+        instructions: 'The page at /accessibility on every site. What it says about conformance comes from the latest report and cannot be set here. What it says about you comes from here.'
+        fields:
+          -
+            handle: statement_template
+            field:
+              type: select
+              display: 'Written for'
+              instructions: 'The EU form always includes an enforcement section, as EN 301 549 statements must.'
+              options:
+                section508: 'United States (Section 508)'
+                en301549: 'European Union (EN 301 549)'
+              default: section508
+              clearable: false
+              width: 50
+          -
+            handle: statement_organization
+            field:
+              type: text
+              display: 'Organisation named in the statement'
+              instructions: 'Leave empty to use the site name.'
+              width: 50
+          -
+            handle: statement_commitment
+            field:
+              type: textarea
+              display: 'Your commitment'
+              instructions: 'The opening paragraph, in your words. Leave empty for a plain sentence saying the organisation is committed to making the site accessible.'
+          -
+            handle: statement_feedback
+            field:
+              type: textarea
+              display: 'How to give feedback'
+              instructions: 'What somebody who finds a problem should do. Leave empty for a plain invitation to get in touch.'
+      -
+        display: 'Contact details'
+        fields:
+          -
+            handle: statement_email
+            field:
+              type: text
+              input_type: email
+              display: 'Email'
+              width: 50
+          -
+            handle: statement_phone
+            field:
+              type: text
+              display: 'Phone'
+              width: 50
+          -
+            handle: statement_url
+            field:
+              type: text
+              display: 'Feedback form or page'
+              width: 50
+          -
+            handle: statement_address
+            field:
+              type: text
+              display: 'Postal address'
+              width: 50
+          -
+            handle: statement_escalation
+            field:
+              type: textarea
+              display: 'If feedback goes unanswered'
+              instructions: 'Who to write to next, and after how long.'
+      -
+        display: 'Enforcement body'
+        instructions: 'Required in an EN 301 549 statement. Optional otherwise, and shown when named.'
+        fields:
+          -
+            handle: enforcement_name
+            field:
+              type: text
+              display: 'Name'
+              width: 50
+          -
+            handle: enforcement_url
+            field:
+              type: text
+              display: 'Web address'
+              width: 50
+  scanning:
+    display: Scanning
+    sections:
+      -
+        display: 'What a scan covers'
+        instructions: 'A page left out here is never read, never counted, and never in a report. That is right for a collection with no public pages and a quiet hole for anything else.'
+        fields:
+          -
+            handle: scan_collections
+            field:
+              type: collections
+              display: 'Collections to scan'
+              instructions: 'Leave this empty and every collection is scanned, unless your developer chose a narrower set when installing the addon; then that set stands until you choose here.'
+              mode: select
+          -
+            handle: scan_sites
+            field:
+              type: sites
+              display: 'Sites to scan'
+              instructions: 'Leave this empty and every site is scanned, unless your developer chose a narrower set when installing; then that set stands until you choose here.'
+              mode: select
+          -
+            handle: scan_exclude_urls
+            field:
+              type: list
+              display: 'Addresses to leave out'
+              instructions: 'One pattern per line, matched against the whole address. An asterisk stands for anything: */print/* leaves out every printable version.'

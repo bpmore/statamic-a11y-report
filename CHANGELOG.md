@@ -69,6 +69,13 @@ the PDF when Chrome is found and says so when it is not. The file declares
 PDF/UA-1, and the suite validates that declaration with veraPDF wherever it
 is installed, CI included: a real report passes every check.
 
+**A settings screen.** Addons, Accessibility Report, Settings: the WCAG
+version to report against (2.2 or 2.1 Level AA), the evaluator, the
+remediation plan, everything the public statement says about you, and the
+scan's scope. The screen wins once saved; the config file answers until
+then. The `report.standard` config default is now `wcag22aa` rather than
+following the scan.
+
 **The chart keeps its shape.** Text and markers are no longer stretched to
 the panel's width; scans within a day of each other are spaced evenly and
 labelled with the time; the latest value no longer sits on its marker.

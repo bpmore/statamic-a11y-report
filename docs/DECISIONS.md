@@ -12,6 +12,61 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: Settings belong in the control panel, and the version is the first of them
+
+A settings screen at Addons, Accessibility Report, Settings, on Statamic's
+own addon settings mechanism: a blueprint is the whole implementation, the
+screen wins once saved, the config file answers until then. The gate's
+decision of 2026-08-12 makes the case and it is stronger here: the person
+handed the site is the one who writes the statement and signs the report.
+
+**What is on it.** The WCAG version the conformance table lists, 2.2 or 2.1.
+The evaluator, printed on every cover. The remediation plan. Everything the
+statement says about the organisation: template, name, commitment, feedback,
+contact details, escalation, enforcement body. And the scan's scope: which
+collections and sites, and the addresses to leave out.
+
+**What is not, on purpose.** The database, the engine, the browser, the
+queue concurrency, the schedule, the retention, the appendix cap, the
+statement's route and layout, and the thresholds a deploy fails on. Each is
+a developer's, and a wrong value stops scans rather than changing a
+sentence. A test pins the list, so a setting added to the file has to be
+placed on one side or the other.
+
+**No Level AAA.** The screen offers 2.1 AA and 2.2 AA and says why there is
+no third choice: WCAG advises against requiring AAA site-wide, most of it is
+judged on meaning by a person, and a table that lists it invites a claim
+nothing here can support. A Level A only view was considered and had no
+demand to answer.
+
+**The three rules taken from the gate, and one more.** Whether the screen
+was saved is the question, not whether it has values; `raw()` not `all()`;
+nulls only are dropped. And: an empty text field is the file's to answer,
+because the settings store does not keep an empty list at all, so "leave
+this empty to scan everything" is true only where the file says everything
+too. The instruction on the screen says so.
+
+**A limit shared with the gate, stated rather than hidden.** An unsaved
+screen shows the shipped defaults, not a developer's edits to the config
+file, because Statamic fills an unsaved form from the blueprint. The test
+site's file names an evaluator and the screen shows the field empty until
+first saved. Saving an empty field does not erase the file's value, so the
+worst case is a screen that understates what is in force. Rejected: writing
+the file's values into the settings store at boot, which is a write on every
+request for a display problem.
+
+**Checked.** The suite, 150 tests, including that every field maps to a
+setting and every mapped setting to a field, that the screen's defaults
+match the file's, that a saved screen reaches the report cover, the
+conformance table and the statement page, and that an untouched field never
+overrules the file. On the test site over HTTP: the screen renders with every
+section and the utility links to it.
+
+**Not checked.** On screen, and a save from the real form rather than from
+the settings repository.
+
+---
+
 ## 2026-09-02: The chart keeps its shape, and one afternoon's scans are spaced evenly
 
 The first screenshot of the overview showed the chart stretched: letters

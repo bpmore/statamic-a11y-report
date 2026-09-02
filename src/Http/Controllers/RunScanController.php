@@ -27,7 +27,7 @@ use Statamic\Http\Controllers\CP\CpController;
  */
 class RunScanController extends CpController
 {
-    public function __invoke(Request $request, Scans $scans, ReportDatabase $database)
+    public function __invoke(Request $request, Scans $scans, ReportDatabase $database, \Bpmore\A11yReport\Settings $settings)
     {
         abort_unless(User::current()?->can('run accessibility scans'), 403);
 
@@ -42,7 +42,7 @@ class RunScanController extends CpController
         $site = $request->input('site');
         $sites = $site && Site::get($site) ? [$site] : [];
 
-        $scope = ScanScope::fromConfig((array) config('statamic-a11y-report.scan', []), $sites);
+        $scope = ScanScope::fromConfig($settings->block('scan'), $sites);
         $scan = $scans->create($scope, Scan::TRIGGER_MANUAL, User::current()?->email());
 
         StartScan::dispatch($scan->id);

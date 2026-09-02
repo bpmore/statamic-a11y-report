@@ -43,6 +43,7 @@ class CriteriaController extends CpController
                 'criteriaUrl' => cp_route('utilities.a11y-report.criteria'),
                 'indexUrl' => cp_route('utilities.a11y-report.issues'),
                 'overviewUrl' => cp_route('utilities.index').'/a11y-report',
+            'settingsUrl' => \Statamic\Facades\Addon::get(\Bpmore\A11yReport\Settings::PACKAGE)?->settingsUrl(),
             ])->render(),
         ]);
     }

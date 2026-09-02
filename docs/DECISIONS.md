@@ -12,6 +12,402 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The PDF declares PDF/UA-1, because it now validates
+
+Reverses one paragraph of the entry below it, written the same afternoon:
+"No PDF/UA identifier". The reasoning there was right and its premise
+changed within the hour. veraPDF was installed here, and the file was
+validated rather than assumed.
+
+**What veraPDF found on the first run, and what was done about each.** Five
+rules failed. Two link annotations had no alternate description: the one
+cross-reference link on the cover, which is now plain text, since a document
+of eight pages does not need a hyperlink to its own third section. Five
+structure elements were of a type ISO 32000 does not define: Chrome writes
+`Strong` for an HTML strong element. The metadata update now re-declares the
+structure tree root with a role map for every non-standard type it finds in
+the file, mapped to the nearest standard one, and a unit test hands it a
+tree with a `Strong` and a `P` and checks only the first is mapped. Ten
+content items were neither tagged nor marked as artifacts, one per page and
+one per section heading: CSS borders and the page background fill, which
+Chrome prints as untagged paths. The print stylesheet drops them; the paper
+is white and the headings are headings without a rule under them. After
+those three, the only failure was the missing identifier.
+
+**So the identifier is written, and the test demands full compliance.** A
+file that declares conformance it has not been shown to have is the failure
+this product exists to refuse. A file that declares conformance the suite
+proves on every run, wherever veraPDF is installed, is the opposite of that:
+the declaration and the validation travel together, and a template change
+that breaks any PDF/UA rule turns the test red before a file that still
+declares conformance can be generated. Not a subset of clauses, as the first
+version of the test asserted. All of them, because "the ones this addon
+controls" was a line drawn before anyone knew whether the rest passed.
+
+**A test that was passing vacuously.** `expect($pdf)->toContain($needle,
+'message')` searches the PDF for the message as a second needle. The gate's
+`CLAUDE.md` says so in as many words and it was written here anyway. Every
+such call in the suite was replaced with an explicit boolean assertion.
+
+**Checked.** The suite, 133 tests, with veraPDF installed: the generated PDF
+is PDF/UA-1 compliant. On hada.farm: the regenerated report's PDF passes
+50,059 checks with none failed.
+
+**Not checked.** The PDF read by a screen reader, which is what the tagging
+is for; veraPDF checks the structure, not the experience. The CI install
+step for veraPDF, which has still not run.
+
+---
+
+## 2026-09-02: The PDF is Chrome's own command line, plus one incremental update
+
+The last pillar of the brief: the conformance document as a tagged PDF,
+generated from the HTML by headless Chrome and kept beside it.
+
+**Chrome's command line, not the DevTools protocol.** The brief expected
+`Page.printToPDF` with `generateTaggedPDF`, driven over CDP because
+Browsershot does not expose it. That would have meant a WebSocket client in
+PHP or a Node dependency. Tried first instead: `--print-to-pdf` on Chrome 151
+against the real hada.farm report. The output was already tagged with no flag
+at all: a structure tree with Document, H1, H2, P, Table, TR, TH, TD, Caption
+and Link, `/MarkInfo /Marked true`, and `/Lang (en)` from the root element.
+`--generate-pdf-document-outline` added the outline. `--export-tagged-pdf` is
+passed anyway for versions that needed asking. Nothing the protocol offers
+this document is missing from the flags, so the protocol is not used.
+
+**Chrome does not always exit.** The new headless mode kept background
+services alive and the first run hung after writing the file. The printer
+waits for a complete file, one ending in `%%EOF` that has stopped growing,
+and then stops Chrome itself if it is still there, inside the configured
+timeout. Each run gets its own throwaway profile with sync, extensions and
+background networking off.
+
+**The XMP title is an incremental update.** PDF/UA wants the document title
+in XMP metadata and the viewer preference that shows it instead of the file
+name, and Chrome writes neither. Chrome writes a classic cross-reference
+table and a plain-text catalog, so the update is what PDF was designed for:
+append a metadata stream, re-declare the catalog with `/Metadata` and
+`/ViewerPreferences`, add a cross-reference section with `/Prev` back to the
+old one. Nothing Chrome wrote is touched; the original bytes are the prefix
+of the result, which a test asserts, and every new cross-reference entry is
+checked against the byte it points at. A file with any other layout is
+refused with a sentence rather than guessed at.
+
+**No PDF/UA identifier.** The XMP could declare `pdfuaid:part="1"`, and
+veraPDF's PDF/UA profile expects it. It is not written, because Chrome's
+output has not been shown to pass a full PDF/UA validation, and a file that
+declares conformance it has not been shown to have is the failure this
+product exists to refuse, in the one artefact most likely to be forwarded to
+a lawyer. The CI test validates with the flavour forced and fails on the
+clauses this addon controls: the structure tree, the metadata title, the
+language. Everything else Chrome's output fails is reported, and is Chrome's,
+until it is not.
+
+**veraPDF runs in CI and not here.** It needs a Java runtime this machine
+does not have, and installing one is a decision for the machine's owner. The
+test skips without it and says so; the workflow installs it with IzPack's
+unattended answers file. That step was written without a runner to try it
+on, and the first run of the workflow is what proves it.
+
+**The stale scan warning, in the same change because it came from the same
+afternoon.** A scan queued from the control panel sat at "queued" with no
+page read, because the site's only worker was Horizon on the Redis queue and
+the scan was on the database one. The overview said "reload to watch it go".
+It now says how long the scan has been still, how many pages were read, the
+likely cause, and both cures: a worker for that connection, or `--resume
+--sync` from the command line. The wait is configurable and the test covers
+queued, running with recent progress, and finished.
+
+**Checked.** The suite, 130 tests, with the PDF tests running against the
+Chrome on this machine. On hada.farm: `a11y:report --format=all` wrote the
+three files; the PDF is tagged, has an outline, an XMP title, the display
+title preference, two `%%EOF`s, and every cross-reference entry of the update
+points at the object it names.
+
+**Not checked.** A full PDF/UA validation, which needs veraPDF. The PDF
+opened in a viewer, or read by a screen reader. The CI install step. And
+how Chrome behaves on a server with no display, beyond the flags known to
+be needed for that.
+
+---
+
+## 2026-09-02: The criteria worksheet writes only what changed, under a name
+
+A third page under the utility: every success criterion for a site, or for
+the global default, with the automated evidence from the latest complete
+scan, the effective result the report would print, and a person's own
+status, method, remarks and lock.
+
+**The effective result is the report's own merge.** The worksheet calls
+`AssessmentMerger` with the same evidence the report uses, lifted out of the
+report builder into `ScanEvidence` so the two cannot disagree. What a person
+sees as the effective result on the sheet is what the next report prints,
+which is the only reason to have the column.
+
+**Only rows that changed are written, and each carries the assessor and the
+date.** One form, every criterion, one save. The server compares each row
+with what is stored and writes the ones that differ, so pressing save with
+nothing altered attests to nothing and stamps nobody's name on anything. A
+row whose status is set back to "no assessment of your own" is deleted, and
+the automated result returns. Rejected: a save button per row, which is 55
+forms on one page, and an autosave, which needs a script and would write an
+attestation nobody meant to make.
+
+**A site's rows sit apart from the global default, and the sheet shows what a
+site inherits.** The report already read a site's row over the global one;
+the sheet edits either, and a site's page shows the global row a criterion
+would inherit, with who assessed it, so overriding it is a decision made
+with the original in view.
+
+**Its own permission.** "Assess accessibility criteria" is separate from
+managing issues, because a row here ends up in a conformance document with
+a name on it. Somebody who may triage the queue is not thereby somebody who
+may attest that Focus Order is supported.
+
+**Checked.** The suite, 122 tests, including that a scan never touches a
+person's row and that the report prints what the sheet saved. And the
+scratch site over HTTP: 55 rows, 110 selects and 55 textareas each with a
+label, a save that recorded the assessor, and the next report counting one
+criterion assessed by a person.
+
+**Not checked.** On screen. And the page is long: 55 rows with three controls
+each. It is one form on purpose, and whether that is bearable in practice is
+a question for the first person to fill one in.
+
+---
+
+## 2026-09-02: The remediation queue is plain forms over the issue states
+
+A second page under the report utility: every problem the scans know about,
+with what a person decided about it, filtered by status, impact, criterion,
+site, collection and assignee, ordered by impact and then oldest first, with
+a bulk change of status, assignee and note for the ticked rows or for
+everything the filter matches.
+
+**The queue is the issue states, joined to the wording of the scan that last
+saw each one.** The states are the only table keyed on the fingerprint alone,
+which is what makes a decision survive the night. The message, the label and
+the pointer come from the issue row of `last_scan_id`, so the queue says what
+the scanner most recently said rather than what it said first.
+
+**Native form controls, deliberately.** Statamic's select and checkbox are
+Vue components bound to state a static template does not have. A `<select>`
+inside a `<form method="get">` is the most accessible control there is, works
+with no script, and keeps the filter in the URL so a link to a filtered queue
+is a link somebody can send. The one thing this costs is looking slightly less
+like the rest of the control panel, and inside an accessibility product that
+is the right trade. A test asserts every control has a label and every
+checkbox an accessible name.
+
+**"Apply to all matching" instead of "select all".** Select-all needs a
+script. Applying a change to everything the current filter matches needs a
+checkbox and the filter echoed back as hidden fields, and it is the more
+useful operation: the forty "Read more" links on forty pages are one decision.
+
+**Rejected.** *Statamic's Listing component*, which is the fuller answer and
+needs an Inertia page, a Vue component and a build step. *An Antlers-free tab
+control*, for the reason given under the overview. *The gate's entry sidebar
+showing this page's open issues*, which the brief asked for and which belongs
+in the gate's repository as an extension point; not built here.
+
+**Checked.** The suite, 114 tests. And the scratch site over HTTP: the page
+rendered with the filter controls and the bulk form, and a change posted
+from it recorded status, assignee, note and who made the change.
+
+**Not checked.** The page on screen, and how the native controls sit beside
+Statamic's own in light and dark mode.
+
+---
+
+## 2026-09-02: The public statement reads the latest report and derives its own status
+
+An accessibility statement page at `/accessibility` on every site, and an
+`{{ a11y:statement }}` tag (or `<s:a11y:statement />` from Blade) for putting
+the same statement inside a page of the site's own.
+
+**The conformance status is derived from the latest report and cannot be
+configured.** Three values: partially conformant when any criterion failed or
+partly supports; not fully evaluated when any criterion has no determination;
+fully conformant only when every criterion carries a person's determination
+of supports or not applicable. A test sets a `status` config key to the best
+answer and reads the derived one back. The organisation's own words
+(commitment, feedback, contact, escalation, enforcement) come from config,
+global with a per-site override, because those are its words and not the
+scanner's. No report yet is said plainly: "Not yet evaluated", and no status
+is claimed.
+
+**Two jurisdictions, one template.** The sections follow the EU model
+statement for EN 301 549, which a Section 508 statement also satisfies:
+status, known problems, how to complain, how the statement was made. The
+`en301549` template always has an enforcement section, naming the body or
+saying it has not been named; `section508` has one only when a body is
+configured. Rejected: two separate templates, which is twice the wording to
+keep honest for a difference of one section and two sentences.
+
+**The page decides its layout when asked for, with a shell of its own as the
+last resort.** The first real site this ran on, hada.farm, is a Blade site
+whose layout uses `@yield` and has no `layout` view at all, and the statement
+page returned a 500 there. Now: the configured layout, else Statamic's system
+layout if the finder can find it, else a plain shell this addon ships. A
+Blade site sets `statement.view` to a template of its own that calls the tag.
+The route registers a closure returning a view, because Statamic wants a
+closure for route data and because the template and layout must be read per
+request, not at boot: a test that changes them after boot proved the
+boot-time version wrong.
+
+**Three harness lessons, written down because each cost a round.** Statamic's
+`FakeViewFactory::exists()` answers from its fake engine, so the finder is
+asked instead. The `View` facade keeps the factory it first resolved, so the
+container's is used. And the fake view finder starts with no namespaces, so
+the test case puts every namespace back at the lowest entry point the trait
+offers, `withFakeViews()`, rather than only the standard one.
+
+**Checked.** The suite, 104 tests. On hada.farm over Herd: the page returned
+200 in the fallback shell with one h1, four h2, a language, and the honest
+status, and `a11y:statement:refresh` cleared it from the static cache.
+
+**Not checked.** The page inside a real site layout (hada.farm has none
+Statamic can use), the tag from a real Blade template on a real site, and the
+wording of either jurisdiction's statement against its legal model text by
+anyone qualified to say.
+
+---
+
+## 2026-09-02: The conformance document, and what it refuses to say
+
+The thing people pay for: an Accessibility Conformance Report as a standalone
+HTML document with a JSON twin, generated from one completed scan, from the
+command line or the control panel, and kept under storage/ with a row that
+says who made it and from which scan.
+
+**"Not evaluated" is the default, and finding nothing is not "supports".** The
+merge has five rules, each with its own test, and the third is the product: a
+criterion the engine covers and found no failures under stays "Not evaluated",
+with the evidence in its remarks. The engine tests part of a criterion.
+Finding nothing in that part is evidence a person can use, not a determination
+the document can make. A criterion with automated failures is "Does not
+support", because an image with no description fails 1.1.1 and that is not a
+matter of opinion. A locked human assessment wins over everything, with the
+automated evidence kept beside it as a separate sentence; an unlocked one
+stands except against a failure the engine can show. No scan ever writes to
+the assessments table. Rejected: "partially supports" for a criterion with no
+automated failures, which is the reading every automated tool's report invites
+and the one this product exists to refuse.
+
+**The limits statement is a partial with no setting.** A customer can add
+remarks, an evaluator, a remediation plan. They cannot remove the scope and
+limits section, and a test sets the whole report config block to garbage and
+reads the section back. Both lists in it, what was evaluated automatically and
+what was not evaluated at all, are computed from the document itself, so they
+cannot go stale. The word "certification" appears in the document exactly as
+often as the phrase "not a certification", which is pinned.
+
+**The engine says which criteria it can cite, derived from its rules.** A
+`criteria()` method on the engine interface, and the PHP engine's answer is
+read off the gate's remediation table, so the list of automated criteria on
+the cover cannot drift from what the checks do. A scan whose engine is not the
+one bound now gets an empty list and a document in which nothing was evaluated
+automatically, which is the truthful answer when the numbers cannot be
+attributed.
+
+**The catalogue is hard-coded: 50 criteria for 2.1, 55 for 2.2, no AAA.** The
+standard follows the scan's ruleset unless config says 2.1, in which case
+4.1.1 Parsing is back and the six 2.2 criteria are gone. AAA is absent on
+purpose: listing it invites a claim nothing here can support.
+
+**House rules are reported apart.** Findings under "Heading structure" or
+"Link check" have no criterion, and the document lists them under "Findings
+outside WCAG" with a sentence saying so, rather than folding them into 1.3.1
+or 2.4.4 where a reader would take them for a criterion failure.
+
+**The HTML is the source of the PDF, so it is semantic for that reason and
+not for tidiness.** One h1, sections with labelled headings, real tables with
+captions and scoped headers, a language on the root, no external resource of
+any kind. A test parses the document and counts those things. The PDF itself
+is not built yet.
+
+**Blade directives glued to a word are not directives.** `scan@if (...)` is
+printed as text with no error. Found in the document view, then found on the
+overview page where it had been shipping as literal "@if" in two sentences.
+Every view is now swept by a test for the pattern.
+
+**Checked.** The suite, 90 tests. And a scratch site: `a11y:report` wrote both
+files, the document parsed with no warnings, one h1, five captioned tables,
+55 conformance rows, and the control panel generated a second report, listed
+both, and served the HTML with the right content type.
+
+**Not checked.** How the document looks in a browser or in print, since no
+browser was available; the PDF pipeline, which does not exist; the ITI terms
+on "VPAT", which the document does not use; and the wording of the limits
+statement against a lawyer's reading, which nobody has done.
+
+---
+
+## 2026-09-02: The overview and the history are one page, drawn server-side, in Statamic's own components
+
+The first thing anybody sees of the report: a utility under Tools with what is
+open now, the last scan, a line of issues per scan over 90 days, and every scan
+so far, plus a dashboard widget with the open count by impact and a 30-day
+line. Nothing here is a document yet; it is the credibility base for one.
+
+**One page, not tabs, for now.** The brief sketched a tabbed utility. Statamic's
+`ui-tabs` is a controlled component whose selected tab is state, and a utility
+view is a static Vue template compiled by `DynamicHtmlRenderer` with no state
+to bind to. The page is sections in `ui-card-panel` instead, and gains tabs
+when the issues queue and the criteria worksheet exist and need them, at which
+point a small script alongside the view is the right shape (the gate's panel
+is the pattern).
+
+**The chart is inline SVG built in PHP, not a charting library.** The rule
+against hand-rolling controls inside an accessibility product is about
+controls; this is a data graphic, and the alternatives were a JavaScript
+library the addon would have to ship a build step for, or nothing. It is one
+series, so there is no legend; time is on the x axis, so scans a day apart and
+a month apart look different; every point carries its own `<title>`; it is
+`role="img"` with a title and description; colour is `currentColor`
+throughout, so nothing is encoded by hue and dark mode needs no second
+palette; and the full data is in the table underneath. The status colours on
+the impact badges are Statamic's own badge colours and appear next to the
+word, never alone.
+
+**Values that reach a Vue-compiled view go through `@plain`.** Blade's escaping
+is not enough there: a `{{` in an error message or a URL is an interpolation to
+Vue, and the whole page compiles to nothing, with no exception on the server.
+Vue finds its delimiters before decoding entities, so the brace is written as
+one. A test puts `{{ boom }}` in a scan error and reads the entity back.
+
+**A test parses each rendered view as XML.** There is no browser in the suite
+and the extension for one was not connected this session, so the failure that
+matters most, an unclosed tag that blanks the page, is caught by strict
+parsing of the markup Vue will receive, with Blade's `<input>` made
+self-closing and bare boolean attributes given a value. It is not a Vue
+compile, and says so. What was checked outside the suite: the page and the
+dashboard fetched over HTTP from a scratch site with a logged-in session,
+every panel present, the widget present, and the run button creating a scan
+attributed to the user who pressed it.
+
+**Running a scan is its own permission.** Seeing the report is Statamic's own
+"access utility" permission. `run accessibility scans` is separate because
+the button makes the site render every page, and a reader of the numbers is
+not necessarily somebody who should be able to do that. The button is not
+drawn without it and the route refuses without it.
+
+**The open count comes from the issue states, which now carry the impact.**
+"Open issues by impact" is one query on `a11y_issue_states` rather than a join
+to the latest scan, and a scan writes the impact as it last reported it. The
+migration was edited in place: nothing has been released, so there is nobody
+to migrate. The scratch site's stale file, made before the column existed,
+was the 500 that proved the point.
+
+**Rejected.** *An Inertia page with a Vue component*, which is the fuller
+answer and needs a build step this addon does not have. *Reading the site from
+`Site::selected()` for the widget*, which would silently narrow a dashboard
+number on a multisite install; the widget takes an explicit `site` config or
+shows every site. *Auto-refreshing the page while a scan runs*, which is a
+script, and the page says to reload instead.
+
+---
+
 ## 2026-09-02: A second addon, depending on the gate, and the scan layer inside it
 
 The first code in this repository: the scan layer of Accessibility Report. The

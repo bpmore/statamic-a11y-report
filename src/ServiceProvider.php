@@ -7,12 +7,24 @@ namespace Bpmore\A11yReport;
 use Bpmore\A11yGate\Accessibility\StaticAccessibilityChecker;
 use Bpmore\A11yGate\Gate\EntryRenderer;
 use Bpmore\A11yGate\Gate\GateSettings;
+use Bpmore\A11yReport\Document\ReportBuilder;
+use Bpmore\A11yReport\Document\ReportWriter;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Scan\Scans;
+use Bpmore\A11yReport\Statement\StatementBuilder;
 use Bpmore\A11yReport\Storage\ReportDatabase;
+use Bpmore\A11yReport\Support\VueSafe;
+use Bpmore\A11yReport\Trends\Overview;
+use Bpmore\A11yReport\Trends\TrendChart;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
 use Statamic\Facades\Addon;
+use Statamic\Facades\Permission;
+use Statamic\Facades\Site;
+use Statamic\Facades\User;
+use Statamic\Facades\Utility;
 use Statamic\Providers\AddonServiceProvider;
 
 /**
@@ -36,14 +48,110 @@ class ServiceProvider extends AddonServiceProvider
 
     protected $commands = [
         Commands\Install::class,
+        Commands\Report::class,
         Commands\Scan::class,
+        Commands\StatementRefresh::class,
     ];
+
+    protected $tags = [
+        Tags\A11y::class,
+    ];
+
+    protected $widgets = [
+        Widgets\AccessibilityReport::class,
+    ];
+
+    protected $viewNamespace = 'a11y-report';
 
     public function bootAddon()
     {
         // After the config file has merged, which is what decides whether
         // the addon's own SQLite connection is wanted at all.
         $this->app->make(ReportDatabase::class)->defineDefaultConnection();
+
+        // `@plain($x)` for any value that reaches a view Vue will compile. See
+        // `VueSafe` for why Blade's own escaping is not enough there.
+        Blade::directive('plain', fn ($expression) => "<?php echo \\Bpmore\\A11yReport\\Support\\VueSafe::text({$expression}); ?>");
+
+        // Seeing the report is Statamic's own "access utility" permission.
+        // Running a scan is separate: it makes the site render every page.
+        Permission::extend(function () {
+            Permission::group('a11y-report', 'Accessibility Report', function () {
+                Permission::register('run accessibility scans')
+                    ->label('Run accessibility scans')
+                    ->description('Start a scan of every page from the control panel. Scans render the whole site on the queue.');
+                Permission::register('manage accessibility issues')
+                    ->label('Manage accessibility issues')
+                    ->description('Change the status, assignee and notes of issues in the remediation queue.');
+                Permission::register('assess accessibility criteria')
+                    ->label('Assess accessibility criteria')
+                    ->description('Record a manual assessment of a WCAG success criterion on the worksheet. What is recorded is printed in the conformance report under the assessor\'s name.');
+                Permission::register('generate accessibility reports')
+                    ->label('Generate accessibility reports')
+                    ->description('Produce a conformance document from a completed scan. The document names who generated it.');
+            });
+        });
+
+        Utility::extend(fn () => Utility::register(
+            Utility::make('a11y-report')
+                ->title('Accessibility Report')
+                ->navTitle('Accessibility Report')
+                ->icon('pulse')
+                ->description('Every scan, what it found, and how that is changing.')
+                ->view('a11y-report::utilities.report', fn (Request $request) => $this->utilityData($request))
+                ->routes(function ($router) {
+                    $router->post('run', Http\Controllers\RunScanController::class)->name('run');
+                    $router->post('reports', Http\Controllers\GenerateReportController::class)->name('reports.generate');
+                    $router->get('reports/{uuid}/{format}', Http\Controllers\DownloadReportController::class)->name('reports.download');
+                    $router->get('issues', Http\Controllers\IssuesController::class)->name('issues');
+                    $router->post('issues', Http\Controllers\UpdateIssuesController::class)->name('issues.update');
+                    $router->get('criteria', Http\Controllers\CriteriaController::class)->name('criteria');
+                    $router->post('criteria', Http\Controllers\SaveCriteriaController::class)->name('criteria.save');
+                })
+        ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function utilityData(Request $request): array
+    {
+        $sites = Site::all()->map(fn ($site) => ['handle' => $site->handle(), 'name' => $site->name()])->values()->all();
+        $site = $request->query('site');
+        $site = is_string($site) && Site::get($site) ? $site : null;
+
+        $overview = new Overview($this->app->make(ReportDatabase::class), $site);
+        $installed = $overview->installed();
+        $trend = $installed ? $overview->trend(90) : [];
+
+        return [
+            'installed' => $installed,
+            'ownsConnection' => $this->app->make(ReportDatabase::class)->ownsConnection(),
+            'connection' => ReportDatabase::connectionName(),
+            'sites' => $sites,
+            'site' => $site,
+            'overview' => $overview,
+            'latest' => $installed ? $overview->latest() : null,
+            'history' => $installed ? $overview->history(20) : collect(),
+            'byImpact' => $installed ? $overview->openByImpact() : [],
+            'openTotal' => $installed ? $overview->openTotal() : 0,
+            'oldestOpenDays' => $installed ? $overview->oldestOpenDays() : null,
+            'trend' => $trend,
+            'chart' => TrendChart::render($trend),
+            'canRun' => (bool) User::current()?->can('run accessibility scans'),
+            'runUrl' => cp_route('utilities.a11y-report.run'),
+            'indexUrl' => cp_route('utilities.a11y-report.issues'),
+            'criteriaUrl' => cp_route('utilities.a11y-report.criteria'),
+            'overviewUrl' => cp_route('utilities.index').'/a11y-report',
+            'canGenerate' => (bool) User::current()?->can('generate accessibility reports'),
+            'generateUrl' => cp_route('utilities.a11y-report.reports.generate'),
+            'hasCompleteScan' => $installed && $overview->history(1)->first()?->status === \Bpmore\A11yReport\Models\Scan::COMPLETE,
+            'reports' => $installed ? \Bpmore\A11yReport\Models\Report::query()->when($site !== null, fn ($q) => $q->where('site', $site))->with('scan')->orderByDesc('id')->limit(20)->get() : collect(),
+            'queueIsSync' => config('queue.default') === 'sync',
+            'queueConnection' => (string) config('queue.default'),
+            'stale' => $installed ? $overview->stale((int) config('statamic-a11y-report.scan.stale_after_minutes', 10)) : null,
+            'engine' => (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY),
+        ];
     }
 
     public function register()
@@ -70,6 +178,32 @@ class ServiceProvider extends AddonServiceProvider
                 $settings->optedIn,
             );
         });
+
+        $this->app->bind(ReportBuilder::class, fn ($app) => new ReportBuilder(
+            $app->make(ScanEngine::class),
+            (array) config('statamic-a11y-report.report', []),
+        ));
+
+        $this->app->bind(\Bpmore\A11yReport\Pdf\ChromePrinter::class, fn () => new \Bpmore\A11yReport\Pdf\ChromePrinter(
+            config('statamic-a11y-report.chrome.binary'),
+            (int) config('statamic-a11y-report.chrome.timeout', 30),
+        ));
+
+        $this->app->bind(ReportWriter::class, fn ($app) => new ReportWriter(
+            $app,
+            $app->make(ReportBuilder::class),
+            $app->make(\Bpmore\A11yReport\Pdf\ChromePrinter::class),
+        ));
+
+        $this->app->bind(\Bpmore\A11yReport\Worksheet\Worksheet::class, fn ($app) => new \Bpmore\A11yReport\Worksheet\Worksheet(
+            new \Bpmore\A11yReport\Document\ScanEvidence($app->make(ScanEngine::class)),
+        ));
+
+        $this->app->bind(StatementBuilder::class, fn ($app) => new StatementBuilder(
+            $app->make(ReportDatabase::class),
+            $app->make(ReportWriter::class),
+            (array) config('statamic-a11y-report.statement', []),
+        ));
 
         $this->app->bind(Scans::class, fn ($app) => new Scans(
             $app->make(ScanEngine::class),

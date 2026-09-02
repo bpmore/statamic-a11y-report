@@ -68,5 +68,42 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
+      # The PDF tests skip without Chrome, and a skipped test is reported as
+      # a pass. Fail here instead, where the reason is one line, so a runner
+      # image that drops Chrome cannot make the tagged PDF quietly untested.
+      - name: Confirm Chrome is here so the PDF tests run rather than skip
+        run: google-chrome --version
+
+      # veraPDF, for the PDF/UA checks. The test asserts the clauses this
+      # addon controls (structure tree, metadata title, language) and reports
+      # the rest, because a conformance report that ships untagged is the
+      # story about this product, and the only way to know is to validate.
+      # The installer is IzPack with an unattended answers file. The first
+      # version of this step guessed the release URL and the first CI run
+      # said so; this one was downloaded and run unattended on a Mac first.
+      - name: Install veraPDF
+        run: |
+          curl -sSL -o /tmp/verapdf.zip https://software.verapdf.org/rel/1.30/verapdf-greenfield-1.30.2-installer.zip
+          cd /tmp && unzip -q verapdf.zip
+          cat > /tmp/verapdf-auto.xml <<'XML'
+          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+          <AutomatedInstallation langpack="eng">
+              <com.izforge.izpack.panels.htmlhello.HTMLHelloPanel id="welcome"/>
+              <com.izforge.izpack.panels.target.TargetPanel id="install_dir"><installpath>/opt/verapdf</installpath></com.izforge.izpack.panels.target.TargetPanel>
+              <com.izforge.izpack.panels.packs.PacksPanel id="sdk_pack_select">
+                  <pack index="0" name="veraPDF GUI" selected="true"/>
+                  <pack index="1" name="veraPDF Mac and *nix Scripts" selected="true"/>
+                  <pack index="2" name="veraPDF Validation model" selected="false"/>
+                  <pack index="3" name="veraPDF Documentation" selected="false"/>
+                  <pack index="4" name="veraPDF Sample Plugins" selected="false"/>
+              </com.izforge.izpack.panels.packs.PacksPanel>
+              <com.izforge.izpack.panels.install.InstallPanel id="install"/>
+              <com.izforge.izpack.panels.finish.FinishPanel id="finish"/>
+          </AutomatedInstallation>
+          XML
+          sudo java -jar /tmp/verapdf-greenfield-1.30.2/verapdf-izpack-installer-1.30.2.jar /tmp/verapdf-auto.xml
+          sudo ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf
+          verapdf --version
+
       - name: Run the suite
         run: ./vendor/bin/pest

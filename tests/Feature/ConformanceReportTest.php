@@ -1,0 +1,325 @@
+<?php
+
+declare(strict_types=1);
+
+use Bpmore\A11yReport\Document\ReportWriter;
+use Bpmore\A11yReport\Models\CriterionAssessment;
+use Bpmore\A11yReport\Models\IssueState;
+use Bpmore\A11yReport\Models\Report;
+use Bpmore\A11yReport\Models\Scan;
+use Bpmore\A11yReport\Storage\ReportDatabase;
+use Statamic\Facades\Collection;
+use Statamic\Facades\Role;
+use Statamic\Facades\User;
+
+/**
+ * The conformance document. Most of these are about what it says and what
+ * it refuses to say, because the document is the product and its claims are
+ * what somebody will be held to.
+ */
+beforeEach(function () {
+    $this->withStandardFakeViews();
+    test()->viewShouldReturnRaw('default', PLAIN);
+    Collection::make('pages')->routes('/{slug}')->save();
+    app(ReportDatabase::class)->install();
+
+    $this->user = User::make()->email('super@example.test')->makeSuper();
+    $this->user->save();
+
+    // Every report from a temporary storage path, so nothing lands in the
+    // harness's own storage directory.
+    $this->storage = sys_get_temp_dir().'/a11y-report-'.uniqid();
+    foreach (['framework/cache', 'framework/views', 'framework/sessions'] as $dir) {
+        mkdir($this->storage.'/'.$dir, 0755, true);
+    }
+    app()->useStoragePath($this->storage);
+});
+
+afterEach(function () {
+    foreach (glob($this->storage.'/a11y-report/reports/*') ?: [] as $f) {
+        unlink($f);
+    }
+});
+
+function scannedSite(): Scan
+{
+    page('one', '<img src="/a.jpg">');
+    page('two', '<h3>Skipped</h3><a href="#">Somewhere</a>');
+    page('three', '<p>Fine.</p>');
+
+    return runScan();
+}
+
+function document(?Scan $scan = null, ?string $by = 'tester@example.test'): array
+{
+    $report = app(ReportWriter::class)->write($scan ?? scannedSite(), $by);
+
+    return [$report, file_get_contents(app(ReportWriter::class)->absolutePath($report->html_path))];
+}
+
+function flat(string $html): string
+{
+    return (string) preg_replace('/\s+/', ' ', strip_tags($html));
+}
+
+it('records who generated it and from which scan, and writes both files', function () {
+    $scan = scannedSite();
+    [$report, $html] = document($scan);
+
+    expect($report->generated_by)->toBe('tester@example.test');
+    expect($report->scan_id)->toBe($scan->id);
+    expect($report->generated_at)->not->toBeNull();
+    expect($report->standard)->toBe('wcag22aa');
+    expect(is_file(app(ReportWriter::class)->absolutePath($report->html_path)))->toBeTrue();
+    expect(is_file(app(ReportWriter::class)->absolutePath($report->json_path)))->toBeTrue();
+    expect($report->coverage_note)->toContain('of 55 criteria had automated checks');
+
+    expect($html)->toContain('tester@example.test');
+    expect($html)->toContain($scan->uuid);
+    expect($html)->toContain($report->uuid);
+});
+
+it('has the shape a reader expects, in that order', function () {
+    [, $html] = document();
+
+    $order = ['Accessibility Conformance Report', 'Evaluation methods', 'Scope and limits of this report', 'Conformance table', 'Findings summary', 'Open issues', 'Remediation plan'];
+    $positions = array_map(fn ($h) => strpos($html, $h), $order);
+
+    foreach ($positions as $i => $p) {
+        expect($p)->not->toBeFalse("the document has a section called {$order[$i]}");
+        if ($i > 0) {
+            expect($p)->toBeGreaterThan($positions[$i - 1], "{$order[$i]} comes after {$order[$i - 1]}");
+        }
+    }
+});
+
+it('marks a criterion the scan failed as does not support and everything else as not evaluated', function () {
+    [$report, $html] = document();
+
+    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/th>\s*<td>A<\/td>\s*<td class="status status-does_not_support">Does not support/');
+    expect($html)->toMatch('/2\.4\.4 Link Purpose \(In Context\)<\/th>\s*<td>A<\/td>\s*<td class="status status-not_evaluated">Not evaluated/');
+    expect($html)->toMatch('/1\.4\.3 Contrast \(Minimum\)<\/th>\s*<td>AA<\/td>\s*<td class="status status-not_evaluated">Not evaluated/');
+    expect(substr_count($html, 'class="status status-supports"'))->toBe(0);
+    expect(substr_count($html, '<th scope="row">'))->toBeGreaterThanOrEqual(55);
+});
+
+it('lists a house rule apart from WCAG so it cannot be read as a criterion', function () {
+    [, $html] = document();
+
+    expect($html)->toContain('Findings outside WCAG');
+    expect($html)->toContain('Heading structure');
+    expect(flat($html))->not->toContain('1.3.1 Info and Relationships</th> <td>A</td> <td class="status status-does_not_support"');
+});
+
+it('carries the limits statement, the automated list, and the not evaluated list, and no configuration removes them', function () {
+    config()->set('statamic-a11y-report.report', ['limits' => false, 'show_limits' => false, 'scope_and_limits' => null, 'evaluator' => []]);
+
+    [, $html] = document();
+    $text = flat($html);
+
+    expect($text)->toContain('This is a self-assessment.');
+    expect($text)->toContain('not a certification and not a third-party audit');
+    expect($text)->toContain('Automated testing cannot determine conformance for most success criteria.');
+    expect($text)->toContain('What was evaluated automatically.');
+    expect($text)->toContain('1.1.1, 1.2.1, 1.2.2, 2.4.4, 2.5.8, 4.1.2');
+    expect($text)->toContain('What was not evaluated.');
+    expect($text)->toContain('"Not evaluated" means exactly that. It is not a pass.');
+    expect($text)->toContain('has not been proven accessible');
+});
+
+it('never says certified or compliant, and mentions certification only to deny it', function () {
+    [, $html] = document();
+    $lower = strtolower(flat($html));
+
+    expect(str_contains($lower, 'certified'))->toBeFalse();
+    expect(str_contains($lower, 'compliant'))->toBeFalse();
+    expect(substr_count($lower, 'certif'))->toBe(substr_count($lower, 'not a certification'));
+    expect(substr_count($lower, 'not a certification'))->toBeGreaterThan(0);
+});
+
+it('lets a locked manual assessment win and shows the automated evidence beside it', function () {
+    $scan = scannedSite();
+
+    CriterionAssessment::create([
+        'site' => 'default', 'criterion' => '1.1.1', 'level' => 'A',
+        'status' => CriterionAssessment::SUPPORTS, 'method' => 'manual', 'locked' => true,
+        'remarks' => 'Every image reviewed by hand on 2 September.', 'assessed_by' => 'Reviewer', 'assessed_at' => now(),
+    ]);
+    CriterionAssessment::create([
+        'site' => null, 'criterion' => '2.4.3', 'level' => 'A',
+        'status' => CriterionAssessment::PARTIALLY_SUPPORTS, 'method' => 'manual', 'locked' => true, 'remarks' => 'Global default note.',
+    ]);
+
+    // A scan of the default site: its own rows beat the global ones.
+    $sited = runScan(sites: ['default']);
+    [$report, $html] = document($sited);
+
+    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/th>\s*<td>A<\/td>\s*<td class="status status-supports">Supports<\/td>\s*<td>Manual, locked/');
+    expect($html)->toContain('Every image reviewed by hand on 2 September.');
+    expect($html)->toContain('Automated checks found 1 issue on 1 page (image-missing-alt).');
+    expect($html)->toContain('Assessed by Reviewer');
+    expect($html)->toMatch('/2\.4\.3 Focus Order<\/th>\s*<td>A<\/td>\s*<td class="status status-partially_supports">Partially supports/');
+    expect($report->coverage_note)->toContain('2 were assessed by a person');
+
+    // And a scan is not allowed to write over either row.
+    runScan(sites: ['default']);
+    expect(CriterionAssessment::where('criterion', '1.1.1')->first()->status)->toBe(CriterionAssessment::SUPPORTS);
+});
+
+it('lets an engine failure beat an unlocked supports', function () {
+    CriterionAssessment::create(['site' => null, 'criterion' => '1.1.1', 'level' => 'A', 'status' => CriterionAssessment::SUPPORTS, 'locked' => false, 'remarks' => 'Probably fine.']);
+
+    [, $html] = document();
+
+    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/th>\s*<td>A<\/td>\s*<td class="status status-does_not_support">Does not support/');
+    expect($html)->toContain('Unlocked assessment on file: Probably fine.');
+});
+
+it('lists the open issues with page, label, impact, and state, and omits what a person closed', function () {
+    $scan = scannedSite();
+    $closed = IssueState::where('rule_id', 'heading-skipped-level')->first();
+    $closed->update(['status' => IssueState::FALSE_POSITIVE]);
+
+    [, $html] = document($scan);
+
+    expect($html)->toContain('<caption>Open issues from this scan</caption>');
+    expect($html)->toContain('<td>/one</td>');
+    expect($html)->toContain('<td>WCAG 1.1.1</td>');
+    expect($html)->toContain('<td>Serious</td>');
+    expect($html)->toContain('<td>open</td>');
+    expect(substr_count(flat($html), 'Skipped'))->toBe(0);
+    expect($html)->toContain('2 open issues from this scan');
+});
+
+it('caps the appendix and says how many were left out', function () {
+    config()->set('statamic-a11y-report.report.appendix_limit', 1);
+
+    [, $html] = document();
+
+    expect($html)->toContain('1 open issue from this scan, and 2 more not listed here');
+});
+
+it('follows the scan ruleset for the standard and lets config choose 2.1', function () {
+    $scan = scannedSite();
+    [$a] = document($scan);
+    expect($a->standard)->toBe('wcag22aa');
+
+    config()->set('statamic-a11y-report.report.standard', 'wcag21aa');
+    [$b, $html] = document($scan);
+    expect($b->standard)->toBe('wcag21aa');
+    expect($html)->toContain('WCAG 2.1 Level AA');
+    expect($html)->toContain('4.1.1 Parsing');
+    expect($html)->not->toContain('2.5.7 Dragging');
+});
+
+it('is one document with one h1, a language, and captioned tables with scoped headers', function () {
+    [, $html] = document();
+
+    $dom = new DOMDocument;
+    libxml_use_internal_errors(true);
+    $dom->loadHTML($html);
+    libxml_clear_errors();
+    $xpath = new DOMXPath($dom);
+
+    expect($xpath->query('//html[@lang]')->length)->toBe(1);
+    expect($xpath->query('//h1')->length)->toBe(1);
+    expect($xpath->query('//title')->length)->toBe(1);
+    expect($xpath->query('//main')->length)->toBe(1);
+    expect($xpath->query('//table')->length)->toBeGreaterThanOrEqual(4);
+    expect($xpath->query('//table[not(caption)]')->length)->toBe(0);
+    expect($xpath->query('//table//th[not(@scope)]')->length)->toBe(0);
+    expect($xpath->query('//link|//script|//img')->length)->toBe(0);
+    expect($xpath->query('//section[not(@aria-labelledby)]')->length)->toBe(0);
+});
+
+it('writes the same numbers to JSON as to HTML', function () {
+    [$report] = document();
+    $json = json_decode(file_get_contents(app(ReportWriter::class)->absolutePath($report->json_path)), true);
+
+    expect($json['uuid'])->toBe($report->uuid);
+    expect($json['kind'])->toBe('self-assessment');
+    expect($json['criteria'])->toHaveCount(55);
+    expect(collect($json['criteria'])->firstWhere('number', '1.1.1')['status'])->toBe('does_not_support');
+    expect($json['methods']['automated_criteria'])->toBe(['1.1.1', '1.2.1', '1.2.2', '2.4.4', '2.5.8', '4.1.2']);
+    expect($json['summary']['issues_total'])->toBe(3);
+    expect(count($json['issues']))->toBe(3);
+});
+
+it('refers to the previous report', function () {
+    $scan = scannedSite();
+    [$first] = document($scan);
+    [, $html] = document($scan);
+
+    expect($html)->toContain("The previous report, {$first->uuid}");
+});
+
+it('refuses a scan that did not complete', function () {
+    $scan = scannedSite();
+    $scan->update(['status' => Scan::FAILED]);
+
+    expect(fn () => app(ReportWriter::class)->write($scan, 'x'))->toThrow(InvalidArgumentException::class);
+    expect(Report::count())->toBe(0);
+});
+
+it('runs as a command and copies the files where asked', function () {
+    scannedSite();
+    $out = $this->storage.'/out';
+
+    $this->artisan('statamic:a11y:report', ['--out' => $out, '--format' => 'html'])
+        ->expectsOutputToContain('generated from scan')
+        ->expectsOutputToContain('had automated checks')
+        ->expectsOutputToContain('A self-assessment, not a certification')
+        ->assertExitCode(0);
+
+    expect(Report::count())->toBe(1);
+    expect(Report::first()->generated_by)->toBe('console');
+    expect(glob($out.'/*.html'))->toHaveCount(1);
+    expect(glob($out.'/*.json'))->toHaveCount(0);
+
+    $this->artisan('statamic:a11y:report', ['--format' => 'docx'])->expectsOutputToContain('There is no [docx] format')->assertExitCode(1);
+    $this->artisan('statamic:a11y:report', ['--scan' => 'nope'])->expectsOutputToContain('no complete scan')->assertExitCode(1);
+});
+
+it('is generated from the control panel by somebody allowed to, and downloaded by anybody who may see the report', function () {
+    scannedSite();
+
+    $this->actingAs($this->user)
+        ->post(cp_route('utilities.a11y-report.reports.generate'))
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $report = Report::first();
+    expect($report->generated_by)->toBe('super@example.test');
+
+    $this->actingAs($this->user)
+        ->get(cp_route('utilities.a11y-report.reports.download', ['uuid' => $report->uuid, 'format' => 'html']))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'text/html; charset=utf-8');
+
+    $this->actingAs($this->user)
+        ->get(cp_route('utilities.a11y-report.reports.download', ['uuid' => $report->uuid, 'format' => 'json']))
+        ->assertOk();
+
+    $this->actingAs($this->user)
+        ->get(cp_route('utilities.a11y-report.reports.download', ['uuid' => 'nope', 'format' => 'html']))
+        ->assertNotFound();
+
+    Role::make('reader')->permissions(['access cp', 'access a11y-report utility'])->save();
+    $reader = User::make()->email('reader@example.test')->assignRole('reader');
+    $reader->save();
+
+    $this->actingAs($reader)->post(cp_route('utilities.a11y-report.reports.generate'))->assertForbidden();
+    $this->actingAs($reader)->get(cp_route('utilities.a11y-report.reports.download', ['uuid' => $report->uuid, 'format' => 'html']))->assertOk();
+
+    $text = pageText($this->actingAs($reader)->get(cp_route('utilities.index').'/a11y-report')->getContent());
+    expect($text)->toContain('Conformance reports');
+    expect($text)->not->toContain('Generate a report');
+});
+
+it('says so on the control panel when there is no complete scan to report on', function () {
+    $this->actingAs($this->user)
+        ->post(cp_route('utilities.a11y-report.reports.generate'))
+        ->assertSessionHas('error');
+
+    expect(Report::count())->toBe(0);
+});

@@ -59,6 +59,10 @@ return [
     'scan' => [
         'concurrency' => 3,
         'schedule' => 'weekly',
+        // After this many minutes with no page read, the overview says the
+        // scan is not moving and what to run. A queue nobody works looks
+        // exactly like a queue that is about to start, otherwise.
+        'stale_after_minutes' => 10,
         'sites' => ['*'],
         'collections' => ['*'],
         'exclude_urls' => [],
@@ -68,17 +72,76 @@ return [
         'scans' => 90,
     ],
 
+    /*
+    |---------------------------------------------------------------------------
+    | Report
+    |---------------------------------------------------------------------------
+    |
+    | 'standard' picks the conformance table: 'wcag21aa' or 'wcag22aa'. Leave
+    | it null to follow the scan's ruleset. The evaluator is named on the
+    | cover of every report. 'remediation_plan' is free text printed in the
+    | document's last section. 'appendix_limit' caps the open issues listed;
+    | the document says how many were left out.
+    |
+    | There is no setting that removes the scope and limits statement, and
+    | there will not be one.
+    |
+    */
+
     'report' => [
+        'standard' => null,
         'evaluator' => [
             'name' => null,
             'organization' => null,
             'email' => null,
         ],
+        'remediation_plan' => null,
+        'appendix_limit' => 1000,
     ],
+
+    /*
+    |---------------------------------------------------------------------------
+    | Accessibility statement
+    |---------------------------------------------------------------------------
+    |
+    | A public page at 'route' on every site, and an `{{ a11y:statement }}`
+    | tag for putting the same statement inside a page of your own. What it
+    | says about conformance comes from the latest report and cannot be set
+    | here. What it says about you comes from here.
+    |
+    | 'template' is 'section508' (US) or 'en301549' (EU public sector, which
+    | always includes an enforcement section). Everything under 'sites' is a
+    | per-site override of the same keys, for a multisite install.
+    |
+    */
 
     'statement' => [
         'route' => '/accessibility',
+        // The template the page renders and the layout it sits in. Null
+        // means this addon's own one-line template, in Statamic's system
+        // layout, or in a plain shell of its own when the site has no such
+        // layout. A Blade site whose layout uses @yield sets 'view' to a
+        // Blade template of its own that calls <s:a11y:statement heading="1" />.
+        'view' => null,
+        'layout' => null,
         'template' => 'section508',
+        'organization' => null,
+        'commitment' => null,
+        'feedback' => null,
+        'contact' => [
+            'email' => null,
+            'phone' => null,
+            'url' => null,
+            'address' => null,
+        ],
+        'escalation' => null,
+        'enforcement' => [
+            'name' => null,
+            'url' => null,
+        ],
+        'sites' => [
+            // 'fr' => ['contact' => ['email' => 'accessibilite@example.fr']],
+        ],
     ],
 
     /*

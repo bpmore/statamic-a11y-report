@@ -364,7 +364,7 @@ final class Scans
 
         Issue::where('a11y_issues.scan_id', $scan->id)
             ->join('a11y_scan_pages', 'a11y_scan_pages.id', '=', 'a11y_issues.page_id')
-            ->select(['a11y_issues.fingerprint', 'a11y_issues.rule_id', 'a11y_scan_pages.url', 'a11y_scan_pages.site', 'a11y_scan_pages.path'])
+            ->select(['a11y_issues.fingerprint', 'a11y_issues.rule_id', 'a11y_issues.impact', 'a11y_scan_pages.url', 'a11y_scan_pages.site', 'a11y_scan_pages.path'])
             ->orderBy('a11y_issues.id')
             ->chunk(500, function (Collection $issues) use ($scan, $now) {
                 $existing = IssueState::whereIn('fingerprint', $issues->pluck('fingerprint'))->get()->keyBy('fingerprint');
@@ -380,6 +380,7 @@ final class Scans
                             'site' => $issue->site,
                             'path' => $issue->path,
                             'rule_id' => $issue->rule_id,
+                            'impact' => $issue->impact,
                             'first_seen_at' => $now,
                             'last_seen_at' => $now,
                             'last_scan_id' => $scan->id,
@@ -388,7 +389,7 @@ final class Scans
                         continue;
                     }
 
-                    $changes = ['last_seen_at' => $now, 'last_scan_id' => $scan->id, 'url' => $issue->url];
+                    $changes = ['last_seen_at' => $now, 'last_scan_id' => $scan->id, 'url' => $issue->url, 'impact' => $issue->impact];
 
                     // Back after being fixed is a regression, and it reopens.
                     // "Won't fix" and "false positive" are left exactly as the

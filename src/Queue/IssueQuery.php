@@ -49,6 +49,9 @@ final class IssueQuery
             // work, and finished work only when asked for.
             'status' => $pick('status', array_merge(self::STATUSES, ['all', 'active'])) ?: 'active',
             'assignee' => $pick('assignee'),
+            // One page, by its site-relative path. Reached from the entry's
+            // own panel rather than from a control on the queue.
+            'path' => $pick('path'),
         ];
     }
 
@@ -88,6 +91,10 @@ final class IssueQuery
 
         if ($f['impact'] !== '') {
             $q->where('a11y_issue_states.impact', $f['impact']);
+        }
+
+        if ($f['path'] !== '') {
+            $q->where('a11y_issue_states.path', $f['path']);
         }
 
         if ($f['assignee'] !== '') {

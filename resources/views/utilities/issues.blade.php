@@ -34,7 +34,15 @@
                 @endforeach
             </div>
 
+            @if ($f['path'] !== '')
+                <div class="flex flex-wrap items-center gap-2">
+                    <ui-badge color="blue" text="@plain('Only the page '.$f['path'])" />
+                    <ui-button size="sm" variant="ghost" href="@plain($href(['path' => null]))" text="Every page" />
+                </div>
+            @endif
+
             <form method="get" action="@plain($indexUrl)" class="flex flex-wrap items-end gap-3">
+                @if ($f['path'] !== '')<input type="hidden" name="path" value="@plain($f['path'])">@endif
                 <div>
                     <label for="a11y-f-status" class="block text-xs font-medium mb-1">Status</label>
                     <select id="a11y-f-status" name="status" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">

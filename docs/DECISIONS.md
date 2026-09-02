@@ -12,6 +12,45 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The gate's sidebar shows this page's open issues, through a seam the gate offers
+
+The last item in the brief's list of control-panel surfaces: extend the
+gate's existing panel with "this page's open issues from the last site scan,
+so the queue and the gate agree with each other."
+
+**The seam is the gate's; the words are this addon's.** The gate gained
+`PanelExtensions::register()`, a callable that takes the entry and returns a
+block for the panel to draw beneath its own result. This addon registers one
+provider: the open issues the last scan left on the page, up to three by
+name, the count of the rest, when the page was read, and a link into the
+queue filtered to that page. A page no scan has read gets nothing, because
+"no open issues" for a page nobody looked at would be the silent zero. A
+scanned page with nothing open is told so, with a reminder that a scan reads
+the page as it was published and not as it stands in the editor.
+
+**The queue learned to filter by one page.** A `path` filter, reached from
+the panel's link and shown as a badge with a way back to every page, kept in
+a hidden field so the other filters compose with it.
+
+**Guarded on the gate having the seam.** The report requires the gate at
+`^0.6`, and the seam lands after 0.6.0. The provider is registered when the
+class exists and nothing happens when it does not, and the integration test
+skips with a sentence saying which gate it needs. When the gate tags 0.7,
+the requirement moves and the skip goes.
+
+**Rejected.** *A fieldtype of this addon's own*, which would put two panels
+in the sidebar answering one question. *Linking to the page's issues without
+a filter*, which lands the author on the whole queue looking for their page.
+
+**Checked.** The suite, 154 tests plus the skip. And the test site, where
+both addons are installed from their working trees: the gate's own preload
+for the gallery page returned four open issues with the link, and for a
+page the scan found nothing on, the nothing-open block.
+
+**Not checked.** The block in a browser.
+
+---
+
 ## 2026-09-02: Settings belong in the control panel, and the version is the first of them
 
 A settings screen at Addons, Accessibility Report, Settings, on Statamic's

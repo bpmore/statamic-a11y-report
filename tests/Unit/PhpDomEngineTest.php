@@ -34,11 +34,11 @@ it('runs the same checker the gate runs and keeps the coverage with the findings
 });
 
 it('parses a criterion out of a WCAG label and nothing out of a house rule', function () {
-    expect(PhpDomEngine::criteria('WCAG 2.4.4'))->toBe(['2.4.4']);
-    expect(PhpDomEngine::criteria('WCAG 1.1.1'))->toBe(['1.1.1']);
-    expect(PhpDomEngine::criteria('Heading structure'))->toBe([]);
-    expect(PhpDomEngine::criteria('Link check'))->toBe([]);
-    expect(PhpDomEngine::criteria('Reading level (guide)'))->toBe([]);
+    expect(PhpDomEngine::criteria_of('WCAG 2.4.4'))->toBe(['2.4.4']);
+    expect(PhpDomEngine::criteria_of('WCAG 1.1.1'))->toBe(['1.1.1']);
+    expect(PhpDomEngine::criteria_of('Heading structure'))->toBe([]);
+    expect(PhpDomEngine::criteria_of('Link check'))->toBe([]);
+    expect(PhpDomEngine::criteria_of('Reading level (guide)'))->toBe([]);
 });
 
 it('never invents a criterion for any rule in the table', function () {
@@ -81,4 +81,22 @@ it('carries the remedy and drops an empty pointer rather than storing a blank', 
     expect($finding->pointer)->toBeNull();
     expect($finding->selector)->toBeNull();
     expect($finding->target())->toBe('');
+});
+
+it('reports the criteria its rules can cite, derived from the table and nothing else', function () {
+    $criteria = engine()->criteria();
+
+    foreach (['1.1.1', '1.2.1', '1.2.2', '2.4.4', '2.5.8', '4.1.2'] as $expected) {
+        expect(in_array($expected, $criteria, true))->toBeTrue("the engine cites {$expected}");
+    }
+
+    $fromTable = [];
+    foreach (Remediation::RULES as $r) {
+        foreach (PhpDomEngine::criteria_of($r['wcag']) as $n) {
+            $fromTable[$n] = $n;
+        }
+    }
+
+    expect(count($criteria))->toBe(count($fromTable));
+    expect(in_array('1.4.3', $criteria, true))->toBeFalse('contrast is not something this engine can see');
 });

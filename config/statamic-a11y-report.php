@@ -68,12 +68,31 @@ return [
         'scans' => 90,
     ],
 
+    /*
+    |---------------------------------------------------------------------------
+    | Report
+    |---------------------------------------------------------------------------
+    |
+    | 'standard' picks the conformance table: 'wcag21aa' or 'wcag22aa'. Leave
+    | it null to follow the scan's ruleset. The evaluator is named on the
+    | cover of every report. 'remediation_plan' is free text printed in the
+    | document's last section. 'appendix_limit' caps the open issues listed;
+    | the document says how many were left out.
+    |
+    | There is no setting that removes the scope and limits statement, and
+    | there will not be one.
+    |
+    */
+
     'report' => [
+        'standard' => null,
         'evaluator' => [
             'name' => null,
             'organization' => null,
             'email' => null,
         ],
+        'remediation_plan' => null,
+        'appendix_limit' => 1000,
     ],
 
     'statement' => [

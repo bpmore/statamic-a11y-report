@@ -70,3 +70,17 @@ function assertVueTemplateIsWellFormed(string $html): void
 
     expect($ok)->toBeTrue('the template is not well formed, so Vue would not compile it: '.implode('; ', $errors));
 }
+
+/**
+ * A Blade directive glued to a word is not a directive. `scan@if (...)` is
+ * printed as text, with no error, and the sentence after it wears a literal
+ * "@if". Found on the overview page after the document view had the same
+ * fault. Every view is swept for it.
+ */
+function assertNoGluedBladeDirectives(): void
+{
+    foreach (glob(__DIR__.'/../resources/views/**/*.blade.php') ?: [] as $file) {
+        $hits = preg_match_all('/[A-Za-z0-9_)]@(if|endif|else|elseif|foreach|endforeach|plain)\b/', (string) file_get_contents($file), $m);
+        expect($hits)->toBe(0, basename($file).' has a directive glued to a word: '.implode(', ', $m[0]));
+    }
+}

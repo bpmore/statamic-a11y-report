@@ -12,6 +12,76 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-02: The conformance document, and what it refuses to say
+
+The thing people pay for: an Accessibility Conformance Report as a standalone
+HTML document with a JSON twin, generated from one completed scan, from the
+command line or the control panel, and kept under storage/ with a row that
+says who made it and from which scan.
+
+**"Not evaluated" is the default, and finding nothing is not "supports".** The
+merge has five rules, each with its own test, and the third is the product: a
+criterion the engine covers and found no failures under stays "Not evaluated",
+with the evidence in its remarks. The engine tests part of a criterion.
+Finding nothing in that part is evidence a person can use, not a determination
+the document can make. A criterion with automated failures is "Does not
+support", because an image with no description fails 1.1.1 and that is not a
+matter of opinion. A locked human assessment wins over everything, with the
+automated evidence kept beside it as a separate sentence; an unlocked one
+stands except against a failure the engine can show. No scan ever writes to
+the assessments table. Rejected: "partially supports" for a criterion with no
+automated failures, which is the reading every automated tool's report invites
+and the one this product exists to refuse.
+
+**The limits statement is a partial with no setting.** A customer can add
+remarks, an evaluator, a remediation plan. They cannot remove the scope and
+limits section, and a test sets the whole report config block to garbage and
+reads the section back. Both lists in it, what was evaluated automatically and
+what was not evaluated at all, are computed from the document itself, so they
+cannot go stale. The word "certification" appears in the document exactly as
+often as the phrase "not a certification", which is pinned.
+
+**The engine says which criteria it can cite, derived from its rules.** A
+`criteria()` method on the engine interface, and the PHP engine's answer is
+read off the gate's remediation table, so the list of automated criteria on
+the cover cannot drift from what the checks do. A scan whose engine is not the
+one bound now gets an empty list and a document in which nothing was evaluated
+automatically, which is the truthful answer when the numbers cannot be
+attributed.
+
+**The catalogue is hard-coded: 50 criteria for 2.1, 55 for 2.2, no AAA.** The
+standard follows the scan's ruleset unless config says 2.1, in which case
+4.1.1 Parsing is back and the six 2.2 criteria are gone. AAA is absent on
+purpose: listing it invites a claim nothing here can support.
+
+**House rules are reported apart.** Findings under "Heading structure" or
+"Link check" have no criterion, and the document lists them under "Findings
+outside WCAG" with a sentence saying so, rather than folding them into 1.3.1
+or 2.4.4 where a reader would take them for a criterion failure.
+
+**The HTML is the source of the PDF, so it is semantic for that reason and
+not for tidiness.** One h1, sections with labelled headings, real tables with
+captions and scoped headers, a language on the root, no external resource of
+any kind. A test parses the document and counts those things. The PDF itself
+is not built yet.
+
+**Blade directives glued to a word are not directives.** `scan@if (...)` is
+printed as text with no error. Found in the document view, then found on the
+overview page where it had been shipping as literal "@if" in two sentences.
+Every view is now swept by a test for the pattern.
+
+**Checked.** The suite, 90 tests. And a scratch site: `a11y:report` wrote both
+files, the document parsed with no warnings, one h1, five captioned tables,
+55 conformance rows, and the control panel generated a second report, listed
+both, and served the HTML with the right content type.
+
+**Not checked.** How the document looks in a browser or in print, since no
+browser was available; the PDF pipeline, which does not exist; the ITI terms
+on "VPAT", which the document does not use; and the wording of the limits
+statement against a lawyer's reading, which nobody has done.
+
+---
+
 ## 2026-09-02: The overview and the history are one page, drawn server-side, in Statamic's own components
 
 The first thing anybody sees of the report: a utility under Tools with what is

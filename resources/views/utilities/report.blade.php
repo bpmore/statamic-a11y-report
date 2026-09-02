@@ -61,7 +61,7 @@
         <ui-card-panel heading="Last scan">
             <div class="space-y-4">
                 @if ($latest === null)
-                    <p>No scan has run@if ($site !== null) for this site@endif.</p>
+                    <p>No scan has run{{ $site !== null ? ' for this site' : '' }}.</p>
                 @else
                     <div class="flex items-center gap-2">
                         <ui-badge color="{{ ['complete' => 'emerald', 'running' => 'blue', 'queued' => 'blue', 'failed' => 'red', 'cancelled' => 'default'][$latest->status] ?? 'default' }}" text="@plain($latest->status)" />
@@ -101,7 +101,7 @@
 
     <ui-card-panel heading="Issues found, last 90 days">
         @if ($chart === '')
-            <p>No scan has completed in the last 90 days@if ($site !== null) for this site@endif.</p>
+            <p>No scan has completed in the last 90 days{{ $site !== null ? ' for this site' : '' }}.</p>
         @else
             <div class="text-gray-800 dark:text-gray-200">{!! $chart !!}</div>
             <ui-description text="One point per completed scan, at the time it finished. Every point is in the table below." />
@@ -132,7 +132,7 @@
                                 @if ($scan->site === null && count($sites) > 1)<ui-description text="all sites" />@endif
                             </ui-table-cell>
                             <ui-table-cell>@plain($scan->status)</ui-table-cell>
-                            <ui-table-cell>@plain($scan->trigger)@if ($scan->initiated_by), @plain($scan->initiated_by)@endif</ui-table-cell>
+                            <ui-table-cell>@plain($scan->trigger . ($scan->initiated_by ? ', '.$scan->initiated_by : ''))</ui-table-cell>
                             <ui-table-cell class="text-right">{{ $scan->pages_scanned }} / {{ $scan->pages_total }}</ui-table-cell>
                             <ui-table-cell class="text-right">{{ $scan->pages_errored }}</ui-table-cell>
                             <ui-table-cell class="text-right">{{ $scan->issues_total }}</ui-table-cell>
@@ -154,6 +154,57 @@
                 </ui-table-rows>
             </ui-table>
         @endif
+    </ui-card-panel>
+
+    <ui-card-panel heading="Conformance reports">
+        <div class="space-y-4">
+            <p>A conformance report is a document: the {{ $reports->isEmpty() ? '' : 'latest ' }}complete scan, every WCAG success criterion with its result, the findings, and the open issues, with a scope and limits statement that cannot be removed. It names who generated it and which scan it came from.</p>
+            @if ($canGenerate)
+                @if ($hasCompleteScan)
+                    <form method="post" action="@plain($generateUrl)">
+                        @csrf
+                        @if ($site !== null)
+                            <input type="hidden" name="site" value="@plain($site)">
+                        @endif
+                        <ui-button type="submit" variant="primary" text="Generate a report from the latest scan" />
+                    </form>
+                @else
+                    <ui-description text="A report needs a complete scan. Run one first." />
+                @endif
+            @endif
+            @if ($reports->isEmpty())
+                <p>No report has been generated{{ $site !== null ? ' for this site' : '' }}.</p>
+            @else
+                <ui-table>
+                    <ui-table-columns>
+                        <ui-table-column>Generated</ui-table-column>
+                        <ui-table-column>By</ui-table-column>
+                        <ui-table-column>Standard</ui-table-column>
+                        <ui-table-column>Coverage</ui-table-column>
+                        <ui-table-column>Files</ui-table-column>
+                    </ui-table-columns>
+                    <ui-table-rows>
+                        @foreach ($reports as $report)
+                            <ui-table-row>
+                                <ui-table-cell>
+                                    <span title="{{ $report->generated_at->toDayDateTimeString() }}">{{ $report->generated_at->diffForHumans() }}</span>
+                                    @if ($report->scan)<ui-description text="from the scan of {{ ($report->scan->finished_at ?? $report->scan->created_at)->diffForHumans() }}, {{ $report->scan->issues_total }} issues" />@endif
+                                </ui-table-cell>
+                                <ui-table-cell>@plain($report->generated_by)</ui-table-cell>
+                                <ui-table-cell>@plain(\Bpmore\A11yReport\Document\Wcag::label($report->standard))</ui-table-cell>
+                                <ui-table-cell>@plain($report->coverage_note)</ui-table-cell>
+                                <ui-table-cell>
+                                    <div class="flex gap-2">
+                                        @if ($report->html_path)<ui-button size="sm" href="@plain(cp_route('utilities.a11y-report.reports.download', ['uuid' => $report->uuid, 'format' => 'html']))" target="_blank" text="HTML" />@endif
+                                        @if ($report->json_path)<ui-button size="sm" href="@plain(cp_route('utilities.a11y-report.reports.download', ['uuid' => $report->uuid, 'format' => 'json']))" target="_blank" text="JSON" />@endif
+                                    </div>
+                                </ui-table-cell>
+                            </ui-table-row>
+                        @endforeach
+                    </ui-table-rows>
+                </ui-table>
+            @endif
+        </div>
     </ui-card-panel>
 
 @endif

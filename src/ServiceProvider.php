@@ -7,6 +7,8 @@ namespace Bpmore\A11yReport;
 use Bpmore\A11yGate\Accessibility\StaticAccessibilityChecker;
 use Bpmore\A11yGate\Gate\EntryRenderer;
 use Bpmore\A11yGate\Gate\GateSettings;
+use Bpmore\A11yReport\Document\ReportBuilder;
+use Bpmore\A11yReport\Document\ReportWriter;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Scan\Scans;
@@ -45,6 +47,7 @@ class ServiceProvider extends AddonServiceProvider
 
     protected $commands = [
         Commands\Install::class,
+        Commands\Report::class,
         Commands\Scan::class,
     ];
 
@@ -71,6 +74,9 @@ class ServiceProvider extends AddonServiceProvider
                 Permission::register('run accessibility scans')
                     ->label('Run accessibility scans')
                     ->description('Start a scan of every page from the control panel. Scans render the whole site on the queue.');
+                Permission::register('generate accessibility reports')
+                    ->label('Generate accessibility reports')
+                    ->description('Produce a conformance document from a completed scan. The document names who generated it.');
             });
         });
 
@@ -83,6 +89,8 @@ class ServiceProvider extends AddonServiceProvider
                 ->view('a11y-report::utilities.report', fn (Request $request) => $this->utilityData($request))
                 ->routes(function ($router) {
                     $router->post('run', Http\Controllers\RunScanController::class)->name('run');
+                    $router->post('reports', Http\Controllers\GenerateReportController::class)->name('reports.generate');
+                    $router->get('reports/{uuid}/{format}', Http\Controllers\DownloadReportController::class)->name('reports.download');
                 })
         ));
     }
@@ -116,6 +124,10 @@ class ServiceProvider extends AddonServiceProvider
             'chart' => TrendChart::render($trend),
             'canRun' => (bool) User::current()?->can('run accessibility scans'),
             'runUrl' => cp_route('utilities.a11y-report.run'),
+            'canGenerate' => (bool) User::current()?->can('generate accessibility reports'),
+            'generateUrl' => cp_route('utilities.a11y-report.reports.generate'),
+            'hasCompleteScan' => $installed && $overview->history(1)->first()?->status === \Bpmore\A11yReport\Models\Scan::COMPLETE,
+            'reports' => $installed ? \Bpmore\A11yReport\Models\Report::query()->when($site !== null, fn ($q) => $q->where('site', $site))->with('scan')->orderByDesc('id')->limit(20)->get() : collect(),
             'queueIsSync' => config('queue.default') === 'sync',
             'engine' => (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY),
         ];
@@ -145,6 +157,13 @@ class ServiceProvider extends AddonServiceProvider
                 $settings->optedIn,
             );
         });
+
+        $this->app->bind(ReportBuilder::class, fn ($app) => new ReportBuilder(
+            $app->make(ScanEngine::class),
+            (array) config('statamic-a11y-report.report', []),
+        ));
+
+        $this->app->bind(ReportWriter::class, fn ($app) => new ReportWriter($app, $app->make(ReportBuilder::class)));
 
         $this->app->bind(Scans::class, fn ($app) => new Scans(
             $app->make(ScanEngine::class),

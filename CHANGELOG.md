@@ -27,4 +27,16 @@ button behind its own permission, `run accessibility scans`. A dashboard
 widget, `accessibility_report`, with the open count by impact and a 30-day
 line; add it to the widgets in `config/statamic/cp.php`.
 
-Nothing is generated yet: no document, no statement page, no issue queue.
+**The conformance document.** `a11y:report` generates an Accessibility
+Conformance Report from a completed scan as standalone HTML and as JSON, kept
+under `storage/a11y-report/reports/` with a row recording who generated it and
+from which scan. Every Level A and AA success criterion is in the table, "Not
+evaluated" by default and never "Supports" without a person's locked
+assessment; a criterion the scan found failures under is "Does not support".
+The scope and limits statement is fixed text with no setting to remove it. The
+control panel generates, lists, and serves reports behind a new
+`generate accessibility reports` permission.
+
+Not yet: the PDF, the statement page, the issue queue, and the criteria
+worksheet in the control panel. Manual assessments can be entered in the
+`a11y_criteria_assessments` table until that screen exists.

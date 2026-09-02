@@ -22,5 +22,17 @@ interface ScanEngine
     /** The version of whatever produced the findings, written onto every scan. */
     public function version(): string;
 
+    /**
+     * Every success criterion this engine's rules can cite, as "1.4.3".
+     *
+     * The conformance report uses it to say which criteria were evaluated
+     * automatically and which were not evaluated at all. Derived from the
+     * rules, never typed by hand, so the list cannot drift from what the
+     * engine actually does.
+     *
+     * @return array<int, string>
+     */
+    public function criteria(): array;
+
     public function scan(RenderedPage $page): EngineResult;
 }

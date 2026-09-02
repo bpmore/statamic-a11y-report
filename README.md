@@ -8,13 +8,13 @@ which stays free. The report is a paid addon.
 
 ## Status
 
-The scan layer and the overview are built. Nothing is generated yet.
+The scan layer, the overview and the HTML conformance report are built.
 
 `php please a11y:scan` reads every published page on the queue, keeps every
 finding, records how much of each page the engine could see, and follows each
 problem from one scan to the next by a fingerprint of rule, target, site and
-path. The conformance report, the accessibility statement page, the triage queue,
-and the tagged PDF are built on these tables and are not here yet.
+path. The accessibility statement page, the triage queue, the criteria worksheet
+in the control panel, and the tagged PDF are not here yet.
 
 ## Install
 
@@ -48,6 +48,26 @@ than no check at all.
 The queue needs Laravel's `job_batches` table. The install creates it through
 your site's own jobs migration when you have one, so `php artisan migrate`
 keeps working afterwards.
+
+## The conformance report
+
+```
+php please a11y:report                       from the latest complete scan
+php please a11y:report --site=default --format=html --out=./reports
+```
+
+It writes an Accessibility Conformance Report as a standalone HTML document
+and as JSON, under `storage/a11y-report/reports/`, and records who generated
+it and from which scan. Every WCAG Level A and AA success criterion is in the
+table. The default is "Not evaluated". A criterion the scan found failures
+under is "Does not support". Nothing becomes "Supports" unless a person
+assessed it and locked the assessment, and a locked assessment is never
+overwritten by a scan. The scope and limits statement is fixed text: you can
+add remarks, an evaluator and a remediation plan in config, and you cannot
+remove it.
+
+Reports can also be generated, listed and opened from the control panel, by
+anybody with the `generate accessibility reports` permission.
 
 ## In the control panel
 

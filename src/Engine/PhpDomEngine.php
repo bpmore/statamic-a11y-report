@@ -6,6 +6,7 @@ namespace Bpmore\A11yReport\Engine;
 
 use Bpmore\A11yGate\Accessibility\AccessibilityStandard;
 use Bpmore\A11yGate\Accessibility\Coverage;
+use Bpmore\A11yGate\Accessibility\Remediation;
 use Bpmore\A11yGate\Accessibility\StaticAccessibilityChecker;
 use Bpmore\A11yGate\Accessibility\Violation;
 
@@ -52,6 +53,22 @@ final class PhpDomEngine implements ScanEngine
         return $this->version;
     }
 
+    public function criteria(): array
+    {
+        $criteria = [];
+
+        foreach (Remediation::RULES as $rule) {
+            foreach (self::criteria_of($rule['wcag']) as $number) {
+                $criteria[$number] = $number;
+            }
+        }
+
+        $criteria = array_values($criteria);
+        usort($criteria, 'version_compare');
+
+        return $criteria;
+    }
+
     public function scan(RenderedPage $page): EngineResult
     {
         $report = $this->checker->report($page->html, $this->standard, $this->optedIn);
@@ -68,7 +85,7 @@ final class PhpDomEngine implements ScanEngine
         return new Finding(
             ruleId: $violation->rule,
             label: $violation->wcag,
-            criteria: self::criteria($violation->wcag),
+            criteria: self::criteria_of($violation->wcag),
             impact: $violation->isError() ? Finding::SERIOUS : Finding::MODERATE,
             message: $violation->message,
             remedy: $violation->cta,
@@ -84,7 +101,7 @@ final class PhpDomEngine implements ScanEngine
      *
      * @return array<int, string>
      */
-    public static function criteria(string $label): array
+    public static function criteria_of(string $label): array
     {
         return preg_match('/^WCAG (\d+\.\d+\.\d+)$/', $label, $m) ? [$m[1]] : [];
     }

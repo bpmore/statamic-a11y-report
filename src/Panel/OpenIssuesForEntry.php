@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Bpmore\A11yReport\Panel;
 
+use Bpmore\A11yReport\Document\Brand;
 use Bpmore\A11yReport\Engine\Fingerprint;
 use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\ScanPage;
 use Bpmore\A11yReport\Queue\IssueQuery;
+use Bpmore\A11yReport\Settings;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Statamic\Contracts\Entries\Entry;
 
@@ -20,12 +22,22 @@ use Statamic\Contracts\Entries\Entry;
  * Nothing to say for a page no scan has read, because "no open issues" for
  * a page nobody looked at would be the silent zero. A scanned page with
  * nothing open is told so, because that is news an author can use.
+ *
+ * The block carries the same mark as the cover of a report, when the site
+ * owner has set one, so an author can see at a glance whose report this is.
+ * Only the mark: the accent colour stays on paper. It is validated against
+ * the white page a report is printed on, and no single colour can clear
+ * 4.5:1 against both control-panel themes, so a heading tinted with it would
+ * fail contrast in one of them for every customer who set one.
  */
 final class OpenIssuesForEntry
 {
     public const SHOWN = 3;
 
-    public function __construct(private readonly ReportDatabase $database) {}
+    public function __construct(
+        private readonly ReportDatabase $database,
+        private readonly Settings $settings,
+    ) {}
 
     /**
      * @return array<string, mixed>|null
@@ -58,6 +70,7 @@ final class OpenIssuesForEntry
             return [
                 'heading' => 'No open issues from the last scan',
                 'lines' => ["Read {$when}. A scan reads the page as it was published, not as it is here."],
+                'mark' => $this->mark($site),
             ];
         }
 
@@ -76,6 +89,36 @@ final class OpenIssuesForEntry
                 'url' => cp_route('utilities.a11y-report.issues', ['site' => $site, 'path' => $path]),
                 'text' => 'Open in the queue',
             ],
+            'mark' => $this->mark($site),
+        ];
+    }
+
+    /**
+     * The site's mark, as an address the panel can fetch, or null.
+     *
+     * The picture is served from a route rather than embedded here. A data
+     * URI in this block would be carried in the page data of every entry an
+     * author opens, and again on the next entry; a URL is fetched once and
+     * cached against the digest of the picture.
+     *
+     * Resolved here rather than trusted from a setting, so a logo the report
+     * would refuse to print is a logo the panel does not wear either: one
+     * with no words to stand in for it, above all, since the panel is the one
+     * place where that would be this product failing on its own screen.
+     *
+     * @return array{url: string, alt: string}|null
+     */
+    private function mark(string $site): ?array
+    {
+        $brand = Brand::resolve((array) ($this->settings->block('report')['brand'] ?? []), $site);
+
+        if ($brand['logo'] === null) {
+            return null;
+        }
+
+        return [
+            'url' => cp_route('utilities.a11y-report.mark', ['site' => $site]),
+            'alt' => (string) $brand['logo']['alt'],
         ];
     }
 }

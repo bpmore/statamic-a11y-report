@@ -47,6 +47,15 @@ with a warning rather than printed: the first would fail the PDF/UA
 validation the suite demands on every run. Nothing a brand touches can reach
 the scope and limits statement, and the evaluator gets no mark of their own.
 
+**Your mark in the entry sidebar.** The block this addon adds to Accessibility
+Gate's panel carries the same logo as the cover of a report, served from the
+control panel rather than embedded, so an author can see whose report it is.
+Not the accent colour: it is validated against the white page a report is
+printed on, and no single colour clears 4.5:1 against both control-panel
+themes, so a tinted heading would fail contrast in one of them. Needs
+Accessibility Gate 0.8 or newer; an older gate ignores the mark and the block
+is unchanged.
+
 **The accessibility statement.** A page at `/accessibility` on every site
 (configurable route, view and layout, with a plain shell of the addon's own
 when the site has no layout Statamic can wrap), and an `{{ a11y:statement }}`

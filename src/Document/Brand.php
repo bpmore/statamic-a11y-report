@@ -267,6 +267,22 @@ final class Brand
         return null;
     }
 
+    /**
+     * The picture itself, from a logo `resolve()` returned.
+     *
+     * Decoded from the embedded copy rather than read from disk again, so
+     * what a browser is served is byte for byte what the document embedded,
+     * even if the file behind it has changed since.
+     *
+     * @param  array<string, mixed>  $logo
+     */
+    public static function bytes(array $logo): string
+    {
+        $uri = (string) ($logo['data_uri'] ?? '');
+
+        return (string) base64_decode((string) preg_replace('/^data:[^,]*,/', '', $uri), true);
+    }
+
     /** A colour as `#rrggbb`, or null if it is not one this can read. */
     public static function colour(string $value): ?string
     {

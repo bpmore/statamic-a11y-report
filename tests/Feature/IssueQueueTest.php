@@ -217,7 +217,7 @@ it('links a cited criterion to the W3C text for it, and leaves a house rule as w
 
     $text = queuePage(['status' => 'all']);
 
-    expect($text)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html" target="_blank" rel="noopener" title="What this criterion requires, at w3.org">WCAG 1.1.1 Non-text Content</a>');
+    expect($text)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html" target="_blank" rel="noopener" class="underline underline-offset-2 text-blue-700 dark:text-blue-300 focus:focus-outline rounded-sm">WCAG 1.1.1 Non-text Content<span class="sr-only"> (the W3C\'s explanation, opens in a new tab)</span></a>');
     expect($text)->toContain('Heading structure');
     expect(str_contains($text, 'Understanding/heading-structure'))->toBeFalse('a house rule is not linked to a criterion');
 });

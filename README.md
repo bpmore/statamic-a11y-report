@@ -58,6 +58,16 @@ from the last scan beneath its own result, with a link into the queue
 filtered to the page, so the gate and the queue agree in the one place an
 author looks.
 
+That block carries the same mark as the cover of a report, when one is set,
+so an author can see whose report it is. The logo only, never the accent
+colour: the colour is checked against the white page a report is printed on,
+and no single colour reaches 4.5:1 against both of the control panel's themes,
+so a heading tinted with it would fail contrast in one of them. The mark is
+served from the control panel rather than embedded in the page, and a logo the
+report would refuse to print is one the panel does not wear either. It needs
+Accessibility Gate 0.8 or newer; an older gate ignores the mark, and the block
+is otherwise unchanged.
+
 ## Settings
 
 Addons, then Accessibility Report, then Settings: the WCAG version to

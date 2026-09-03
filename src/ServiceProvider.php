@@ -127,7 +127,10 @@ class ServiceProvider extends AddonServiceProvider
         // The gate's sidebar panel, with this page's open issues from the last
         // scan beneath the gate's own result, so the two agree in the one
         // place an author looks.
-        \Bpmore\A11yGate\Panel\PanelExtensions::register(new Panel\OpenIssuesForEntry($this->app->make(ReportDatabase::class)));
+        \Bpmore\A11yGate\Panel\PanelExtensions::register(new Panel\OpenIssuesForEntry(
+            $this->app->make(ReportDatabase::class),
+            $this->app->make(Settings::class),
+        ));
 
         Utility::extend(fn () => Utility::register(
             Utility::make('a11y-report')
@@ -142,6 +145,7 @@ class ServiceProvider extends AddonServiceProvider
                     $router->get('reports/{uuid}/{format}', Http\Controllers\DownloadReportController::class)->name('reports.download');
                     $router->get('issues', Http\Controllers\IssuesController::class)->name('issues');
                     $router->post('issues', Http\Controllers\UpdateIssuesController::class)->name('issues.update');
+                    $router->get('mark', Http\Controllers\MarkController::class)->name('mark');
                     $router->get('criteria', Http\Controllers\CriteriaController::class)->name('criteria');
                     $router->post('criteria', Http\Controllers\SaveCriteriaController::class)->name('criteria.save');
                 })

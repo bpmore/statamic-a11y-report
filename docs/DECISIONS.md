@@ -12,6 +12,61 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-03: The gate's panel wears the mark and not the colour, because no colour would work
+
+Asked for: the gate's panel using the same brand as the reports. The mark was
+built. The colour was not, and it is worth writing down why, because it looks
+like a judgement and it is not.
+
+**No single colour can do it.** The accent is validated at 4.5:1 against the
+white page a report is printed on. The control panel has a light theme and a
+dark one. To clear 4.5:1 on white a colour needs a relative luminance of at
+most 0.1833; to clear it against the dark theme's background it needs at least
+0.2164. The bands do not overlap, so the set of colours that would pass in
+both themes is empty. All 4096 three-digit colours were measured against both
+surfaces before this was written, and none passed. Tinting a heading with the
+accent would therefore have shipped a contrast failure in one theme for every
+customer who set a colour, in the product whose entire claim is that it finds
+those. A brand that wanted a colour in the panel would have to supply two, one
+per theme, and nobody has asked for that.
+
+**The mark goes through the gate's seam, and the gate gains no branding.** The
+gate is free and stands alone. It now draws a mark a provider hands it, with
+no idea whose it is, and refuses one with no words or an address it should not
+hand the browser. This addon supplies the URL and the words. Turned down:
+brand settings in the gate, which would put a second copy of a paid feature
+inside a free addon, and reading this addon's config from the gate, which
+would make the free one depend on the paid one.
+
+**Served from a route, not embedded.** The document embeds the logo because
+headless Chrome fetches nothing for print. The panel is an ordinary page in an
+ordinary browser, and a data URI there would carry the whole picture in the
+page data of every entry an author opens, then again on the next one. The
+route is inside the utility's own route group, so it is behind the control
+panel's authentication like everything else here, and it carries the digest of
+the picture as its ETag so a replaced logo is a new address and an unchanged
+one is not fetched twice.
+
+**The panel resolves the brand rather than trusting the setting.** A logo the
+cover refuses to print is a logo the panel does not wear. That matters most
+for the one with no alternative text: the panel is where drawing it anyway
+would be this product failing its own rule on its own screen.
+
+**A block reporting a problem wears no mark.** That is the gate's voice, in
+the control panel's colours, and it is nobody's to put a name against.
+
+**Checked.** The suite, 195 tests. The mark, the refusals and the route's
+authentication were each mutation-tested; the first attempt at the
+authentication one changed the controller's base class, which is not what
+guards it, and the guard was found and mutated properly instead. On
+statamic-testing: the mark drawn in the panel of a scanned entry, and served
+by the route.
+
+**Not checked.** The panel in a browser at either theme, or how a wide
+wordmark sits in a narrow sidebar.
+
+---
+
 ## 2026-09-03: The customer's mark goes on the cover, and reaches nothing else
 
 Asked for: the site's brand on the reports. Three things were added, and the

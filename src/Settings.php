@@ -37,6 +37,10 @@ final class Settings
         'evaluator_organization' => 'report.evaluator.organization',
         'evaluator_email' => 'report.evaluator.email',
         'remediation_plan' => 'report.remediation_plan',
+        'brand_logo' => 'report.brand.logo',
+        'brand_logo_alt' => 'report.brand.logo_alt',
+        'brand_accent' => 'report.brand.accent',
+        'brand_sites' => 'report.brand.sites',
         'statement_template' => 'statement.template',
         'statement_organization' => 'statement.organization',
         'statement_commitment' => 'statement.commitment',
@@ -60,6 +64,15 @@ final class Settings
     private const ALL_WHEN_EMPTY = ['scan_collections', 'scan_sites'];
 
     /**
+     * The one field the screen collects in a different shape from the file.
+     * The form has no way to key rows by site, so it asks for a list of rows
+     * that each name their site; the file keeps them keyed, as the statement
+     * block does. Same answer, two shapes, converted here rather than in
+     * everything that reads it.
+     */
+    private const SITE_KEYED = 'brand_sites';
+
+    /**
      * @return array<string, mixed> the whole config block, as in force
      */
     public function effective(): array
@@ -79,6 +92,10 @@ final class Settings
 
             $value = $saved[$handle];
 
+            if ($handle === self::SITE_KEYED) {
+                $value = self::siteKeyed($value);
+            }
+
             // A text field left empty is the file's to answer, the same as
             // one never shown; an empty list is an answer of its own.
             if ($value === '' || (is_array($value) && $value === [] && ! in_array($handle, self::ALL_WHEN_EMPTY, true))) {
@@ -93,6 +110,44 @@ final class Settings
         }
 
         return $config;
+    }
+
+    /**
+     * Rows naming their site, as the file keeps them: by site.
+     *
+     * A row with no site named is dropped rather than guessed at, and so is
+     * one that fills nothing in, so that adding an empty row on the screen
+     * does not silently blank a site the file already answers for.
+     *
+     * @return array<string, array<string, string>>
+     */
+    private static function siteKeyed(mixed $rows): array
+    {
+        $keyed = [];
+
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            // A relationship field hands back a list even when it takes one.
+            $site = is_array($row['site'] ?? null) ? ($row['site'][0] ?? null) : ($row['site'] ?? null);
+
+            if (! is_string($site) || $site === '') {
+                continue;
+            }
+
+            $values = array_filter(
+                ['logo' => $row['logo'] ?? null, 'logo_alt' => $row['logo_alt'] ?? null, 'accent' => $row['accent'] ?? null],
+                fn ($v) => is_string($v) && trim($v) !== '',
+            );
+
+            if ($values !== []) {
+                $keyed[$site] = $values;
+            }
+        }
+
+        return $keyed;
     }
 
     /**

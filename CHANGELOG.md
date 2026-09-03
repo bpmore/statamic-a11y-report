@@ -37,6 +37,16 @@ The scope and limits statement is fixed text with no setting to remove it. The
 control panel generates, lists, and serves reports behind a new
 `generate accessibility reports` permission.
 
+**Your mark on the cover of a report.** A logo, the words that stand in for
+it, and one heading colour, on the settings screen or under `report.brand` in
+config, with a per-site override for a multisite install. The logo is
+embedded as the document is generated, so a report keeps the mark it was
+filed with. A logo with no alternative text, a colour under 4.5:1 on white,
+and a drawing that carries script or points outside itself are each left out
+with a warning rather than printed: the first would fail the PDF/UA
+validation the suite demands on every run. Nothing a brand touches can reach
+the scope and limits statement, and the evaluator gets no mark of their own.
+
 **The accessibility statement.** A page at `/accessibility` on every site
 (configurable route, view and layout, with a plain shell of the addon's own
 when the site has no layout Statamic can wrap), and an `{{ a11y:statement }}`

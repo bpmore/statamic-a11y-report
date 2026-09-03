@@ -45,6 +45,28 @@ function runScan(array $sites = [], array $collections = [], ?string $since = nu
 
 
 /**
+ * The settings screen, saved, as a person pressing Save on it would.
+ *
+ * @param  array<string, mixed>  $values  by field handle
+ */
+function saveSettings(array $values): void
+{
+    $settings = \Statamic\Facades\Addon::get(\Bpmore\A11yReport\Settings::PACKAGE)->settings();
+
+    foreach ($values as $handle => $value) {
+        $settings->set($handle, $value);
+    }
+
+    app(\Statamic\Contracts\Addons\SettingsRepository::class)->save($settings);
+}
+
+/** The settings in force: the file, with the screen on top of it. */
+function effective(): array
+{
+    return app(\Bpmore\A11yReport\Settings::class)->effective();
+}
+
+/**
  * Whether markup Vue will compile is well formed.
  *
  * A utility view and a widget view become `defineComponent({ template })`

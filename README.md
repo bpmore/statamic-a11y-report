@@ -61,9 +61,9 @@ author looks.
 ## Settings
 
 Addons, then Accessibility Report, then Settings: the WCAG version to
-report against, who evaluated the site, the remediation plan, everything the
-public statement says about you, and which collections, sites and addresses
-a scan covers. The screen wins once it has been saved; until then the config
+report against, who evaluated the site, your mark on the cover of a report,
+the remediation plan, everything the public statement says about you, and
+which collections, sites and addresses a scan covers. The screen wins once it has been saved; until then the config
 file answers. The database, engine, browser, queue and deploy thresholds stay
 in the config file and `.env`, because a wrong value for any of them stops
 scans rather than changing a sentence.
@@ -89,6 +89,20 @@ W3C's own text for it, and the PDF describes each link for a screen reader.
 
 Reports can also be generated, listed and opened from the control panel, by
 anybody with the `generate accessibility reports` permission.
+
+**Your mark on the cover.** A logo, the words that stand in for it, and one
+heading colour, on the settings screen or under `report.brand` in config. A
+multisite install can give one site a mark of its own; a report covering more
+than one site wears none of them. The logo is embedded in the document as it
+is generated, so a report keeps the mark it was filed with, and it may be an
+asset, a file inside the site, or the name of a file in the container the
+picker uses. Three things are refused rather than printed: a logo with no
+words, because an untagged image would fail the PDF/UA validation the suite
+demands; a colour that does not reach 4.5:1 on white, which is what 1.4.3
+asks of text that size; and a drawing that carries script or points outside
+itself. Each is left out with a warning in the log, and the report is
+generated either way. Nothing else about the document can be changed, and
+nothing a brand touches can reach the scope and limits statement.
 
 **The PDF.** `--format=pdf` or `--format=all` prints the document with
 headless Chrome, which produces a tagged PDF with a structure tree, an

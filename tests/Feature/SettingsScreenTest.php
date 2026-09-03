@@ -6,7 +6,6 @@ use Bpmore\A11yReport\Document\ReportWriter;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Settings;
 use Bpmore\A11yReport\Storage\ReportDatabase;
-use Statamic\Contracts\Addons\SettingsRepository;
 use Statamic\Facades\Addon;
 use Statamic\Facades\Collection;
 use Statamic\Facades\User;
@@ -24,22 +23,6 @@ beforeEach(function () {
     app(ReportDatabase::class)->install();
     tempStorage();
 });
-
-function saveSettings(array $values): void
-{
-    $settings = Addon::get(Settings::PACKAGE)->settings();
-
-    foreach ($values as $handle => $value) {
-        $settings->set($handle, $value);
-    }
-
-    app(SettingsRepository::class)->save($settings);
-}
-
-function effective(): array
-{
-    return app(Settings::class)->effective();
-}
 
 it('offers a settings screen at all, and links to it from the utility', function () {
     $addon = Addon::get(Settings::PACKAGE);
@@ -182,6 +165,9 @@ it('says out loud which settings the screen cannot reach', function () {
     // Developer's settings, kept off the screen on purpose: a wrong value
     // for any of them stops scans rather than changing a sentence. Pinned so
     // that a setting added to the file has to be placed, here or there.
+    // `report.brand.container` is here because it decides which picker the
+    // screen shows, and a field that changes the screen it sits on is a
+    // puzzle rather than a setting.
     $reachable = array_values(Settings::MAP);
 
     $flatten = function (array $config, string $prefix = '') use (&$flatten): array {
@@ -203,7 +189,7 @@ it('says out loud which settings the screen cannot reach', function () {
     expect($unreachable)->toBe([
         'connection', 'engine', 'chrome.binary', 'chrome.timeout',
         'scan.concurrency', 'scan.schedule', 'scan.stale_after_minutes',
-        'retention.scans', 'report.appendix_limit',
+        'retention.scans', 'report.appendix_limit', 'report.brand.container',
         'statement.route', 'statement.view', 'statement.layout', 'statement.sites',
         'ci.fail_above.critical', 'ci.fail_above.serious',
     ], 'a setting gained or lost a field on the screen: '.implode(', ', $unreachable));

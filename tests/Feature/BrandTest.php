@@ -72,10 +72,23 @@ function documentWithBrand(array $sites = []): array
     ];
 }
 
-/** One more place the site keeps pictures. */
+/**
+ * One more place the site keeps pictures, in an empty directory of its own.
+ *
+ * Never the shared temporary directory: Statamic lists a container's files,
+ * and on a Linux runner that directory is full of other processes' folders
+ * this one cannot open, which fails as `UnableToListContents` rather than as
+ * anything to do with the test.
+ */
 function makeContainer(string $handle, ?string $root = null): void
 {
-    config()->set('filesystems.disks.'.$handle, ['driver' => 'local', 'root' => $root ?? sys_get_temp_dir()]);
+    $root ??= sys_get_temp_dir().'/a11y-container-'.$handle.'-'.uniqid();
+
+    if (! is_dir($root)) {
+        mkdir($root, 0755, true);
+    }
+
+    config()->set('filesystems.disks.'.$handle, ['driver' => 'local', 'root' => $root]);
     AssetContainer::make($handle)->disk($handle)->save();
 }
 

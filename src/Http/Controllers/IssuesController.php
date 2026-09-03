@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Bpmore\A11yReport\Http\Controllers;
 
+use Bpmore\A11yReport\Document\Wcag;
 use Bpmore\A11yReport\Queue\IssueQuery;
+use Bpmore\A11yReport\Settings;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -36,11 +38,21 @@ class IssuesController extends CpController
             'overviewUrl' => cp_route('utilities.index').'/a11y-report',
             'settingsUrl' => \Statamic\Facades\Addon::get(\Bpmore\A11yReport\Settings::PACKAGE)?->settingsUrl(),
             'statuses' => IssueQuery::STATUSES,
+            // The WCAG version the report is set to, so a link on a cited
+            // criterion opens that version's text rather than the newest.
+            'standard' => self::standard(),
         ];
 
         return Inertia::render('utilities/Show', [
             'title' => 'Accessibility Report: Issues',
             'html' => view('a11y-report::utilities.issues', $data)->render(),
         ]);
+    }
+
+    private static function standard(): string
+    {
+        $configured = app(Settings::class)->block('report')['standard'] ?? null;
+
+        return is_string($configured) && isset(Wcag::STANDARDS[$configured]) ? $configured : 'wcag22aa';
     }
 }

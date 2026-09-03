@@ -7,9 +7,10 @@ namespace Bpmore\A11yReport\Pdf;
 use RuntimeException;
 
 /**
- * The two things PDF/UA wants that Chrome's print does not write: the
- * document title in XMP metadata, and the viewer preference that shows it
- * in the window title instead of the file name.
+ * The things PDF/UA wants that Chrome's print does not write: the document
+ * title in XMP metadata, the viewer preference that shows it in the window
+ * title instead of the file name, a role map for structure types the
+ * standard does not define, and an alternate description on every link.
  *
  * Added as an incremental update, which is how PDF is designed to be
  * amended: nothing Chrome wrote is touched. A metadata stream is appended,
@@ -48,7 +49,10 @@ final class PdfMetadata
         'Pre' => 'P', 'Dl' => 'L', 'Dt' => 'Lbl', 'Dd' => 'LBody', 'Ul' => 'L', 'Ol' => 'L', 'Li' => 'LI',
     ];
 
-    public static function stamp(string $pdfPath, string $title, string $lang = 'en', ?string $producer = null, bool $declarePdfUa = false): void
+    /**
+     * @param  array<string, string>  $linkDescriptions  destination URL => what a reader should hear for a link to it; a link to anything else is described by its URL
+     */
+    public static function stamp(string $pdfPath, string $title, string $lang = 'en', ?string $producer = null, bool $declarePdfUa = false, array $linkDescriptions = []): void
     {
         $pdf = (string) file_get_contents($pdfPath);
 
@@ -99,6 +103,15 @@ final class PdfMetadata
             [$rootId, $rootObject] = $roleMapped;
             $entries[$rootId] = strlen($out);
             $out .= "{$rootId} 0 obj\n{$rootObject}\nendobj\n";
+        }
+
+        // Every link annotation without an alternate description gets one.
+        // PDF/UA 7.18.5 wants a Contents entry on each, Chrome writes none,
+        // and veraPDF failed the file on exactly that when the first link
+        // went in. Re-declared in the same update, like the catalog.
+        foreach (self::linkAnnotationsWithContents($pdf, $linkDescriptions) as $annotId => $annotObject) {
+            $entries[$annotId] = strlen($out);
+            $out .= "{$annotId} 0 obj\n{$annotObject}\nendobj\n";
         }
 
         $xrefOffset = strlen($out);
@@ -200,6 +213,49 @@ final class PdfMetadata
         $map = implode(' ', array_map(fn ($from, $to) => "/{$from} /{$to}", array_keys($existing), $existing));
 
         return [$rootId, '<<'.trim((string) $body)."\n/RoleMap <<{$map}>>>>"];
+    }
+
+    /**
+     * Every link annotation that has no Contents entry, re-declared with one.
+     * The description is looked up by the link's URI, and falls back to the
+     * URI itself: a reader told where a link goes is better served than one
+     * told nothing, and PDF/UA asks for a description, not a good one.
+     *
+     * @param  array<string, string>  $descriptions
+     * @return array<int, string> object id => object body
+     */
+    private static function linkAnnotationsWithContents(string $pdf, array $descriptions): array
+    {
+        // A dictionary that must not contain endobj. A lazy match up to the
+        // first dictionary close followed by endobj, started at a content
+        // stream's dictionary, runs through the stream and swallows the next
+        // object: that is how the annotations after the first page's content
+        // went unseen on the first attempt. (No literal close tag in this
+        // comment either; PHP honours one even here.)
+        preg_match_all('/(?<![0-9])(\d+)\s+0\s+obj\s*(<<(?:(?!endobj).)*>>)\s*endobj/s', $pdf, $objects, PREG_SET_ORDER);
+
+        $out = [];
+
+        foreach ($objects as [, $id, $dict]) {
+            if (! preg_match('/\/Subtype\s*\/Link(?![A-Za-z])/', $dict) || preg_match('/\/Contents\s*[(<]/', $dict)) {
+                continue;
+            }
+
+            $uri = preg_match('/\/URI\s*\(((?:[^()\\\\]|\\\\.)*)\)/s', $dict, $u) ? stripslashes($u[1]) : '';
+            $description = $descriptions[$uri] ?? ($uri !== '' ? 'Link to '.$uri : 'Link');
+
+            $out[(int) $id] = '<<'.substr($dict, 2, -2)."\n/Contents (".self::literal($description).')>>';
+        }
+
+        return $out;
+    }
+
+    /** A PDF literal string body: backslash, parentheses and line breaks escaped, anything outside PDFDocEncoding's safe range replaced. */
+    private static function literal(string $s): string
+    {
+        $ascii = (string) preg_replace('/[^\x20-\x7E]/', '?', $s);
+
+        return str_replace(['\\', '(', ')', "\r", "\n"], ['\\\\', '\\(', '\\)', '\\r', '\\n'], $ascii);
     }
 
     private static function xmp(string $title, string $lang, ?string $producer, bool $declarePdfUa = false): string

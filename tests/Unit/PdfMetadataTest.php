@@ -118,3 +118,31 @@ it('maps a non-standard structure type in the role map and leaves a standard one
     expect(substr_count($out, '/Type /StructTreeRoot'))->toBe(2);
     expect($out)->not->toContain('/P /Span');
 });
+
+it('gives every link annotation an alternate description, by destination where it knows one and by URL where it does not', function () {
+    // Two link annotations in the shape Chrome writes them, one already
+    // described, separated by a content stream to prove the object scan
+    // does not run through the stream and swallow what follows it.
+    $path = tempnam(sys_get_temp_dir(), 'a11y-pdf');
+    $pdf = tinyPdf();
+    $pdf = str_replace(
+        "trailer\n<</Size 5",
+        "5 0 obj\n<</Length 12>>\nstream\nBT >> endobj\nendstream\nendobj\n"
+        ."6 0 obj\n<</Type /Annot /Subtype /Link /Rect [0 0 1 1] /A <</Type /Action /S /URI /URI (https://www.w3.org/TR/WCAG22/)>>>>\nendobj\n"
+        ."7 0 obj\n<</Type /Annot /Subtype /Link /Rect [0 0 1 1] /A <</S /URI /URI (https://example.test/a\\(b\\))>>>>\nendobj\n"
+        ."8 0 obj\n<</Type /Annot /Subtype /Link /Rect [0 0 1 1] /Contents (Already said) /A <</S /URI /URI (https://example.test/)>>>>\nendobj\n"
+        ."trailer\n<</Size 9",
+        $pdf,
+    );
+    file_put_contents($path, $pdf);
+
+    PdfMetadata::stamp($path, 'T', 'en', null, false, ['https://www.w3.org/TR/WCAG22/' => 'The WCAG 2.2 Recommendation at w3.org']);
+    $out = file_get_contents($path);
+    unlink($path);
+
+    expect(str_contains($out, '/URI (https://www.w3.org/TR/WCAG22/)>>'."\n".'/Contents (The WCAG 2.2 Recommendation at w3.org)>>'))->toBeTrue('the known destination gets its description');
+    expect(str_contains($out, '/Contents (Link to https://example.test/a\\(b\\))>>'))->toBeTrue('an unknown destination is described by its URL, escaped');
+    expect(substr_count($out, 'Already said'))->toBe(1);
+    expect(substr_count($out, '/Subtype /Link'))->toBe(5);
+    expect(preg_match('/\n6 1\n\d{10} 00000 n \n7 1\n/', $out))->toBe(1);
+});

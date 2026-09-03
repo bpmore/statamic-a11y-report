@@ -12,6 +12,14 @@
     $href = fn (array $extra = []) => $indexUrl.(($qs = http_build_query(array_merge($queryString, $extra))) !== '' ? '?'.$qs : '');
     $label = fn (string $status) => ucfirst(str_replace('_', ' ', $status));
     $colour = ['critical' => 'red', 'serious' => 'amber', 'moderate' => 'blue', 'minor' => 'default'];
+    // The criterion the engine cited, looked up in the catalogue for its
+    // name and the W3C's page on it. A house rule cites none and stays text.
+    $criterion = function ($i) {
+        $cited = is_string($i->wcag_criteria) ? (array) json_decode($i->wcag_criteria, true) : (array) $i->wcag_criteria;
+
+        return isset($cited[0]) ? \Bpmore\A11yReport\Document\Wcag::find((string) $cited[0]) : null;
+    };
+    $version = \Bpmore\A11yReport\Document\Wcag::version($standard);
 @endphp
 
 <ui-header title="Accessibility Report" icon="pulse" />
@@ -140,7 +148,9 @@
                                     </ui-table-cell>
                                     <ui-table-cell>
                                         <div>@plain($i->message)</div>
-                                        <ui-description text="@plain($i->label . ($i->pointer ? ': '.$i->pointer : '') . ($i->occurrences > 1 ? ', '.$i->occurrences.' times' : ''))" />
+                                        <div class="text-xs text-gray-600 dark:text-gray-400">
+                                            @if (($c = $criterion($i)) !== null)<a href="@plain($c->understandingUrl($version))" target="_blank" rel="noopener" title="What this criterion requires, at w3.org">@plain($i->label) @plain($c->name)</a>@else @plain($i->label) @endif @plain(($i->pointer ? ': '.$i->pointer : '') . ($i->occurrences > 1 ? ', '.$i->occurrences.' times' : ''))
+                                        </div>
                                         @if ($i->note)<ui-description text="Note: @plain($i->note)" />@endif
                                     </ui-table-cell>
                                     <ui-table-cell><ui-badge color="{{ $colour[$i->impact] ?? 'default' }}" text="@plain($i->impact)" pill /></ui-table-cell>

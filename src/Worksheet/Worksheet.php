@@ -61,6 +61,7 @@ final class Worksheet
                 'number' => $criterion->number,
                 'name' => $criterion->name,
                 'level' => $criterion->level,
+                'url' => $criterion->understandingUrl(Wcag::version($standard)),
                 'automated' => in_array($criterion->number, $automated, true),
                 'failure' => $failures[$criterion->number] ?? null,
                 'evidence' => $effective['evidence'],

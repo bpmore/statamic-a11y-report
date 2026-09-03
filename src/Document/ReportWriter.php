@@ -62,7 +62,7 @@ final class ReportWriter
             // repeats wherever veraPDF is installed, CI included. A change to
             // the template that breaks a rule turns that test red before it
             // ships a file that declares what it no longer has.
-            PdfMetadata::stamp($pdf, self::pdfTitle($data), $data['lang'], $data['generator'], declarePdfUa: true);
+            PdfMetadata::stamp($pdf, self::pdfTitle($data), $data['lang'], $data['generator'], declarePdfUa: true, linkDescriptions: Wcag::linkDescriptions($data['standard']));
             $paths['pdf_path'] = 'a11y-report/reports/'.$data['uuid'].'.pdf';
         }
 

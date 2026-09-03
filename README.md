@@ -84,6 +84,8 @@ assessed it and locked the assessment, and a locked assessment is never
 overwritten by a scan. The scope and limits statement is fixed text: you can
 add remarks, an evaluator and a remediation plan in config, and you cannot
 remove it.
+Every criterion in the document, and the standard on its cover, links to the
+W3C's own text for it, and the PDF describes each link for a screen reader.
 
 Reports can also be generated, listed and opened from the control panel, by
 anybody with the `generate accessibility reports` permission.
@@ -150,6 +152,8 @@ and your own status, remarks and lock, per site or as a global default. This
 is the only way a criterion becomes "Supports". Only rows you change are
 written, with your name and the date, and it needs the `assess accessibility
 criteria` permission. A locked row is never changed by a scan.
+Each criterion, here and in the queue, links to the W3C's Understanding page
+for it under the WCAG version in your settings.
 
 A dashboard widget shows the open count by impact and a 30-day line. Add it to
 `config/statamic/cp.php`:

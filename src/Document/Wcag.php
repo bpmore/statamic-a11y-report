@@ -114,6 +114,44 @@ final class Wcag
         return self::STANDARDS[$standard]['version'] ?? self::STANDARDS['wcag22aa']['version'];
     }
 
+    /** The W3C Recommendation itself, for the standard's label to point at. */
+    public static function specUrl(string $standard): string
+    {
+        return 'https://www.w3.org/TR/WCAG'.str_replace('.', '', self::version($standard)).'/';
+    }
+
+    /**
+     * The Understanding page for a criterion number under a standard, or
+     * null for a number the catalogue does not know. Null, not a guessed
+     * URL: a link that 404s from a conformance document is worse than
+     * plain text, and a number outside Level A and AA is not one this
+     * addon should be sending anybody to read up on as if it were in scope.
+     */
+    public static function urlFor(string $number, string $standard): ?string
+    {
+        return self::find($number)?->understandingUrl(self::version($standard));
+    }
+
+    /**
+     * Every URL a document for this standard may link to, with the words
+     * a PDF reader should say for it. PDF/UA requires an alternate
+     * description on every link annotation, and Chrome writes none, so the
+     * PDF stamp looks each link's destination up here.
+     *
+     * @return array<string, string> url => description
+     */
+    public static function linkDescriptions(string $standard): array
+    {
+        $version = self::version($standard);
+        $out = [self::specUrl($standard) => 'The WCAG '.$version.' Recommendation at w3.org'];
+
+        foreach (self::all() as $criterion) {
+            $out[$criterion->understandingUrl($version)] = "Understanding success criterion {$criterion->number} {$criterion->name}, at w3.org";
+        }
+
+        return $out;
+    }
+
     public static function label(string $standard): string
     {
         return self::STANDARDS[$standard]['label'] ?? self::STANDARDS['wcag22aa']['label'];

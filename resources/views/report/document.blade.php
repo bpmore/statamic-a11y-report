@@ -36,6 +36,9 @@
         .status-partially_supports { color: #7a4d00; }
         .evidence { color: #444; font-size: 0.92em; }
         .notice { border: 1px solid #999; padding: 0.75em 1em; background: #fafafa; }
+        /* Links go to the W3C's own text for each criterion. Dark enough to
+           pass 1.4.3 on white, underlined so colour is not the only cue. */
+        a { color: #1a4d8a; text-decoration: underline; }
         footer { margin-top: 3em; border-top: 1px solid #ccc; padding-top: 1em; font-size: 0.9em; color: #444; }
         @page { margin: 18mm; }
         /* No CSS borders on print except in tables. Chrome prints a border
@@ -57,12 +60,12 @@
 <main>
     <header id="cover">
         <h1>{{ $r['title'] }}</h1>
-        <p class="notice">A self-assessment against {{ $r['standard_label'] }}. It is not a certification and not a third-party audit. Read the section called Scope and limits before reading the conformance table.</p>
+        <p class="notice">A self-assessment against <a href="{{ $r['standard_url'] }}">{{ $r['standard_label'] }}</a>. It is not a certification and not a third-party audit. Read the section called Scope and limits before reading the conformance table.</p>
         <dl class="cover">
             <dt>Site</dt>
             <dd>{{ $r['subject']['name'] }}@if ($r['subject']['url'] !== ''), {{ $r['subject']['url'] }}@endif</dd>
             <dt>Standard</dt>
-            <dd>{{ $r['standard_label'] }}</dd>
+            <dd><a href="{{ $r['standard_url'] }}">{{ $r['standard_label'] }}</a></dd>
             <dt>Report date</dt>
             <dd>{{ \Illuminate\Support\Carbon::parse($r['generated_at'])->format('j F Y') }}</dd>
             <dt>Evaluation period</dt>
@@ -119,7 +122,7 @@
 
     <section id="conformance" aria-labelledby="conformance-heading">
         <h2 id="conformance-heading">Conformance table</h2>
-        <p>Every Level A and AA success criterion in {{ $r['standard_label'] }}. "Not evaluated" is the default and means no determination was made.</p>
+        <p>Every Level A and AA success criterion in {{ $r['standard_label'] }}. "Not evaluated" is the default and means no determination was made. Each criterion links to the W3C's explanation of what it requires.</p>
         <table>
             <caption>{{ $r['standard_label'] }} success criteria</caption>
             <thead>
@@ -134,7 +137,7 @@
             <tbody>
                 @foreach ($r['criteria'] as $c)
                     <tr>
-                        <th scope="row">{{ $c['number'] }} {{ $c['name'] }}</th>
+                        <th scope="row">@if (! empty($c['url']))<a href="{{ $c['url'] }}">{{ $c['number'] }} {{ $c['name'] }}</a>@else{{ $c['number'] }} {{ $c['name'] }}@endif</th>
                         <td>{{ $c['level'] }}</td>
                         <td class="status status-{{ $c['status'] }}">{{ \Bpmore\A11yReport\Document\AssessmentMerger::label($c['status']) }}</td>
                         <td>{{ $c['locked'] ? ucfirst($c['method']).', locked' : ucfirst($c['method']) }}</td>
@@ -167,7 +170,7 @@
                 <thead><tr><th scope="col">Criterion</th><th scope="col" class="num">Issues</th><th scope="col" class="num">Pages</th></tr></thead>
                 <tbody>
                     @foreach ($r['summary']['by_criterion'] as $row)
-                        <tr><th scope="row">{{ $row['number'] }} {{ $row['name'] }}</th><td class="num">{{ $row['issues'] }}</td><td class="num">{{ $row['pages'] }}</td></tr>
+                        <tr><th scope="row">@if (! empty($row['url']))<a href="{{ $row['url'] }}">{{ $row['number'] }} {{ $row['name'] }}</a>@else{{ $row['number'] }} {{ $row['name'] }}@endif</th><td class="num">{{ $row['issues'] }}</td><td class="num">{{ $row['pages'] }}</td></tr>
                     @endforeach
                 </tbody>
             </table>
@@ -213,7 +216,7 @@
                     @foreach ($r['issues'] as $i)
                         <tr>
                             <td>{{ $i['path'] }}{{ $r['subject']['site'] === null && count($r['subject']['sites']) > 1 ? ' ('.$i['site'].')' : '' }}</td>
-                            <td>{{ $i['label'] }}</td>
+                            <td>@if (($u = \Bpmore\A11yReport\Document\Wcag::urlFor((string) (($i['criteria'] ?? [])[0] ?? ''), $r['standard'])) !== null)<a href="{{ $u }}">{{ $i['label'] }}</a>@else{{ $i['label'] }}@endif</td>
                             <td>{{ ucfirst($i['impact']) }}</td>
                             <td>{{ $i['message'] }}@if ($i['target']) <span class="evidence">({{ $i['target'] }}{{ $i['occurrences'] > 1 ? ', '.$i['occurrences'].' times' : '' }})</span>@endif</td>
                             <td>{{ str_replace('_', ' ', (string) $i['state']) }}</td>

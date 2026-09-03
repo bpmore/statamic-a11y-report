@@ -24,7 +24,7 @@
 
     <ui-card-panel heading="Criteria worksheet">
         <div class="space-y-4">
-            <p>Every {{ $standardLabel }} success criterion. The automated evidence comes from the latest complete scan{{ $scan ? ' of '.($scan->finished_at ?? $scan->created_at)->diffForHumans().', '.$scan->pages_scanned.' pages read' : '' }}. What you write here is what the conformance report prints. A locked row is never changed by a scan. Nothing becomes "Supports" unless a person sets it.</p>
+            <p>Every <a href="@plain($standardUrl)" target="_blank" rel="noopener">{{ $standardLabel }}</a> success criterion, each linked to the W3C's explanation of what it requires. The automated evidence comes from the latest complete scan{{ $scan ? ' of '.($scan->finished_at ?? $scan->created_at)->diffForHumans().', '.$scan->pages_scanned.' pages read' : '' }}. What you write here is what the conformance report prints. A locked row is never changed by a scan. Nothing becomes "Supports" unless a person sets it.</p>
 
             @if (count($sites) > 1)
                 <div class="flex flex-wrap items-center gap-2">
@@ -62,7 +62,7 @@
                             @endphp
                             <ui-table-row>
                                 <ui-table-cell>
-                                    <div class="font-medium">{{ $n }} @plain($row['name'])</div>
+                                    <div class="font-medium"><a href="@plain($row['url'])" target="_blank" rel="noopener" title="What this criterion requires, at w3.org">{{ $n }} @plain($row['name'])</a></div>
                                     <ui-description text="Level {{ $row['level'] }}" />
                                 </ui-table-cell>
                                 <ui-table-cell>

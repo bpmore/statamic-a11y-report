@@ -119,6 +119,7 @@ final class StatementBuilder
                 'evaluated_at' => $report->scan?->finished_at?->toIso8601String(),
                 'standard' => $report->standard,
                 'standard_label' => Wcag::label((string) $report->standard),
+                'standard_url' => Wcag::specUrl((string) $report->standard),
                 'pages_read' => (int) ($report->scan?->pages_scanned ?? 0),
                 'pages_total' => (int) ($report->scan?->pages_total ?? 0),
                 'engine' => trim(($report->scan?->engine ?? '').' '.($report->scan?->engine_version ?? '')),
@@ -148,9 +149,9 @@ final class StatementBuilder
             $counts[$row['status']] = ($counts[$row['status']] ?? 0) + 1;
 
             if ($row['status'] === CriterionAssessment::DOES_NOT_SUPPORT) {
-                $failing[] = ['number' => $row['number'], 'name' => $row['name'], 'remarks' => $row['remarks'], 'evidence' => $row['evidence']];
+                $failing[] = self::criterionRow($row, $data['standard']);
             } elseif ($row['status'] === CriterionAssessment::PARTIALLY_SUPPORTS) {
-                $partial[] = ['number' => $row['number'], 'name' => $row['name'], 'remarks' => $row['remarks'], 'evidence' => $row['evidence']];
+                $partial[] = self::criterionRow($row, $data['standard']);
             }
         }
 
@@ -160,6 +161,7 @@ final class StatementBuilder
             'evaluated_at' => $data['scan']['finished_at'] ?? $data['generated_at'],
             'standard' => $data['standard'],
             'standard_label' => $data['standard_label'],
+            'standard_url' => $data['standard_url'] ?? Wcag::specUrl((string) $data['standard']),
             'pages_read' => (int) $data['scan']['pages_scanned'],
             'pages_total' => (int) $data['scan']['pages_total'],
             'engine' => trim($data['scan']['engine'].' '.$data['scan']['engine_version']),
@@ -204,5 +206,23 @@ final class StatementBuilder
     public static function date(?string $iso): string
     {
         return $iso === null ? 'an unrecorded date' : Carbon::parse($iso)->format('j F Y');
+    }
+
+    /**
+     * A criterion as the statement lists it, with the W3C's page on it.
+     * Older report JSON has no url; the catalogue answers for it.
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private static function criterionRow(array $row, string $standard): array
+    {
+        return [
+            'number' => $row['number'],
+            'name' => $row['name'],
+            'url' => $row['url'] ?? Wcag::urlFor((string) $row['number'], $standard),
+            'remarks' => $row['remarks'],
+            'evidence' => $row['evidence'],
+        ];
     }
 }

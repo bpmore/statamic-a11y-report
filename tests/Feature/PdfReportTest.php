@@ -120,3 +120,11 @@ it('finds Chrome from config before searching, and reports absence rather than a
         expect(is_executable($found))->toBeTrue();
     }
 });
+
+it('describes every link in the PDF for a reader who cannot see where it points', function () {
+    [, $pdf] = pdfBytes();
+
+    expect(substr_count($pdf, '/Subtype /Link'))->toBeGreaterThan(0);
+    expect(str_contains($pdf, '/Contents (Understanding success criterion 1.1.1 Non-text Content, at w3.org)'))->toBeTrue('the criterion link is described');
+    expect(str_contains($pdf, '/Contents (The WCAG 2.2 Recommendation at w3.org)'))->toBeTrue('the standard link is described');
+})->group('pdf');

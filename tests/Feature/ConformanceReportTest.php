@@ -96,9 +96,9 @@ it('has the shape a reader expects, in that order', function () {
 it('marks a criterion the scan failed as does not support and everything else as not evaluated', function () {
     [$report, $html] = document();
 
-    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/th>\s*<td>A<\/td>\s*<td class="status status-does_not_support">Does not support/');
-    expect($html)->toMatch('/2\.4\.4 Link Purpose \(In Context\)<\/th>\s*<td>A<\/td>\s*<td class="status status-not_evaluated">Not evaluated/');
-    expect($html)->toMatch('/1\.4\.3 Contrast \(Minimum\)<\/th>\s*<td>AA<\/td>\s*<td class="status status-not_evaluated">Not evaluated/');
+    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/a><\/th>\s*<td>A<\/td>\s*<td class="status status-does_not_support">Does not support/');
+    expect($html)->toMatch('/2\.4\.4 Link Purpose \(In Context\)<\/a><\/th>\s*<td>A<\/td>\s*<td class="status status-not_evaluated">Not evaluated/');
+    expect($html)->toMatch('/1\.4\.3 Contrast \(Minimum\)<\/a><\/th>\s*<td>AA<\/td>\s*<td class="status status-not_evaluated">Not evaluated/');
     expect(substr_count($html, 'class="status status-supports"'))->toBe(0);
     expect(substr_count($html, '<th scope="row">'))->toBeGreaterThanOrEqual(55);
 });
@@ -108,7 +108,7 @@ it('lists a house rule apart from WCAG so it cannot be read as a criterion', fun
 
     expect($html)->toContain('Findings outside WCAG');
     expect($html)->toContain('Heading structure');
-    expect(flat($html))->not->toContain('1.3.1 Info and Relationships</th> <td>A</td> <td class="status status-does_not_support"');
+    expect(str_contains(flat($html), '1.3.1 Info and Relationships A Does not support'))->toBeFalse('the house rule is not attributed to 1.3.1');
 });
 
 it('carries the limits statement, the automated list, and the not evaluated list, and no configuration removes them', function () {
@@ -154,11 +154,11 @@ it('lets a locked manual assessment win and shows the automated evidence beside 
     $sited = runScan(sites: ['default']);
     [$report, $html] = document($sited);
 
-    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/th>\s*<td>A<\/td>\s*<td class="status status-supports">Supports<\/td>\s*<td>Manual, locked/');
+    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/a><\/th>\s*<td>A<\/td>\s*<td class="status status-supports">Supports<\/td>\s*<td>Manual, locked/');
     expect($html)->toContain('Every image reviewed by hand on 2 September.');
     expect($html)->toContain('Automated checks found 1 issue on 1 page (image-missing-alt).');
     expect($html)->toContain('Assessed by Reviewer');
-    expect($html)->toMatch('/2\.4\.3 Focus Order<\/th>\s*<td>A<\/td>\s*<td class="status status-partially_supports">Partially supports/');
+    expect($html)->toMatch('/2\.4\.3 Focus Order<\/a><\/th>\s*<td>A<\/td>\s*<td class="status status-partially_supports">Partially supports/');
     expect($report->coverage_note)->toContain('2 were assessed by a person');
 
     // And a scan is not allowed to write over either row.
@@ -171,7 +171,7 @@ it('lets an engine failure beat an unlocked supports', function () {
 
     [, $html] = document();
 
-    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/th>\s*<td>A<\/td>\s*<td class="status status-does_not_support">Does not support/');
+    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/a><\/th>\s*<td>A<\/td>\s*<td class="status status-does_not_support">Does not support/');
     expect($html)->toContain('Unlocked assessment on file: Probably fine.');
 });
 
@@ -184,7 +184,7 @@ it('lists the open issues with page, label, impact, and state, and omits what a 
 
     expect($html)->toContain('<caption>Open issues from this scan</caption>');
     expect($html)->toContain('<td>/one</td>');
-    expect($html)->toContain('<td>WCAG 1.1.1</td>');
+    expect($html)->toContain('<td><a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html">WCAG 1.1.1</a></td>');
     expect($html)->toContain('<td>Serious</td>');
     expect($html)->toContain('<td>open</td>');
     expect(substr_count(flat($html), 'Skipped'))->toBe(0);
@@ -322,4 +322,28 @@ it('says so on the control panel when there is no complete scan to report on', f
         ->assertSessionHas('error');
 
     expect(Report::count())->toBe(0);
+});
+
+it('links every criterion, and the standard, to the W3C text for the report\'s WCAG version', function () {
+    [, $html] = document();
+
+    expect($html)->toContain('<a href="https://www.w3.org/TR/WCAG22/">WCAG 2.2 Level AA</a>');
+    expect($html)->toContain('<th scope="row"><a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html">1.1.1 Non-text Content</a></th>');
+    expect($html)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/accessible-authentication-minimum.html">3.3.8 Accessible Authentication (Minimum)</a>');
+    // The two lists in the limits statement, number by number.
+    expect($html)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/link-purpose-in-context.html" title="Link Purpose (In Context)">2.4.4</a>');
+    expect(substr_count($html, 'https://www.w3.org/WAI/WCAG22/Understanding/'))->toBeGreaterThanOrEqual(55 + 6);
+    expect(substr_count($html, 'WCAG21/Understanding'))->toBe(0);
+    // A house rule cites no criterion and gets no link.
+    expect(str_contains($html, 'Understanding/heading-structure'))->toBeFalse('a house rule is not linked to a criterion');
+    expect($html)->toContain('<td>Heading structure</td>');
+});
+
+it('links to the WCAG 2.1 text when the report is set to 2.1', function () {
+    config()->set('statamic-a11y-report.report.standard', 'wcag21aa');
+    [, $html] = document();
+
+    expect($html)->toContain('<a href="https://www.w3.org/TR/WCAG21/">WCAG 2.1 Level AA</a>');
+    expect($html)->toContain('https://www.w3.org/WAI/WCAG21/Understanding/parsing.html');
+    expect(substr_count($html, 'WCAG22/Understanding'))->toBe(1); // 2.5.8, which 2.1 has no page for
 });

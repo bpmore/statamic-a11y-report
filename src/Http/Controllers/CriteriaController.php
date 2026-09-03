@@ -35,6 +35,7 @@ class CriteriaController extends CpController
                 'sites' => Site::all()->map(fn ($s) => ['handle' => $s->handle(), 'name' => $s->name()])->values()->all(),
                 'sheet' => $sheet,
                 'standardLabel' => Wcag::label($sheet['standard']),
+                'standardUrl' => Wcag::specUrl($sheet['standard']),
                 'statuses' => Worksheet::STATUSES,
                 'methods' => Worksheet::METHODS,
                 'label' => fn (string $s) => AssessmentMerger::label($s),

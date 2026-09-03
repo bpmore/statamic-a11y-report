@@ -105,9 +105,9 @@ it('is what the report prints', function () {
     $report = app(ReportWriter::class)->write($scan, 'x');
     $html = file_get_contents(app(ReportWriter::class)->absolutePath($report->html_path));
 
-    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/th>\s*<td>A<\/td>\s*<td class="status status-supports">Supports<\/td>\s*<td>Manual, locked/');
+    expect($html)->toMatch('/1\.1\.1 Non-text Content<\/a><\/th>\s*<td>A<\/td>\s*<td class="status status-supports">Supports<\/td>\s*<td>Manual, locked/');
     expect($html)->toContain('Every image checked by hand.');
-    expect($html)->toMatch('/2\.4\.3 Focus Order<\/th>\s*<td>A<\/td>\s*<td class="status status-partially_supports">Partially supports/');
+    expect($html)->toMatch('/2\.4\.3 Focus Order<\/a><\/th>\s*<td>A<\/td>\s*<td class="status status-partially_supports">Partially supports/');
     expect($html)->toContain('Assessed by assessor@example.test');
 });
 
@@ -193,4 +193,15 @@ it('renders markup Vue can compile with a label on every control, before and aft
         $id = $control->getAttribute('id');
         expect($xpath->query("//label[@for='{$id}']")->length)->toBe(1, "control {$id} has a label");
     }
+});
+
+it('links every row and the standard to the W3C text', function () {
+    page('one', '<img src="/a.jpg">');
+    runScan();
+
+    $text = worksheet();
+
+    expect($text)->toContain('<a href="https://www.w3.org/TR/WCAG22/" target="_blank" rel="noopener">WCAG 2.2 Level AA</a>');
+    expect($text)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html" target="_blank" rel="noopener" title="What this criterion requires, at w3.org">1.1.1 Non-text Content</a>');
+    expect(substr_count($text, 'https://www.w3.org/WAI/WCAG22/Understanding/'))->toBe(55);
 });

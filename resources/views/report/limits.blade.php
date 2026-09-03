@@ -17,7 +17,7 @@
             No success criterion was evaluated automatically: the engine that read the pages could not be identified, so none of its results are counted here.
         @else
             The automated checks in this report can cite {{ count($r['methods']['automated_criteria']) }} of the {{ count($r['criteria']) }} success criteria, and only parts of each:
-            {{ implode(', ', $r['methods']['automated_criteria']) }}.
+            @include('a11y-report::report.criteria-list', ['numbers' => $r['methods']['automated_criteria'], 'standard' => $r['standard']]).
             Where they found failures, the criterion is marked "Does not support". Where they found none, the criterion is left "Not evaluated" with the evidence noted, because the checks do not cover the whole criterion.
         @endif
     </p>
@@ -27,7 +27,7 @@
             Every criterion in the table below carries a determination made by a person.
         @else
             {{ count($r['methods']['not_evaluated']) }} of the {{ count($r['criteria']) }} success criteria are marked "Not evaluated": no automated check covers them, or the checks that do found nothing and no person has assessed them. They are:
-            {{ implode(', ', $r['methods']['not_evaluated']) }}.
+            @include('a11y-report::report.criteria-list', ['numbers' => $r['methods']['not_evaluated'], 'standard' => $r['standard']]).
             "Not evaluated" means exactly that. It is not a pass.
         @endif
     </p>

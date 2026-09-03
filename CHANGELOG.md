@@ -60,6 +60,13 @@ site or as a global default. Only rows that changed are written, each with
 the assessor's name and the date, behind a new `assess accessibility
 criteria` permission.
 
+**Links to the W3C's text.** Every success criterion in the queue, the
+worksheet, the conformance document and the statement links to the W3C's
+Understanding page for it, under the WCAG version the report is set to, and
+the standard's label links to the Recommendation. A house rule cites no
+criterion and gets no link. The PDF keeps the links and gives each an
+alternate description, so it still validates as PDF/UA-1.
+
 **The tagged PDF.** `a11y:report --format=pdf` (or `all`) prints the
 document with headless Chrome, which tags it, and adds the XMP title and the
 display-title preference as an incremental update, with a role map for the

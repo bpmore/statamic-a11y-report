@@ -39,7 +39,7 @@
             <p><strong>Not yet evaluated.</strong> No accessibility evaluation of this website has been recorded yet, so no conformance status is claimed.</p>
         @else
             <p>
-                <strong>{{ \Bpmore\A11yReport\Statement\StatementBuilder::statusLabel($r['status']) }}</strong> with {{ $r['standard_label'] }}, as of {{ \Bpmore\A11yReport\Statement\StatementBuilder::date($r['evaluated_at']) }}.
+                <strong>{{ \Bpmore\A11yReport\Statement\StatementBuilder::statusLabel($r['status']) }}</strong> with <a href="{{ $r['standard_url'] }}">{{ $r['standard_label'] }}</a>, as of {{ \Bpmore\A11yReport\Statement\StatementBuilder::date($r['evaluated_at']) }}.
                 @if ($r['status'] === 'partially_conformant')
                     Some parts of the content do not fully conform: {{ count($r['does_not_support']) }} {{ count($r['does_not_support']) === 1 ? 'success criterion is' : 'success criteria are' }} not supported{{ count($r['partially_supports']) > 0 ? ' and '.count($r['partially_supports']).' '.(count($r['partially_supports']) === 1 ? 'is' : 'are').' partly supported' : '' }}. They are listed below.
                 @elseif ($r['status'] === 'not_fully_evaluated')
@@ -67,7 +67,7 @@
                 <p>The following success criteria are not supported:</p>
                 <ul>
                     @foreach ($r['does_not_support'] as $c)
-                        <li><strong>{{ $c['number'] }} {{ $c['name'] }}.</strong> {{ $c['remarks'] !== '' ? $c['remarks'] : $c['evidence'] }}</li>
+                        <li><strong>@if (! empty($c['url']))<a href="{{ $c['url'] }}">{{ $c['number'] }} {{ $c['name'] }}</a>@else{{ $c['number'] }} {{ $c['name'] }}@endif.</strong> {{ $c['remarks'] !== '' ? $c['remarks'] : $c['evidence'] }}</li>
                     @endforeach
                 </ul>
             @endif
@@ -75,7 +75,7 @@
                 <p>The following success criteria are partly supported:</p>
                 <ul>
                     @foreach ($r['partially_supports'] as $c)
-                        <li><strong>{{ $c['number'] }} {{ $c['name'] }}.</strong> {{ $c['remarks'] !== '' ? $c['remarks'] : $c['evidence'] }}</li>
+                        <li><strong>@if (! empty($c['url']))<a href="{{ $c['url'] }}">{{ $c['number'] }} {{ $c['name'] }}</a>@else{{ $c['number'] }} {{ $c['name'] }}@endif.</strong> {{ $c['remarks'] !== '' ? $c['remarks'] : $c['evidence'] }}</li>
                     @endforeach
                 </ul>
             @endif

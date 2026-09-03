@@ -49,9 +49,10 @@ it('is partially conformant when the latest report has a criterion that failed, 
 
     $html = statement();
 
-    expect($html)->toContain('<strong>Partially conformant</strong> with WCAG 2.2 Level AA');
+    expect($html)->toContain('<strong>Partially conformant</strong> with <a href="https://www.w3.org/TR/WCAG22/">WCAG 2.2 Level AA</a>');
     expect($html)->toContain('1 success criterion is not supported');
-    expect($html)->toContain('<strong>1.1.1 Non-text Content.</strong>');
+    expect($html)->toContain('<strong><a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html">1.1.1 Non-text Content</a>.</strong>');
+    expect($html)->toContain('with <a href="https://www.w3.org/TR/WCAG22/">WCAG 2.2 Level AA</a>');
     expect($html)->toContain('Automated checks found 1 issue on 1 page (image-missing-alt).');
     expect($html)->toContain('found 1 issue across 1 page: 1 serious');
     expect($html)->toContain('This is a self-assessment.');

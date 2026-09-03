@@ -12,6 +12,60 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-03: Every criterion links to the W3C's own text for it, and the PDF describes each link
+
+A reader of the queue, the worksheet, the conformance document or the
+statement meets "1.1.1", "2.4.4" or "WCAG 2.2 Level AA" and has to know what
+it means to act on it. Now each is a link: a criterion to the W3C's
+Understanding page for it, under the WCAG version the report is set to, and
+the standard's label to the Recommendation itself.
+
+**Link to the W3C, do not paraphrase.** The alternative was a sentence or
+two of this addon's own for each criterion, shown inline or on hover. Turned
+down because a summary here is one more place a criterion could be
+misdescribed with this addon's name on it, and because the Understanding
+pages are the text the criteria's authors wrote to answer exactly this
+question. A house rule such as "Heading structure" cites no criterion and
+stays plain text, for the same reason it is listed apart in the document: a
+link to a criterion would be citing what the check cannot establish.
+
+**The URL is derived from the name, not stored.** Every one of the 56 Level A
+and AA criteria follows the W3C's rule (lower case, punctuation dropped,
+spaces to hyphens), and a second column would be a second place for a typo.
+A criterion newer than the report's version links to the version that
+introduced it, because WCAG 2.1 has no page for 2.5.8 and an engine on the
+2.2 ruleset can cite it under a report set to 2.1. A number the catalogue
+does not know gets no link rather than a guessed one.
+
+**The PDF keeps the links and describes each.** When the first link went into
+the document, veraPDF failed two PDF/UA-1 rules on it, 7.18.1 and 7.18.5:
+Chrome writes no alternate description on a link annotation. The cover link
+was dropped then. Dropping links from the PDF now would have meant printing
+from a second rendering of the document, or leaving the compliance officer
+with a PDF that cannot take them to the text. Instead the metadata stamp
+re-declares every link annotation with a `Contents` entry, looked up by
+destination from the catalogue ("Understanding success criterion 1.1.1
+Non-text Content, at w3.org") and falling back to the URL itself. The first
+attempt found no annotations in the real document: a lazy match for an
+object's dictionary, started at a content stream, ran through the stream and
+swallowed the objects after it. The scan now refuses a dictionary containing
+`endobj`, and the unit test puts a stream between two annotations.
+
+**Checked.** 167 tests, with veraPDF: the report PDF is PDF/UA-1 compliant
+with links in it. Every derived Understanding URL for both standards
+answered 200 from w3.org, once by hand and once through a test that runs
+only with `A11Y_REPORT_CHECK_W3C=1`, because 105 requests do not belong in
+every run. Removing the link description step fails three tests. On the
+test site: the queue's first page has 45 criterion links and the house rules
+have none; the worksheet links all 55 rows and the standard; the regenerated
+PDF validates with 194 links, each described.
+
+**Not checked.** The pages on a screen, and the PDF's link descriptions read
+aloud by a screen reader. The gate's own panel still shows "WCAG 1.1.1" as
+plain text: that is the gate's, and a separate change there.
+
+---
+
 ## 2026-09-02: The gate's sidebar shows this page's open issues, through a seam the gate offers
 
 The last item in the brief's list of control-panel surfaces: extend the

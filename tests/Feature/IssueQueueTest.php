@@ -211,3 +211,20 @@ it('renders markup Vue can compile, with a label on every control, and says so b
         expect($labelled)->toBeTrue('every checkbox is labelled');
     }
 });
+
+it('links a cited criterion to the W3C text for it, and leaves a house rule as words', function () {
+    seedQueue();
+
+    $text = queuePage(['status' => 'all']);
+
+    expect($text)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html" target="_blank" rel="noopener" title="What this criterion requires, at w3.org">WCAG 1.1.1 Non-text Content</a>');
+    expect($text)->toContain('Heading structure');
+    expect(str_contains($text, 'Understanding/heading-structure'))->toBeFalse('a house rule is not linked to a criterion');
+});
+
+it('follows the configured standard for the version of WCAG a criterion link opens', function () {
+    config()->set('statamic-a11y-report.report.standard', 'wcag21aa');
+    seedQueue();
+
+    expect(queuePage())->toContain('https://www.w3.org/WAI/WCAG21/Understanding/non-text-content.html');
+});

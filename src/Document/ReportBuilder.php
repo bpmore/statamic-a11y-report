@@ -56,7 +56,7 @@ final class ReportBuilder
 
         foreach ($criteriaList as $criterion) {
             $rows[] = array_merge(
-                ['number' => $criterion->number, 'name' => $criterion->name, 'level' => $criterion->level],
+                ['number' => $criterion->number, 'name' => $criterion->name, 'level' => $criterion->level, 'url' => $criterion->understandingUrl(Wcag::version($standard))],
                 AssessmentMerger::merge($criterion, $automated, $failures, $assessments[$criterion->number] ?? null, $pagesRead),
             );
         }
@@ -72,6 +72,7 @@ final class ReportBuilder
             'generator' => 'Accessibility Report for Statamic',
             'standard' => $standard,
             'standard_label' => Wcag::label($standard),
+            'standard_url' => Wcag::specUrl($standard),
             'lang' => $this->lang($scan->site),
             'subject' => $this->subject($scan->site),
             'evaluator' => [
@@ -111,7 +112,7 @@ final class ReportBuilder
             'summary' => [
                 'issues_total' => (int) $scan->issues_total,
                 'by_impact' => $this->byImpact($scan),
-                'by_criterion' => $this->summaryByCriterion($failures),
+                'by_criterion' => $this->summaryByCriterion($failures, $standard),
                 'outside_wcag' => $this->outsideWcag($scan),
                 'diff' => $scan->diff,
                 'previous_report' => $previous === null ? null : [
@@ -225,12 +226,12 @@ final class ReportBuilder
      * @param  array<string, array{issues: int, pages: int, rules: array<int, string>}>  $failures
      * @return array<int, array{number: string, name: string, issues: int, pages: int}>
      */
-    private function summaryByCriterion(array $failures): array
+    private function summaryByCriterion(array $failures, string $standard): array
     {
         $rows = [];
 
         foreach ($failures as $number => $f) {
-            $rows[] = ['number' => $number, 'name' => Wcag::find($number)?->name ?? '', 'issues' => $f['issues'], 'pages' => $f['pages']];
+            $rows[] = ['number' => $number, 'name' => Wcag::find($number)?->name ?? '', 'url' => Wcag::urlFor($number, $standard), 'issues' => $f['issues'], 'pages' => $f['pages']];
         }
 
         usort($rows, fn ($a, $b) => version_compare($a['number'], $b['number']));

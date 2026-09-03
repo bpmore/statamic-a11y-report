@@ -12,6 +12,105 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-03: The customer's mark goes on the cover, and reaches nothing else
+
+Asked for: the site's brand on the reports. Three things were added, and the
+list of what was refused is longer than the list of what was built, which is
+the point of the entry.
+
+**A logo, the words that stand in for it, and one heading colour.** Nothing
+else. A conformance report is evidence, and evidence laid out differently for
+every organisation is harder to read and easier to argue with. Turned down: a
+customer-supplied Blade template, which was the obvious way to allow more.
+It is also the one setting that would let somebody delete the scope and
+limits statement, so it is not a feature with a caveat, it is a feature that
+cannot exist here. Turned down for the same reason: any reach into the
+limits, the self-assessment notice on the cover, the footer, and the status
+colours in the conformance table, which carry meaning rather than decoration.
+
+**The evaluator gets no mark.** Only the customer's. Two logos on the cover
+of a self-assessment invites a reader to take it for a third-party audit,
+which is the misreading this whole product is arranged to prevent.
+
+**No alternative text means no logo.** An untagged image fails PDF/UA-1
+outright, and the suite has demanded full PDF/UA-1 compliance since the file
+started declaring it. So a logo with no words is dropped rather than printed:
+the alternative is a document that stops validating, in the artefact most
+likely to be forwarded to a lawyer. Checked, not assumed: veraPDF validates a
+report with a logo on the cover, and the figure carries its description.
+
+**The accent is heading text, never a fill or a rule.** Chrome prints a
+background fill and a CSS border as untagged paths, which PDF/UA reads as
+content nobody can reach. That is why the print stylesheet dropped its
+borders in the 2 September entry below, and a coloured bar across the cover
+would have undone it within a fortnight. Text colour costs nothing. The
+colour is refused unless it reaches 4.5:1 on white, which is what 1.4.3 asks
+of text below 24px: the smaller headings are, and an accessibility report
+whose own headings fail a criterion it reports on is the story about the
+product. A colour that fails is dropped and the headings stay black.
+
+**A per-site mark, and the rules that stop it lying.** A logo and its words
+are taken from the same level, always: a site with its own logo and no words
+of its own would otherwise inherit another organisation's name for its mark,
+which is a wrong caption and not a fallback. The colour has no such pairing,
+so a site may change the ink and keep the mark. A report about more than one
+site wears none of their marks, because it speaks for all of them. Which site
+a report is about is decided by what was reported on and not by how the scan
+was narrowed, so a single-site install gets its own mark without having to
+name the site it has only one of.
+
+**Embedded as a data URI, and dropped from the JSON.** Headless Chrome
+fetches nothing at all for print, so an external image would print as a hole;
+this was in the build brief and is not news. Embedding also gives the right
+behaviour for a document that is filed as evidence: a report generated last
+month keeps the mark it was filed with when the asset is replaced. The bytes
+are then dropped from the JSON, which is the record a person reads to see
+what changed between two reports and which a base64 image would be most of.
+What identifies the mark stays: where it came from, its type, its size, and
+its SHA-256, so "the logo has since been replaced" stays answerable.
+
+**The settings screen builds its logo field in PHP, which is the part worth
+reading.** Statamic's asset fieldtype throws while it renders if it has no
+container and the site does not have exactly one. Written into the form's own
+file, the brand section would have returned a server error for the *entire*
+settings screen on any site that keeps pictures in two places. So the section
+is added by a closure that names a container when one can be determined and
+falls back to a plain text field when one cannot. That trap is now a test:
+with the guard removed and two containers present, the screen 500s with
+`UndefinedContainerException`. Turned down: naming a container in the form
+file and telling people to change it, which is the same crash with a support
+ticket attached.
+
+**One storage shape, three ways to write it.** An asset reference
+(`assets::logo.svg`), a path inside the site (`public/img/logo.svg`), or the
+bare name of a file in the container the picker uses. A developer writing the
+config file and a person using the picker produce values that the same
+resolver reads. Per-site marks are keyed by site in the file, as the
+statement block already is; the screen collects them as rows that each name
+their site, because addon settings are one flat record with no site
+dimension, and `Settings` converts between the two shapes.
+
+**Whatever is wrong with a picture, the report is still owed.** Every failure
+here drops the logo or the colour, records the reason in the report data, and
+logs a warning. Nothing about a brand can throw. A drawing is refused if it
+carries script, declares its own entities, or points at something outside
+itself; a file is refused if the bytes are not an image, whatever the name
+says, or if it is over 384 KB, since it is embedded in every report.
+
+**Checked.** The suite, 191 tests. Every guard above was mutation-tested by
+breaking it and confirming a test went red, which caught two that were
+passing vacuously: the multi-site rule, whose test had a mark on only one of
+the two sites, and the container guard, whose first mutation was not the
+failure the guard exists for. veraPDF validates a branded report as PDF/UA-1
+with the figure described. On statamic-testing: a report generated with a
+logo and an accent, and a second with a colour too pale to use.
+
+**Not checked.** A logo in a screen reader, which is what the alternative
+text is for. A large raster logo's effect on PDF size in practice. Whether
+384 KB is the right ceiling: it is a judgement, not a measurement.
+
+---
+
 ## 2026-09-03: A link in the control panel is underlined, coloured, focusable, and announces its tab
 
 The criterion links merged the same morning were reported, with a

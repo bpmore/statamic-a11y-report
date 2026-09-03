@@ -12,6 +12,7 @@ use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Report;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Models\ScanPage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Statamic\Facades\Site;
 
@@ -20,7 +21,8 @@ use Statamic\Facades\Site;
  *
  * Built once and handed to every format, so the HTML, the JSON and one day
  * the PDF cannot disagree about a number. The shape is documented by
- * `build()` and pinned by the tests; the JSON export is this array verbatim.
+ * `build()` and pinned by the tests; the JSON export is this array verbatim,
+ * less the logo's bytes, which `ReportWriter` drops from it.
  */
 final class ReportBuilder
 {
@@ -62,6 +64,7 @@ final class ReportBuilder
         }
 
         $previous = Report::where('site', $scan->site)->orderByDesc('id')->first();
+        $subject = $this->subject($scan->site);
 
         return [
             'uuid' => (string) Str::uuid(),
@@ -74,12 +77,16 @@ final class ReportBuilder
             'standard_label' => Wcag::label($standard),
             'standard_url' => Wcag::specUrl($standard),
             'lang' => $this->lang($scan->site),
-            'subject' => $this->subject($scan->site),
+            'subject' => $subject,
             'evaluator' => [
                 'name' => $this->config['evaluator']['name'] ?? null,
                 'organization' => $this->config['evaluator']['organization'] ?? null,
                 'email' => $this->config['evaluator']['email'] ?? null,
             ],
+            // The customer's mark, and nothing the evaluator wears: a second
+            // logo on the cover would invite a reader to take a
+            // self-assessment for a third-party audit.
+            'brand' => $this->brand($subject),
             'scan' => [
                 'id' => $scan->id,
                 'uuid' => $scan->uuid,
@@ -125,6 +132,33 @@ final class ReportBuilder
             'issues_omitted' => max(0, $this->openIssueCount($scan) - $this->appendixLimit()),
             'remediation_plan' => $this->config['remediation_plan'] ?? null,
         ];
+    }
+
+    /**
+     * The mark on the cover, with anything that could not be used said out
+     * loud. A logo is decoration and a report is not: whatever is wrong with
+     * a picture, the document is still owed, so every failure here is a
+     * warning in the log rather than an exception.
+     *
+     * Which site's mark, if any, follows from what the report is about
+     * rather than from how the scan was narrowed. A single-site install
+     * scans without naming a site, and the report is still that site's.
+     *
+     * @param  array<string, mixed>  $subject
+     * @return array<string, mixed>
+     */
+    private function brand(array $subject): array
+    {
+        $sites = (array) ($subject['sites'] ?? []);
+        $site = count($sites) === 1 ? ($sites[0]['handle'] ?? null) : null;
+
+        $brand = Brand::resolve((array) ($this->config['brand'] ?? []), is_string($site) ? $site : null);
+
+        foreach ($brand['dropped'] as $reason) {
+            Log::warning('[a11y-report] '.$reason);
+        }
+
+        return $brand;
     }
 
     private function standardFor(Scan $scan): string

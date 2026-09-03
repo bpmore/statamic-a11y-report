@@ -85,6 +85,16 @@ return [
     | There is no setting that removes the scope and limits statement, and
     | there will not be one.
     |
+    | 'brand' puts the customer's own mark on the cover, and reaches nothing
+    | else: a logo, the words that stand in for it, and one heading colour
+    | dark enough to read on white. 'logo' is an asset ('assets::logo.svg'),
+    | a file inside the site ('public/img/logo.svg'), or the name of a file
+    | in the container 'container' names. 'container' is only for the picker
+    | on the settings screen, and is guessed when the site has one container.
+    | Everything under 'sites' is a per-site override of the same keys, for a
+    | multisite install; a report covering every site uses the settings above
+    | it, never one site's mark.
+    |
     */
 
     'report' => [
@@ -96,6 +106,15 @@ return [
         ],
         'remediation_plan' => null,
         'appendix_limit' => 1000,
+        'brand' => [
+            'logo' => null,
+            'logo_alt' => null,
+            'accent' => null,
+            'container' => null,
+            'sites' => [
+                // 'fr' => ['logo' => 'assets::logo-fr.svg', 'logo_alt' => 'Example SARL'],
+            ],
+        ],
     ],
 
     /*

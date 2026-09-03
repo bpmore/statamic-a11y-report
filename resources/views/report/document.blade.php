@@ -39,6 +39,18 @@
         /* Links go to the W3C's own text for each criterion. Dark enough to
            pass 1.4.3 on white, underlined so colour is not the only cue. */
         a { color: #1a4d8a; text-decoration: underline; }
+        /* The customer's mark, at about the size of a letterhead. Embedded
+           as a data URI: headless Chrome fetches nothing at all for print. */
+        img.mark { display: block; max-height: 18mm; max-width: 70mm; width: auto; margin: 0 0 1.2em; }
+@if (! empty($r['brand']['accent']))
+        /* The customer's heading colour. Text only, never a fill or a rule:
+           Chrome prints those as untagged paths, which PDF/UA reads as
+           content nobody can reach, which is why the print rules below drop
+           the borders. This value reached here only by passing a contrast
+           check against the white page, so it cannot make a heading
+           unreadable. */
+        h1, h2 { color: {{ $r['brand']['accent'] }}; }
+@endif
         footer { margin-top: 3em; border-top: 1px solid #ccc; padding-top: 1em; font-size: 0.9em; color: #444; }
         @page { margin: 18mm; }
         /* No CSS borders on print except in tables. Chrome prints a border
@@ -59,6 +71,9 @@
 <body>
 <main>
     <header id="cover">
+@if (! empty($r['brand']['logo']))
+        <img class="mark" src="{{ $r['brand']['logo']['data_uri'] }}" alt="{{ $r['brand']['logo']['alt'] }}">
+@endif
         <h1>{{ $r['title'] }}</h1>
         <p class="notice">A self-assessment against <a href="{{ $r['standard_url'] }}">{{ $r['standard_label'] }}</a>. It is not a certification and not a third-party audit. Read the section called Scope and limits before reading the conformance table.</p>
         <dl class="cover">

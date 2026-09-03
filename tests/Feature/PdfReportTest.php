@@ -35,6 +35,24 @@ function pdfBytes(): array
     return [$report, (string) file_get_contents($path), $path];
 }
 
+/** The file's own bytes plus every compressed stream in it, as one string. */
+function pdfWithStreams(string $pdf): string
+{
+    $text = $pdf;
+
+    preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $pdf, $streams);
+
+    foreach ($streams[1] as $stream) {
+        $inflated = @gzuncompress($stream);
+
+        if ($inflated !== false) {
+            $text .= $inflated;
+        }
+    }
+
+    return $text;
+}
+
 it('prints a tagged PDF with a structure tree, headings, tables, a language, an outline, and its title', function () {
     [$report, $pdf, $path] = pdfBytes();
 
@@ -120,6 +138,40 @@ it('finds Chrome from config before searching, and reports absence rather than a
         expect(is_executable($found))->toBeTrue();
     }
 });
+
+it('keeps the PDF valid when the cover carries a mark, and describes the mark', function () {
+    config()->set('statamic-a11y-report.report.brand.logo', __DIR__.'/../__fixtures__/logo.png');
+    config()->set('statamic-a11y-report.report.brand.logo_alt', 'Example Trust');
+    config()->set('statamic-a11y-report.report.brand.accent', '#0f3d2e');
+
+    [, $pdf, $path] = pdfBytes();
+
+    $text = pdfWithStreams($pdf);
+
+    // A figure carrying the words that stand in for it. An untagged image
+    // fails PDF/UA outright, which is why a logo with no words is left out
+    // of the document rather than printed silently.
+    expect(str_contains($text, '/Alt (Example Trust)'))->toBeTrue('the mark on the cover has no description in the PDF');
+    expect(str_contains($text, '/S /Figure'))->toBeTrue('the mark is not a figure in the structure tree');
+
+    $verapdf = trim((string) shell_exec('command -v verapdf 2>/dev/null'));
+
+    if ($verapdf === '') {
+        test()->markTestSkipped('veraPDF is not installed here; the CI workflow runs it.');
+    }
+
+    $xml = (string) shell_exec(escapeshellarg($verapdf).' --flavour ua1 --format xml '.escapeshellarg($path).' 2>/dev/null');
+
+    preg_match_all('/<rule\s[^>]*clause="([^"]+)"[^>]*status="failed"[^>]*>(.*?)<\/rule>/s', $xml, $failed, PREG_SET_ORDER);
+    $failures = array_map(function ($f) {
+        preg_match('/<description>(.*?)<\/description>/s', $f[2], $d);
+
+        return $f[1].': '.trim($d[1] ?? '');
+    }, $failed);
+
+    expect($failures)->toBe([], 'veraPDF failed with a logo on the cover: '.implode(' | ', $failures));
+    expect(preg_match('/isCompliant="true"/', $xml))->toBe(1);
+})->group('pdf');
 
 it('describes every link in the PDF for a reader who cannot see where it points', function () {
     [, $pdf] = pdfBytes();

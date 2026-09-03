@@ -67,7 +67,7 @@ final class ReportWriter
         }
 
         if (in_array('json', $formats, true)) {
-            $paths['json_path'] = $this->store($data['uuid'].'.json', (string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            $paths['json_path'] = $this->store($data['uuid'].'.json', (string) json_encode(self::forJson($data), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
         }
 
         return Report::create(array_merge([
@@ -123,6 +123,28 @@ final class ReportWriter
         file_put_contents($absolute, $contents);
 
         return $relative;
+    }
+
+    /**
+     * The report data as it is kept: everything the document was built from,
+     * without the logo's bytes.
+     *
+     * The JSON is what a later scan is compared against and what a person
+     * reads to see what changed between two reports. An embedded image would
+     * be most of the file and would tell that reader nothing. What identifies
+     * the mark stays behind: where it came from, its type, its size, and its
+     * digest, so "the logo has since been replaced" is still answerable.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private static function forJson(array $data): array
+    {
+        if (isset($data['brand']['logo']['data_uri'])) {
+            unset($data['brand']['logo']['data_uri']);
+        }
+
+        return $data;
     }
 
     /**

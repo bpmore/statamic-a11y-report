@@ -7,6 +7,7 @@ namespace Bpmore\A11yReport;
 use Bpmore\A11yGate\Accessibility\StaticAccessibilityChecker;
 use Bpmore\A11yGate\Gate\EntryRenderer;
 use Bpmore\A11yGate\Gate\GateSettings;
+use Bpmore\A11yReport\Document\Brand;
 use Bpmore\A11yReport\Document\ReportBuilder;
 use Bpmore\A11yReport\Document\ReportWriter;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
@@ -25,6 +26,7 @@ use Statamic\Facades\Permission;
 use Statamic\Facades\Site;
 use Statamic\Facades\User;
 use Statamic\Facades\Utility;
+use Statamic\Facades\YAML;
 use Statamic\Providers\AddonServiceProvider;
 
 /**
@@ -62,6 +64,36 @@ class ServiceProvider extends AddonServiceProvider
     ];
 
     protected $viewNamespace = 'a11y-report';
+
+    /**
+     * The settings screen, with the brand section added in PHP.
+     *
+     * An asset picker with no container throws while it renders, and a site
+     * with two containers gives it no obvious one, so a brand section
+     * written into the form's own file would return a server error for the
+     * whole settings screen on any site that keeps pictures in more than one
+     * place. The picker appears when a container can be named and a plain
+     * text field stands in when one cannot, which is a choice only PHP can
+     * make. Registered after the parent, whose own decision about whether to
+     * boot at all is the guard here.
+     */
+    protected function bootSettingsBlueprint()
+    {
+        parent::bootSettingsBlueprint();
+
+        if (! $this->getAddon()->hasSettingsBlueprint()) {
+            return $this;
+        }
+
+        $path = $this->getAddon()->directory().'resources/blueprints/settings.yaml';
+
+        $this->registerSettingsBlueprint(fn () => Brand::addSettingsSection(
+            YAML::file($path)->parse(),
+            Brand::container(config('statamic-a11y-report.report.brand.container')),
+        ));
+
+        return $this;
+    }
 
     public function bootAddon()
     {

@@ -201,7 +201,15 @@ it('links every row and the standard to the W3C text', function () {
 
     $text = worksheet();
 
-    expect($text)->toContain('<a href="https://www.w3.org/TR/WCAG22/" target="_blank" rel="noopener">WCAG 2.2 Level AA</a>');
-    expect($text)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html" target="_blank" rel="noopener" title="What this criterion requires, at w3.org">1.1.1 Non-text Content</a>');
+    expect($text)->toContain('<a href="https://www.w3.org/TR/WCAG22/" target="_blank" rel="noopener" class="underline underline-offset-2 text-blue-700 dark:text-blue-300 focus:focus-outline rounded-sm">WCAG 2.2 Level AA<span class="sr-only"> (the W3C Recommendation, opens in a new tab)</span></a>');
+    expect($text)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html" target="_blank" rel="noopener" class="underline underline-offset-2 text-blue-700 dark:text-blue-300 focus:focus-outline rounded-sm">1.1.1 Non-text Content<span class="sr-only"> (the W3C\'s explanation, opens in a new tab)</span></a>');
+    // Every link on the page is underlined and warns about the tab: a link
+    // the stylesheet has reset to look like text is the failure this fixes.
+    preg_match_all('/<a href="https:\/\/www\.w3\.org[^>]*>/', $text, $anchors);
+    expect(count($anchors[0]))->toBe(56);
+    foreach ($anchors[0] as $anchor) {
+        expect(str_contains($anchor, 'underline'))->toBeTrue($anchor.' is underlined');
+    }
+    expect(substr_count($text, 'opens in a new tab'))->toBe(56);
     expect(substr_count($text, 'https://www.w3.org/WAI/WCAG22/Understanding/'))->toBe(55);
 });

@@ -12,6 +12,39 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-03: A link in the control panel is underlined, coloured, focusable, and announces its tab
+
+The criterion links merged the same morning were reported, with a
+screenshot, as not visibly links. They were not: the control panel's
+stylesheet resets anchors to the surrounding text colour with no underline,
+so on the worksheet "1.1.1 Non-text Content" looked exactly as it had before
+it was a link. In an accessibility product that is a failure of 1.4.1 on its
+own screen.
+
+**Styled by hand, from classes the control panel actually ships.** A
+`<style>` block is not an option in a view Vue compiles, so the choice was
+inline styles or utility classes, and utility classes only work if
+Statamic's build includes them. Checked against the built stylesheet before
+choosing: `underline`, `underline-offset-2`, `text-blue-700` with
+`dark:text-blue-300` (the pair Statamic's blue badge uses, so contrast holds
+in both themes), `sr-only`, and Statamic's own `focus:focus-outline` for the
+keyboard ring. Several plausible classes (`decoration-1`, any
+`focus-visible:` variant, `hover:text-blue-900`) are not in the build and
+would have been silently dropped, which is the same failure again.
+
+**The tab is announced, and the title attribute is gone.** The links open in
+a new tab because the worksheet is a form and leaving it loses unsaved
+assessments. A new tab a screen-reader user is not told about is
+disorienting, so each link ends in a screen-reader-only note. The `title`
+attribute the first version used for the link's purpose is not reliably read
+and is not shown on touch; the purpose is now in the link text.
+
+**Checked.** The suite; the worksheet test counts 56 W3C links, asserts
+every one is underlined and every one announces the tab. **Not checked.**
+The pages on a screen, and the announcement in a screen reader.
+
+---
+
 ## 2026-09-03: Every criterion links to the W3C's own text for it, and the PDF describes each link
 
 A reader of the queue, the worksheet, the conformance document or the

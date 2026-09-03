@@ -20,6 +20,12 @@
         return isset($cited[0]) ? \Bpmore\A11yReport\Document\Wcag::find((string) $cited[0]) : null;
     };
     $version = \Bpmore\A11yReport\Document\Wcag::version($standard);
+    // Underlined and blue, because the control panel's stylesheet resets
+    // anchors to the text colour and a link nobody can tell from text is
+    // not a link (1.4.1). The colours are the pair Statamic's own blue badge
+    // uses, so they hold contrast in both themes. Statamic's focus utility
+    // gives the keyboard ring. The tab warning is read, not shown.
+    $link = 'underline underline-offset-2 text-blue-700 dark:text-blue-300 focus:focus-outline rounded-sm';
 @endphp
 
 <ui-header title="Accessibility Report" icon="pulse" />
@@ -149,7 +155,7 @@
                                     <ui-table-cell>
                                         <div>@plain($i->message)</div>
                                         <div class="text-xs text-gray-600 dark:text-gray-400">
-                                            @if (($c = $criterion($i)) !== null)<a href="@plain($c->understandingUrl($version))" target="_blank" rel="noopener" title="What this criterion requires, at w3.org">@plain($i->label) @plain($c->name)</a>@else @plain($i->label) @endif @plain(($i->pointer ? ': '.$i->pointer : '') . ($i->occurrences > 1 ? ', '.$i->occurrences.' times' : ''))
+                                            @if (($c = $criterion($i)) !== null)<a href="@plain($c->understandingUrl($version))" target="_blank" rel="noopener" class="{{ $link }}">@plain($i->label) @plain($c->name)<span class="sr-only"> (the W3C's explanation, opens in a new tab)</span></a>@else @plain($i->label) @endif @plain(($i->pointer ? ': '.$i->pointer : '') . ($i->occurrences > 1 ? ', '.$i->occurrences.' times' : ''))
                                         </div>
                                         @if ($i->note)<ui-description text="Note: @plain($i->note)" />@endif
                                     </ui-table-cell>

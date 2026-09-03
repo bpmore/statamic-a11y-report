@@ -66,6 +66,8 @@ Understanding page for it, under the WCAG version the report is set to, and
 the standard's label links to the Recommendation. A house rule cites no
 criterion and gets no link. The PDF keeps the links and gives each an
 alternate description, so it still validates as PDF/UA-1.
+In the control panel the links are underlined and coloured for both themes,
+take keyboard focus visibly, and say that they open a new tab.
 
 **The tagged PDF.** `a11y:report --format=pdf` (or `all`) prints the
 document with headless Chrome, which tags it, and adds the XMP title and the

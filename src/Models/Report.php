@@ -8,8 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A generated conformance document: who made it, when, from which scan, and
- * where the files are. The table exists now so the scan layer is designed
- * around it; nothing writes to it yet.
+ * where the files are.
+ *
+ * `remediation_policy` is the copy of the targets that were in force when the
+ * document was filed, for the same reason the cover carries the mark it was
+ * printed with: a report kept as evidence has to stay readable after the
+ * settings have moved on.
  */
 final class Report extends ReportModel
 {
@@ -18,6 +22,7 @@ final class Report extends ReportModel
     protected $casts = [
         'generated_at' => 'datetime',
         'signed_at' => 'datetime',
+        'remediation_policy' => 'array',
     ];
 
     public function scan(): BelongsTo

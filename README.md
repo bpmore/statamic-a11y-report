@@ -68,12 +68,34 @@ report would refuse to print is one the panel does not wear either. It needs
 Accessibility Gate 0.8 or newer; an older gate ignores the mark, and the block
 is otherwise unchanged.
 
+## Remediation targets and accepted issues
+
+The queue and the report measure open problems against targets you set: how
+many days a critical, serious, moderate or minor problem may stay open. Anything
+past its target is counted and can be filtered to, in the queue and in the
+document.
+
+An issue you decide not to fix is accepted rather than closed. That needs a
+reason, which the report prints, and a date it runs out on, which cannot be
+further ahead than the review period in your settings. There is no permanent
+acceptance: past the date the issue counts as open again until somebody looks
+at it, and the record of who accepted it and why is kept.
+
+Accepting an issue changes nothing a report claims. It is still a failure, it
+is still counted under its success criterion, and it is still listed in the
+document. The targets are a promise about what you will chase, and no setting
+here can move a criterion in the conformance table.
+
+Every report carries a copy of the targets that were in force when it was
+generated, so a document you filed months ago still makes sense after you
+change them.
+
 ## Settings
 
 Addons, then Accessibility Report, then Settings: the WCAG version to
 report against, who evaluated the site, your mark on the cover of a report,
-the remediation plan, everything the public statement says about you, and
-which collections, sites and addresses a scan covers. The screen wins once it has been saved; until then the config
+the remediation plan and its targets, everything the public statement says
+about you, and which collections, sites and addresses a scan covers. The screen wins once it has been saved; until then the config
 file answers. The database, engine, browser, queue and deploy thresholds stay
 in the config file and `.env`, because a wrong value for any of them stops
 scans rather than changing a sentence.

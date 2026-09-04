@@ -12,6 +12,107 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-04: Remediation targets and an exception register, which promise things and claim nothing
+
+Asked for: a policy manager. "Policy" in a compliance product means two things
+and only one of them can exist here, so the split is the decision, and the rest
+follows from it.
+
+**Policy about what you chase, never policy about what you claim.** Targets,
+deadlines and accepted exceptions are a promise an organisation makes to
+itself, and dated and kept they are evidence. Criterion scope, what counts as
+conforming, and which findings count are not settings and never will be: a
+screen that let a customer configure the meaning of "supports" is the damaging
+bug at the top of CLAUDE.md with a nice interface on it. Turned down on that
+rule alone: per-criterion scope exclusions ("we do not do video, mark 1.2.x out
+of scope"), which must stay `not_evaluated`; rule toggles and severity
+remapping, which are the gate's checker and the gate's settings; and anything
+that narrows the document without the document saying so.
+
+**The load-bearing rule, which was already true and was not tested.**
+`ScanEvidence::failuresByCriterion` counts every issue in a scan whatever a
+person decided about it, so an accepted failure is still "does not support"
+under its criterion. Nothing was changed there. It now has a test, mutated by
+making the query skip accepted issues, and confirmed red. Without that test the
+register is one careless join away from being a way to make a report look
+clean, which is the whole thing this product exists not to be.
+
+**An acceptance carries a reason and a date it runs out on, and neither is
+optional.** Before this, "won't fix" was a status and an optional free note: an
+accepted failure with nothing recorded about who accepted it or for how long,
+which is the first thing an auditor asks about. There is no permanent
+acceptance. Turned down: a "no expiry" option with a reason, which is less
+friction for a third-party embed nobody can fix, and which turns the register
+into rows nothing will ever surface again. An issue nobody looks at again is
+one nobody has decided about. The date may not be set further ahead than the
+policy's review period, and a date past it is refused rather than moved back:
+quietly clamping it would file a promise, under somebody's name, that they did
+not make.
+
+**An expired acceptance counts as open, and its row is not rewritten.** No job
+flips it and no scan touches it. The decision was "accepted until this date",
+and past the date it has run out on its own terms, so counting it as open
+honours what the person wrote rather than overruling it. That is the same rule
+as a scan never reopening a `wont_fix` it still finds. Turned down: a scheduled
+command that changes the status, which is state drift plus a cron whose failure
+is silent.
+
+**One definition of open, on the model.** It was spelled out in three places,
+in the report, the queue and the overview, and three copies of that answer
+disagree the first time one changes. They now call `IssueState::openNow()`. The
+gate's sidebar panel picked up expired acceptances for free, because it asks
+the queue rather than the database.
+
+**Due dates are computed and never stored, and every report keeps its own copy
+of the policy.** Changing a target moves every live date, which is right,
+because the policy is the promise in force. A document filed in March would
+then become unreadable in December, so `a11y_reports` carries a
+`remediation_policy` column and the JSON carries the same object, exactly as
+the cover carries the mark it was printed with rather than pointing at a
+setting that has moved on. Turned down: a `policy_versions` table, a second
+archive of what the reports already archive, that every report would need a key
+into anyway.
+
+**The upgrade gives existing acceptances a review date rather than either quiet
+answer.** Grandfathering them forever, and reopening the lot on the morning
+somebody upgrades, are both wrong. The migration backfills what was known (the
+note as the reason, who last touched the row, when) and counts the review
+period from the upgrade, because nobody agreed to a review before there was one
+to agree to. On statamic-testing four real acceptances came through with a date
+and a name, and "No reason was recorded" where there was no note, which is the
+honest thing for that column to say.
+
+**Reusing `manage accessibility issues`.** A separate "accept accessibility
+exceptions" is the finer grain and is the right answer eventually. It also
+takes a button away from every user on an existing install the moment they
+upgrade. `exception_by` records who accepted regardless of who was allowed to,
+which is the accountability that matters. Also out of this change:
+`ci.fail_on_overdue`, which stays in the config file when it comes, because a
+compliance officer's number should not break a developer's deploy unless the
+developer opted in.
+
+**Checked.** The suite, 215 tests. Nine guards were mutation-tested by breaking
+each and confirming a test went red: the conformance table's immunity to an
+acceptance, the "no targets means nothing is overdue" guard (an empty set of
+SQL conditions matches every row, which would have called an entire site late
+the moment somebody switched targets off), the required reason, the review-period
+ceiling, the refusal of a date already gone, the expired-acceptance branch of
+`openNow`, the migration's backfill, the policy stamped into the report row,
+and the clearing of an acceptance when the status moves off it. A unit test
+caught a real bug while being written: `??` read a deliberate `null` target as
+"use the shipped default", so a developer switching a target off got it back.
+veraPDF validates a report carrying both register tables as PDF/UA-1. The queue
+screen is compiled as a Vue template and every control labelled, with both
+acceptance branches on screen, which the queue file's own check never rendered.
+On statamic-testing: install, backfill, a scan, an acceptance in force, one run
+out, five issues past target, and the generated document.
+
+**Not checked.** The control panel screens in a browser at either theme. Whether
+180 days is the right review period: it is a judgement, not a measurement. How a
+register of several hundred acceptances reads in a printed document.
+
+---
+
 ## 2026-09-03: The gate's panel wears the mark and not the colour, because no colour would work
 
 Asked for: the gate's panel using the same brand as the reports. The mark was

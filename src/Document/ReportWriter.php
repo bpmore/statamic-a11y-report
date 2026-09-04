@@ -81,6 +81,10 @@ final class ReportWriter
             'evaluator_name' => $data['evaluator']['name'],
             'evaluator_org' => $data['evaluator']['organization'],
             'remediation_plan' => $data['remediation_plan'],
+            // The promise in force when this document was filed. Kept on the
+            // row as well as in the JSON so "what were the targets in March"
+            // is answerable without opening a file.
+            'remediation_policy' => $data['remediation']['policy'],
         ], $paths));
     }
 

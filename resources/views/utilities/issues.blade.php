@@ -26,6 +26,10 @@
     // uses, so they hold contrast in both themes. Statamic's focus utility
     // gives the keyboard ring. The tab warning is read, not shown.
     $link = 'underline underline-offset-2 text-blue-700 dark:text-blue-300 focus:focus-outline rounded-sm';
+    // Said in words and never in colour alone. A queue that marks overdue
+    // work with a red dot fails 1.4.1 on the screen of an accessibility
+    // product, which is the story about the product.
+    $dueLabel = ['overdue' => 'Past target', 'expiring' => 'Acceptance runs out within '.$expiringWithin.' days', 'expired' => 'Acceptance has run out'];
 @endphp
 
 <ui-header title="Accessibility Report" icon="pulse" />
@@ -46,6 +50,15 @@
                 @foreach ($counts as $status => $n)
                     <ui-badge text="{{ $n }} {{ strtolower($label($status)) }}" @if ($f['status'] === $status) color="blue" @endif />
                 @endforeach
+                @if ($policyCounts['overdue'] > 0)
+                    <ui-badge color="red" text="{{ $policyCounts['overdue'] }} past target" />
+                @endif
+                @if ($policyCounts['expired'] > 0)
+                    <ui-badge color="amber" text="{{ $policyCounts['expired'] }} {{ $policyCounts['expired'] === 1 ? 'acceptance' : 'acceptances' }} run out" />
+                @endif
+                @if ($policyCounts['expiring'] > 0)
+                    <ui-badge text="{{ $policyCounts['expiring'] }} {{ $policyCounts['expiring'] === 1 ? 'acceptance' : 'acceptances' }} running out soon" />
+                @endif
             </div>
 
             @if ($f['path'] !== '')
@@ -73,6 +86,15 @@
                         <option value="">Any</option>
                         @foreach (['critical', 'serious', 'moderate', 'minor'] as $impact)
                             <option value="{{ $impact }}" @if ($f['impact'] === $impact) selected @endif>{{ ucfirst($impact) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="a11y-f-due" class="block text-xs font-medium mb-1">Against the policy</label>
+                    <select id="a11y-f-due" name="due" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
+                        <option value="">Any</option>
+                        @foreach ($dueOptions as $due)
+                            <option value="{{ $due }}" @if ($f['due'] === $due) selected @endif>{{ $dueLabel[$due] }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -136,7 +158,7 @@
                             <ui-table-column>Page</ui-table-column>
                             <ui-table-column>Problem</ui-table-column>
                             <ui-table-column>Impact</ui-table-column>
-                            <ui-table-column>Open for</ui-table-column>
+                            <ui-table-column>Open for, and due</ui-table-column>
                             <ui-table-column>Status</ui-table-column>
                             <ui-table-column>Assigned</ui-table-column>
                         </ui-table-columns>
@@ -162,10 +184,29 @@
                                     <ui-table-cell><ui-badge color="{{ $colour[$i->impact] ?? 'default' }}" text="@plain($i->impact)" pill /></ui-table-cell>
                                     <ui-table-cell>
                                         <span title="{{ $i->first_seen_at->toDayDateTimeString() }}">{{ (int) $i->first_seen_at->diffInDays(now()) }} {{ (int) $i->first_seen_at->diffInDays(now()) === 1 ? 'day' : 'days' }}</span>
+                                        @php($over = $policy->overdueDays((string) $i->impact, $i->first_seen_at))
+                                        @php($due = $policy->dueAt((string) $i->impact, $i->first_seen_at))
+                                        @if ($over !== null)
+                                            <ui-description text="Past target by {{ $over }} {{ $over === 1 ? 'day' : 'days' }}" />
+                                        @elseif ($due !== null)
+                                            <ui-description text="Due {{ $due->format('j M Y') }}" />
+                                        @else
+                                            <ui-description text="No target for {{ $i->impact }}" />
+                                        @endif
                                     </ui-table-cell>
                                     <ui-table-cell>
                                         @plain($label($i->status))
                                         @if ($i->updated_by)<ui-description text="by @plain($i->updated_by)" />@endif
+                                        @if ($i->status === \Bpmore\A11yReport\Models\IssueState::WONT_FIX)
+                                            @if ($i->exception_expires_at === null)
+                                                <ui-description text="No review date recorded" />
+                                            @elseif ($i->acceptanceHasExpired())
+                                                <ui-description text="Accepted until {{ $i->exception_expires_at->format('j M Y') }}, which has gone: open again until somebody looks" />
+                                            @else
+                                                <ui-description text="Accepted until {{ $i->exception_expires_at->format('j M Y') }}" />
+                                            @endif
+                                            @if ($i->exception_reason)<ui-description text="Because: @plain($i->exception_reason)" />@endif
+                                        @endif
                                     </ui-table-cell>
                                     <ui-table-cell>@plain($i->assigned_to ?: 'nobody')</ui-table-cell>
                                 </ui-table-row>
@@ -202,11 +243,24 @@
                                     <input id="a11y-b-note" type="text" name="note" placeholder="why, for whoever reads this next" class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
                                 </div>
                             </div>
+                            <div class="flex flex-wrap items-end gap-3">
+                                <div class="grow">
+                                    <label for="a11y-b-reason" class="block text-xs font-medium mb-1">Reason, if the status is won't fix</label>
+                                    <input id="a11y-b-reason" type="text" name="exception_reason" aria-describedby="a11y-b-reason-help" class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
+                                    <p id="a11y-b-reason-help" class="text-xs mt-1 opacity-70">Required to accept an issue, and printed in the conformance report.</p>
+                                </div>
+                                <div>
+                                    <label for="a11y-b-expires" class="block text-xs font-medium mb-1">Accepted until</label>
+                                    <input id="a11y-b-expires" type="date" name="exception_expires_at" max="@plain($latestExpiry)" aria-describedby="a11y-b-expires-help" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
+                                    <p id="a11y-b-expires-help" class="text-xs mt-1 opacity-70">Leave empty for {{ $latestExpiry }}, the furthest the policy allows.</p>
+                                </div>
+                            </div>
                             <div class="flex flex-wrap items-center gap-4">
                                 <label class="text-sm"><input type="checkbox" name="all_matching" value="1"> Apply to all {{ $issues->total() }} matching the current filter, not only the ticked ones</label>
                                 <ui-button type="submit" variant="primary" size="sm" text="Apply" />
                             </div>
                             <ui-description text="A scan never reopens an issue marked won't fix or false positive. It reopens a fixed one, or one whose page was removed, only if the problem comes back." />
+                            <ui-description text="Accepting an issue needs a reason and a date it runs out on. It does not hide the issue: an accepted failure is still listed in the conformance report and still counted under its success criterion. Past the date, it counts as open again, and the record of who accepted it and why is kept." />
                         </fieldset>
                     @endif
                 </form>

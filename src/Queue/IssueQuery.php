@@ -6,6 +6,8 @@ namespace Bpmore\A11yReport\Queue;
 
 use Bpmore\A11yReport\Engine\Finding;
 use Bpmore\A11yReport\Models\IssueState;
+use Bpmore\A11yReport\Remediation\Policy;
+use Bpmore\A11yReport\Settings;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -25,8 +27,19 @@ final class IssueQuery
 
     public const PER_PAGE = 50;
 
+    /** The three questions the policy adds to the queue, as one control. */
+    public const DUE = ['overdue', 'expiring', 'expired'];
+
+    /** How near an acceptance has to be to running out before the queue says so. */
+    public const EXPIRING_WITHIN_DAYS = 30;
+
+    /** The issue states table, qualified: `impact` is on the issues table too. */
+    private const T = 'a11y_issue_states.';
+
     /** @var array<string, string> */
     public readonly array $filters;
+
+    public readonly Policy $policy;
 
     /**
      * @param  array<string, mixed>  $input  request query: site, collection, criterion, impact, status, assignee, page
@@ -52,7 +65,13 @@ final class IssueQuery
             // One page, by its site-relative path. Reached from the entry's
             // own panel rather than from a control on the queue.
             'path' => $pick('path'),
+            // Past its target, or an acceptance that has run out or is about
+            // to. All three are questions about a date rather than about a
+            // status, which is why they are one control and not six.
+            'due' => $pick('due', self::DUE),
         ];
+
+        $this->policy = Policy::fromConfig(app(Settings::class)->block('report'));
     }
 
     public function query(): Builder
@@ -73,8 +92,22 @@ final class IssueQuery
 
         match ($f['status']) {
             'all' => null,
-            'active' => $q->whereIn('a11y_issue_states.status', [IssueState::OPEN, IssueState::IN_PROGRESS]),
-            default => $q->where('a11y_issue_states.status', $f['status']),
+            // An acceptance that has run out is work again, so the default
+            // view shows it. Its stored status stays "won't fix": that was a
+            // person's decision, and it ran out rather than being overruled.
+            'active' => IssueState::openNow($q, self::T.'status'),
+            default => $q->where(self::T.'status', $f['status']),
+        };
+
+        match ($f['due']) {
+            'overdue' => $this->policy->overdue(IssueState::openNow($q, self::T.'status'), self::T),
+            'expiring' => IssueState::accepted($q, self::T.'status')
+                ->whereNotNull(self::T.'exception_expires_at')
+                ->where(self::T.'exception_expires_at', '<=', now()->copy()->addDays(self::EXPIRING_WITHIN_DAYS)),
+            'expired' => $q->where(self::T.'status', IssueState::WONT_FIX)
+                ->whereNotNull(self::T.'exception_expires_at')
+                ->where(self::T.'exception_expires_at', '<=', now()),
+            default => null,
         };
 
         if ($f['site'] !== '') {
@@ -130,6 +163,28 @@ final class IssueQuery
         }
 
         return $result;
+    }
+
+    /**
+     * What the policy says about the queue as a whole, counted on the states
+     * alone so these numbers do not depend on the filter in the address bar.
+     *
+     * @return array<string, int>
+     */
+    public function policyCounts(): array
+    {
+        return [
+            'overdue' => $this->policy->overdue(IssueState::openNow(IssueState::query()))->count(),
+            'expiring' => IssueState::accepted(IssueState::query())
+                ->whereNotNull('exception_expires_at')
+                ->where('exception_expires_at', '<=', now()->copy()->addDays(self::EXPIRING_WITHIN_DAYS))
+                ->count(),
+            'expired' => IssueState::query()
+                ->where('status', IssueState::WONT_FIX)
+                ->whereNotNull('exception_expires_at')
+                ->where('exception_expires_at', '<=', now())
+                ->count(),
+        ];
     }
 
     /**

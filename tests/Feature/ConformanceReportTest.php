@@ -82,7 +82,7 @@ it('records who generated it and from which scan, and writes both files', functi
 it('has the shape a reader expects, in that order', function () {
     [, $html] = document();
 
-    $order = ['Accessibility Conformance Report', 'Evaluation methods', 'Scope and limits of this report', 'Conformance table', 'Findings summary', 'Open issues', 'Remediation plan'];
+    $order = ['Accessibility Conformance Report', 'Evaluation methods', 'Scope and limits of this report', 'Conformance table', 'Findings summary', 'Open issues', 'Remediation'];
     $positions = array_map(fn ($h) => strpos($html, $h), $order);
 
     foreach ($positions as $i => $p) {
@@ -186,7 +186,9 @@ it('lists the open issues with page, label, impact, and state, and omits what a 
     expect($html)->toContain('<td>/one</td>');
     expect($html)->toContain('<td><a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html">WCAG 1.1.1</a></td>');
     expect($html)->toContain('<td>Serious</td>');
-    expect($html)->toContain('<td>open</td>');
+    // The state, and what the policy says about it: this one is inside its
+    // target, so the cell says when it is due rather than that it is late.
+    expect($html)->toMatch('/<td>\s*open\s*<span class="evidence">Due /');
     expect(substr_count(flat($html), 'Skipped'))->toBe(0);
     expect($html)->toContain('2 open issues from this scan');
 });

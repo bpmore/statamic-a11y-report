@@ -177,6 +177,8 @@ class ServiceProvider extends AddonServiceProvider
             'byImpact' => $installed ? $overview->openByImpact() : [],
             'openTotal' => $installed ? $overview->openTotal() : 0,
             'oldestOpenDays' => $installed ? $overview->oldestOpenDays() : null,
+            'overdueTotal' => $installed ? $overview->overdueTotal() : 0,
+            'expiredExceptions' => $installed ? $overview->expiredExceptions() : 0,
             'trend' => $trend,
             'chart' => TrendChart::render($trend),
             'canRun' => (bool) User::current()?->can('run accessibility scans'),

@@ -53,6 +53,30 @@ function pdfWithStreams(string $pdf): string
     return $text;
 }
 
+/**
+ * veraPDF's verdict on a file: the report, and every rule it failed.
+ *
+ * @return array{0: string, 1: array<int, string>}
+ */
+function veraPdfVerdict(string $path): array
+{
+    $verapdf = trim((string) shell_exec('command -v verapdf 2>/dev/null'));
+
+    if ($verapdf === '') {
+        test()->markTestSkipped('veraPDF is not installed here; the CI workflow runs it.');
+    }
+
+    $xml = (string) shell_exec(escapeshellarg($verapdf).' --flavour ua1 --format xml '.escapeshellarg($path).' 2>/dev/null');
+
+    preg_match_all('/<rule\s[^>]*clause="([^"]+)"[^>]*status="failed"[^>]*>(.*?)<\/rule>/s', $xml, $failed, PREG_SET_ORDER);
+
+    return [$xml, array_map(function ($f) {
+        preg_match('/<description>(.*?)<\/description>/s', $f[2], $d);
+
+        return $f[1].': '.trim($d[1] ?? '');
+    }, $failed)];
+}
+
 it('prints a tagged PDF with a structure tree, headings, tables, a language, an outline, and its title', function () {
     [$report, $pdf, $path] = pdfBytes();
 
@@ -91,26 +115,57 @@ it('is PDF/UA-1 compliant according to veraPDF, when veraPDF is installed', func
 
     expect(str_contains($pdf, '<pdfuaid:part>1</pdfuaid:part>'))->toBeTrue('the file declares PDF/UA-1, which the rest of this test is what makes true');
 
-    $verapdf = trim((string) shell_exec('command -v verapdf 2>/dev/null'));
+    [$xml, $failures] = veraPdfVerdict($path);
 
-    if ($verapdf === '') {
-        test()->markTestSkipped('veraPDF is not installed here; the CI workflow runs it.');
-    }
-
-    $xml = (string) shell_exec(escapeshellarg($verapdf).' --flavour ua1 --format xml '.escapeshellarg($path).' 2>/dev/null');
     expect(str_contains($xml, '<validationReport'))->toBeTrue('veraPDF produced a report');
-
-    preg_match_all('/<rule\s[^>]*clause="([^"]+)"[^>]*status="failed"[^>]*>(.*?)<\/rule>/s', $xml, $failed, PREG_SET_ORDER);
-    $failures = array_map(function ($f) {
-        preg_match('/<description>(.*?)<\/description>/s', $f[2], $d);
-
-        return $f[1].': '.trim($d[1] ?? '');
-    }, $failed);
 
     // Full compliance, not a chosen subset. The identifier above is a claim,
     // and this assertion is what keeps it true: a template change that
     // breaks any PDF/UA rule fails here before a file that still declares
     // conformance can be generated.
+    expect($failures)->toBe([], 'veraPDF failed: '.implode(' | ', $failures));
+    expect(preg_match('/isCompliant="true"/', $xml))->toBe(1);
+})->group('pdf');
+
+it('keeps the PDF valid when the document carries an exception register', function () {
+    if (! app(ChromePrinter::class)->available()) {
+        test()->markTestSkipped('No Chrome on this machine: the PDF cannot be produced here.');
+    }
+
+    page('one', '<img src="/a.jpg">');
+    page('two', '<h3>Skipped</h3><a href="#">Somewhere</a>');
+    $scan = runScan();
+
+    // One acceptance standing and one that has run out, so both of the
+    // register's tables are in the document. They are new tables in the file
+    // that is also the source of the tagged PDF, and Chrome's tag quality is
+    // entirely a function of this markup.
+    $rows = \Bpmore\A11yReport\Models\IssueState::query()->orderBy('fingerprint')->get();
+
+    $rows[0]->update([
+        'status' => \Bpmore\A11yReport\Models\IssueState::WONT_FIX,
+        'exception_reason' => 'Supplied by the ticketing vendor.',
+        'exception_by' => 'sam@example.test',
+        'exception_at' => now(),
+        'exception_expires_at' => now()->copy()->addDays(30),
+    ]);
+
+    $rows[1]->update([
+        'status' => \Bpmore\A11yReport\Models\IssueState::WONT_FIX,
+        'exception_reason' => 'Agreed last year, never looked at again.',
+        'exception_by' => 'sam@example.test',
+        'exception_at' => now()->copy()->subYear(),
+        'exception_expires_at' => now()->copy()->subDay(),
+    ]);
+
+    $report = app(ReportWriter::class)->write($scan, 'tester', ['pdf']);
+    $path = (string) app(ReportWriter::class)->absolutePath($report->pdf_path);
+
+    expect(str_contains((string) file_get_contents((string) app(ReportWriter::class)->absolutePath($report->html_path)), 'Acceptances that have run out'))
+        ->toBeTrue('the document being printed carries both register tables');
+
+    [$xml, $failures] = veraPdfVerdict($path);
+
     expect($failures)->toBe([], 'veraPDF failed: '.implode(' | ', $failures));
     expect(preg_match('/isCompliant="true"/', $xml))->toBe(1);
 })->group('pdf');

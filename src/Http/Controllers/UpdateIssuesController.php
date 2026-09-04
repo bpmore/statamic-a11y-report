@@ -6,7 +6,10 @@ namespace Bpmore\A11yReport\Http\Controllers;
 
 use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Queue\IssueQuery;
+use Bpmore\A11yReport\Remediation\Policy;
+use Bpmore\A11yReport\Settings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Statamic\Facades\User;
 use Statamic\Http\Controllers\CP\CpController;
 
@@ -17,6 +20,12 @@ use Statamic\Http\Controllers\CP\CpController;
  * A person's decision is recorded with their name and the time, and it is
  * what the next scan will respect: a scan never reopens "won't fix" or
  * "false positive", and it reopens "fixed" only when the problem comes back.
+ *
+ * Accepting a problem is the one change that asks for more than a click.
+ * "Won't fix" is a claim an organisation may have to defend, so it carries a
+ * reason and a date it runs out on, and neither is optional. Before the
+ * register existed an accepted failure could be recorded in bulk with nothing
+ * written down at all, which is the first thing an auditor asks about.
  */
 class UpdateIssuesController extends CpController
 {
@@ -33,6 +42,20 @@ class UpdateIssuesController extends CpController
         if (in_array($status, IssueQuery::STATUSES, true)) {
             $changes['status'] = $status;
             $changes['resolved_at'] = in_array($status, [IssueState::FIXED, IssueState::WONT_FIX, IssueState::FALSE_POSITIVE], true) ? now() : null;
+
+            $acceptance = $status === IssueState::WONT_FIX
+                ? $this->acceptance($request)
+                // Any other status ends the acceptance. The reason is cleared
+                // with it rather than kept: a justification left attached to
+                // an issue nobody is accepting any more is a sentence the
+                // report would print about a decision that is over.
+                : array_fill_keys(IssueState::EXCEPTION_COLUMNS, null);
+
+            if (is_string($acceptance)) {
+                return back()->with('error', $acceptance);
+            }
+
+            $changes = array_merge($changes, $acceptance);
         }
 
         if (is_string($assignee) && $assignee !== '') {
@@ -61,5 +84,60 @@ class UpdateIssuesController extends CpController
         $count = IssueState::whereIn('fingerprint', $fingerprints->all())->update($changes);
 
         return back()->with('success', $count.' '.($count === 1 ? 'issue' : 'issues').' updated.');
+    }
+
+    /**
+     * The columns an acceptance is recorded in, or the sentence to refuse it
+     * with.
+     *
+     * Refused rather than corrected. A date quietly moved to the furthest one
+     * the policy allows is a promise the person did not make, under their own
+     * name, in a document filed as evidence.
+     *
+     * @return array<string, mixed>|string
+     */
+    private function acceptance(Request $request): array|string
+    {
+        $reason = $request->input('exception_reason');
+        $reason = is_string($reason) ? trim($reason) : '';
+
+        if ($reason === '') {
+            return 'An issue marked "won\'t fix" needs a reason. It is a claim the organisation may have to defend, and a report prints it.';
+        }
+
+        $policy = Policy::fromConfig(app(Settings::class)->block('report'));
+        $latest = $policy->latestExpiry();
+        $wanted = $request->input('exception_expires_at');
+
+        if (! is_string($wanted) || trim($wanted) === '') {
+            return $this->columns($reason, $latest);
+        }
+
+        try {
+            $expires = Carbon::parse(trim($wanted))->endOfDay();
+        } catch (\Throwable) {
+            return 'That is not a date the acceptance could run out on.';
+        }
+
+        if ($expires->isPast()) {
+            return 'An acceptance that has already run out is not an acceptance. Pick a date in the future.';
+        }
+
+        if ($expires->greaterThan($latest)) {
+            return 'The policy reviews an accepted issue within '.$policy->exceptionDays.' days, so the furthest ahead this can run to is '.$latest->format('j F Y').'. Change the policy in the addon settings to accept anything for longer.';
+        }
+
+        return $this->columns($reason, $expires);
+    }
+
+    /** @return array<string, mixed> */
+    private function columns(string $reason, Carbon $expires): array
+    {
+        return [
+            'exception_reason' => $reason,
+            'exception_by' => User::current()?->email(),
+            'exception_at' => now(),
+            'exception_expires_at' => $expires,
+        ];
     }
 }

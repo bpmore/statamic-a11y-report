@@ -13,6 +13,7 @@ use Bpmore\A11yReport\Document\ReportWriter;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Scan\Scans;
+use Bpmore\A11yReport\Scan\ScanSchedule;
 use Bpmore\A11yReport\Statement\StatementBuilder;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Bpmore\A11yReport\Support\VueSafe;
@@ -64,6 +65,29 @@ class ServiceProvider extends AddonServiceProvider
     ];
 
     protected $viewNamespace = 'a11y-report';
+
+    /**
+     * The recurring scan. `scan.schedule` sat in the config file from the
+     * first release with nothing reading it, so every install was told it
+     * scanned weekly and none of them did.
+     *
+     * Statamic's own hook, which its boot sequence calls only when running in
+     * console. That is the right gate: the scheduler is a console concern and
+     * registering it on every web request is work nobody reads.
+     *
+     * The registration itself waits for the application to finish booting.
+     * Statamic's chain calls this hook several steps *before* it merges the
+     * addon's config, so reading `scan.schedule` here gets null and quietly
+     * schedules nothing, which is the exact bug this method exists to fix,
+     * reintroduced one line lower down.
+     */
+    protected function schedule(\Illuminate\Console\Scheduling\Schedule $schedule)
+    {
+        $this->app->booted(fn () => ScanSchedule::register(
+            $schedule,
+            (array) config('statamic-a11y-report.scan', []),
+        ));
+    }
 
     /**
      * The settings screen, with the brand section added in PHP.
@@ -192,6 +216,7 @@ class ServiceProvider extends AddonServiceProvider
             'queueIsSync' => config('queue.default') === 'sync',
             'queueConnection' => (string) config('queue.default'),
             'stale' => $installed ? $overview->stale((int) config('statamic-a11y-report.scan.stale_after_minutes', 10)) : null,
+            'schedule' => $installed ? $overview->schedule() : null,
             'engine' => (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY),
         ];
     }

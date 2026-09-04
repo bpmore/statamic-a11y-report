@@ -9,6 +9,31 @@ Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
 ## Unreleased
 
+### Fixed
+
+**`scan.schedule` now actually schedules a scan.** It has been in the config
+file since the first release and nothing read it, so every install was told it
+scanned weekly and none of them did. It takes `daily`, `weekly` (Sunday),
+`monthly` (the 1st), any cron expression, or `false`. `scan.schedule_at` sets
+the time of day for the named ones and defaults to `02:00`.
+
+This needs Laravel's scheduler running on the server, which is one line in the
+crontab and covers every scheduled task the site has:
+
+```
+* * * * * cd /path/to/site && php artisan schedule:run >> /dev/null 2>&1
+```
+
+If it is not there, the report overview now says so and gives you that line. A
+schedule nobody runs looks exactly like a schedule that runs and finds nothing,
+and a conformance report is not the place to discover the difference. The
+overview says it again if scheduled scans were running and have stopped.
+
+A scheduled scan does not start while another is queued or running, and unlike
+`--sync` it does not report a failure for issue counts or for a page that could
+not be read. Those are still on the screen and in the report. A weekly job that
+fails every week for a known reason is a job whose mail gets ignored.
+
 ### Added
 
 **The scan layer.** `a11y:report:install` creates the tables, on a SQLite file

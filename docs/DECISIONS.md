@@ -12,6 +12,97 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-04: The weekly scan now happens, and says so when it does not
+
+`scan.schedule => 'weekly'` shipped in the first release and was read by
+nothing. Every install has been told it scans weekly and none of them did. The
+report's whole claim is about a site over time, and time was the part nobody
+wired up.
+
+**Three named frequencies and a cron expression for everything else.** Daily,
+weekly (Sunday), monthly (the 1st), at `scan.schedule_at`. "Hourly" is
+deliberately not a name you can type: a scan renders every published page, and
+a word somebody picks off a list without thinking should not turn the site into
+a load test 24 times a day. Anyone who genuinely wants that writes the cron
+expression, which is a deliberate act rather than a plausible-looking word.
+
+**A value it does not understand schedules nothing and warns.** Turned down:
+falling back to weekly, which is a scan nobody asked for, at a time nobody
+chose, on a machine sized for neither. Turning it off is a supported choice and
+is silent, and a test asserts the absence of the warning, because "schedules
+nothing" was true down both paths and the test could not otherwise tell them
+apart. That was found by mutation: shrinking the list of words meaning "off"
+left every assertion passing.
+
+**Statamic's own hook, but not Statamic's own moment.** `AddonServiceProvider`
+calls `schedule()` only when running in console, which is the right gate. It
+also calls it several steps *before* `bootConfig()`, so reading
+`statamic-a11y-report.scan` inside that hook returns null and quietly
+schedules nothing: the exact bug this change exists to fix, reintroduced one
+line lower. Registration therefore happens in an `app->booted()` callback
+raised from inside the hook, which keeps the console-only gate and gets a
+merged config. Found by running it, not by reading it, and pinned by a test
+that asks the booted application what is on its schedule rather than asking
+the class whether it can register.
+
+**Registered once, however many times the provider boots.** The test harness
+boots the addon twice and put two identical scans on the schedule. Both would
+be stopped from doing anything by `withoutOverlapping()` and by the command's
+own guard, so this is not a double scan, but two identical rows in
+`schedule:list` is a support question and the mitigation was luck.
+
+**A scheduled run does not start on top of one already going.** The command
+refuses, rather than the cache lock alone, because the domain answer works when
+the cache is `array` and the lock is not. A person pressing the button during a
+scan is deliberate; a cron doing it is a pile-up nobody is watching, so the
+guard is on `--scheduled` and not on the command.
+
+**Skipping is not failing, and neither is a page that will not render.** Both
+exit zero. `--sync` still exits non-zero above the CI thresholds and on any
+unreadable page, and must: that is a gate. The scheduler gates nothing, and a
+weekly job that fails every week for the same known reason is a job whose mail
+gets filtered, which is how the run that really broke goes unread. A scheduled
+run reports a failure only when the scan did not finish, which is the one thing
+a person reading cron mail can act on. Found by running it on
+statamic-testing, whose one broken template made the first real scheduled run
+exit 1.
+
+**The overview says when the schedule is not running.** A weekly scan on a
+server with no `schedule:run` in its crontab looks exactly like a weekly scan
+that runs and finds nothing: the same screen, the same numbers, a date that
+quietly stops moving. So the overview carries the crontab line when no
+scheduled scan has ever run, and says so again when two runs in a row have
+been missed. Two and not one, because a screen that cries wolf the morning
+after somebody sets this up is a screen people learn to ignore. Only a scan
+whose trigger is `scheduled` counts: a site where somebody keeps pressing the
+button by hand has not got a working schedule, and mutation testing caught
+that the first version could not tell the difference.
+
+**`schedule_at` is a developer's, in the config file.** The settings-split test
+of 3 September forced the choice as it was built to, and the 2026-09-03 entry
+already settled the principle: a wrong value here stops scans rather than
+changing a sentence.
+
+**Checked.** The suite, 210 tests. Ten guards mutation-tested by breaking each
+and confirming a test went red, including the deferred registration, the
+once-only registration, the skip, the trigger, the two-missed-runs rule, and
+the frozen clock: `CronExpression` builds its own `now` from the string 'now'
+and ignores a frozen one, so the screen and its test disagreed about which
+runs had been missed. Two mutants survived the first pass and were killed by
+strengthening the tests, not the code. On statamic-testing: `schedule:list`
+shows one entry at `0 2 * * 0`; `daily` and a raw cron expression register as
+written; `false` and an unrecognised word register nothing; a real
+`--scheduled` run recorded `trigger=scheduled`, `initiated_by=schedule`, and
+exited zero despite the site's one unreadable page.
+
+**Not checked.** The overview's two schedule panels in a browser. Whether an
+actual crontab fires it on a server, which is the one step this addon cannot
+test from inside itself. Whether Sunday 02:00 is a sensible default for sites
+in other timezones: it uses the application's, and nobody has asked for a
+setting.
+
+---
+
 ## 2026-09-03: The gate's panel wears the mark and not the colour, because no colour would work
 
 Asked for: the gate's panel using the same brand as the reports. The mark was

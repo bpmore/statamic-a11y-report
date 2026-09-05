@@ -33,6 +33,36 @@ nothing else. To use a database the site already runs, set
 If you skip the install and the addon is on its own SQLite file, the first scan
 runs the install itself. On any other connection it asks you to.
 
+## Engines
+
+Two, and a scan records which one ran, at what version, and with which rules.
+
+**`php`** is the default: the same checker Accessibility Gate runs before a
+publish, run across the whole site. It reads markup, needs nothing installed,
+and can speak to six success criteria.
+
+**`axe`** runs axe-core in headless Chrome against the page as your site serves
+it. It speaks to around two dozen criteria, colour contrast among them, which
+is the failure most sites have most of and the one reading markup can never
+find. Set `engine` to `axe` in the config file, or `A11Y_ENGINE=axe`, or run one
+scan with `php please a11y:scan --engine=axe`.
+
+axe-core is bundled with the addon, so there is nothing to install and nothing
+is fetched while scanning. It needs Chrome on the machine and your site
+reachable from it. Ask for axe without Chrome and the scan runs the PHP checker
+instead and says so; the scan row and the report always name the engine that
+actually ran.
+
+Level AAA is never run by either. The conformance table has no AAA row.
+
+axe-core is [Deque's](https://github.com/dequelabs/axe-core), MPL-2.0, bundled
+unmodified at `resources/js/axe.min.js` with its licence header intact.
+
+Switching engines does not close the other engine's issues: two engines look
+for different things, and one not looking for something is not evidence it was
+fixed. They stay open in the queue until a scan by their own engine finds them
+gone, or you close them by hand.
+
 ## Scan
 
 ```

@@ -23,6 +23,16 @@ interface ScanEngine
     public function version(): string;
 
     /**
+     * Which rules ran, written onto every scan beside the engine and version.
+     *
+     * The engine's to answer and not the caller's: two engines reading the
+     * same site run different sets of rules, and a scan row that named the
+     * standard somebody asked for rather than the rules that ran would leave
+     * the difference between two scans' numbers with no explanation on it.
+     */
+    public function ruleset(): string;
+
+    /**
      * Every success criterion this engine's rules can cite, as "1.4.3".
      *
      * The conformance report uses it to say which criteria were evaluated

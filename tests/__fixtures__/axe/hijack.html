@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>A page that ships its own axe</title>
+<script>
+  window.axe = {
+    version: '1.0.0',
+    run: function () {
+      return Promise.resolve({
+        testEngine: { name: 'axe-core', version: '1.0.0' },
+        violations: [], incomplete: [], passes: [], inapplicable: []
+      });
+    }
+  };
+</script>
+</head>
+<body><main><h1>A page that ships its own axe</h1></main></body>
+</html>

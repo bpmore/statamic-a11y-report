@@ -48,7 +48,6 @@ final class Scans
     public function __construct(
         private readonly ScanEngine $engine,
         private readonly EntryRenderer $renderer,
-        private readonly string $ruleset,
         private readonly array $config,
     ) {}
 
@@ -61,7 +60,11 @@ final class Scans
             'status' => Scan::QUEUED,
             'engine' => $this->engine->key(),
             'engine_version' => $this->engine->version(),
-            'ruleset' => $this->ruleset,
+            'ruleset' => $this->engine->ruleset(),
+            // What this engine could speak to, kept on the row: a report
+            // generated later must not have to ask an engine that was not the
+            // one that ran.
+            'criteria' => $this->engine->criteria(),
             'scope' => $scope->toArray(),
             'initiated_by' => $initiatedBy,
         ]);
@@ -324,6 +327,10 @@ final class Scans
         $previous = Scan::where('status', Scan::COMPLETE)
             ->where('id', '<', $scan->id)
             ->where('site', $scan->site)
+            // Against the last scan by the same engine. Comparing axe to the
+            // PHP checker would report every finding of one as new and every
+            // finding of the other as fixed, in a sentence the report prints.
+            ->where('engine', $scan->engine)
             ->orderByDesc('id')
             ->first();
 
@@ -376,6 +383,7 @@ final class Scans
                         IssueState::create([
                             'fingerprint' => $issue->fingerprint,
                             'status' => IssueState::OPEN,
+                            'engine' => $scan->engine,
                             'url' => $issue->url,
                             'site' => $issue->site,
                             'path' => $issue->path,
@@ -417,6 +425,11 @@ final class Scans
                     IssueState::where('site', $site)
                         ->whereIn('path', $onSite->pluck('path'))
                         ->whereIn('status', IssueState::closableByScan())
+                        // Only what an engine of this kind found. Two engines
+                        // are two sets of answers, and axe not looking for
+                        // something the gate's checker found is not evidence
+                        // that anybody fixed it.
+                        ->where('engine', $scan->engine)
                         ->whereNotIn('fingerprint', $current)
                         ->update([
                             'status' => IssueState::FIXED,
@@ -464,6 +477,7 @@ final class Scans
             })
             ->join('a11y_scan_pages', 'a11y_scan_pages.id', '=', 'a11y_issues.page_id')
             ->whereIn('a11y_issue_states.status', IssueState::closableByScan())
+            ->where('a11y_issue_states.engine', $scan->engine)
             ->when($scope->sites !== [], fn ($q) => $q->whereIn('a11y_issue_states.site', $scope->sites))
             ->when($scope->collections !== [], fn ($q) => $q->whereIn('a11y_scan_pages.collection', $scope->collections))
             ->select(['a11y_issue_states.fingerprint', 'a11y_issue_states.site', 'a11y_issue_states.path', 'a11y_issue_states.url'])

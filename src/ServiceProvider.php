@@ -9,7 +9,10 @@ use Bpmore\A11yGate\Gate\EntryRenderer;
 use Bpmore\A11yGate\Gate\GateSettings;
 use Bpmore\A11yReport\Document\Brand;
 use Bpmore\A11yReport\Document\ReportBuilder;
+use Bpmore\A11yReport\Chrome\Browser;
+use Bpmore\A11yReport\Chrome\DevTools;
 use Bpmore\A11yReport\Document\ReportWriter;
+use Bpmore\A11yReport\Engine\AxeEngine;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Scan\Scans;
@@ -153,6 +156,17 @@ class ServiceProvider extends AddonServiceProvider
     }
 
     /**
+     * The WCAG version the report is written against, which is also the set
+     * of rules an engine that can choose should run.
+     */
+    private static function reportStandard(): string
+    {
+        $configured = app(Settings::class)->block('report')['standard'] ?? null;
+
+        return is_string($configured) && isset(\Bpmore\A11yReport\Document\Wcag::STANDARDS[$configured]) ? $configured : 'wcag22aa';
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function utilityData(Request $request): array
@@ -202,16 +216,38 @@ class ServiceProvider extends AddonServiceProvider
 
         $this->app->bind(EntryRenderer::class, fn ($app) => new EntryRenderer($app));
 
-        $this->app->bind(ScanEngine::class, function ($app) {
-            $settings = $app->make(GateSettings::class);
+        // A singleton, not a binding. The axe engine holds a headless Chrome
+        // open across pages because starting one costs the better part of a
+        // second, and `Scans` is resolved once per queued page: bound rather
+        // than shared, every page would start and stop its own browser and the
+        // saving would be exactly reversed.
+        $this->app->singleton(ScanEngine::class, function ($app) {
             $wanted = (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY);
 
-            if ($wanted !== PhpDomEngine::KEY) {
-                // Said out loud rather than swapped quietly. The scan row will
-                // carry "php" as its engine either way, so nothing downstream
-                // can mistake the result for the fuller one.
-                Log::warning("a11y-report: the [{$wanted}] engine is not available yet; scanning with the PHP checker instead.");
+            if ($wanted === AxeEngine::KEY) {
+                $browser = new Browser(config('statamic-a11y-report.chrome.binary'));
+
+                if ($browser->available()) {
+                    return new AxeEngine(
+                        new DevTools(
+                            $browser,
+                            (int) config('statamic-a11y-report.chrome.timeout', 30),
+                            (int) config('statamic-a11y-report.axe.settle_ms', 250),
+                        ),
+                        self::reportStandard(),
+                        (bool) config('statamic-a11y-report.axe.best_practices', true),
+                    );
+                }
+
+                // Scanning with the lesser engine beats failing every page,
+                // and it is not a quiet swap: the scan row carries "php", and
+                // the report says which criteria that engine can speak to.
+                Log::warning('a11y-report: the axe engine needs Chrome and none was found; scanning with the PHP checker instead. Set A11Y_CHROME_PATH to the browser binary.');
+            } elseif ($wanted !== PhpDomEngine::KEY) {
+                Log::warning("a11y-report: there is no [{$wanted}] engine; scanning with the PHP checker instead.");
             }
+
+            $settings = $app->make(GateSettings::class);
 
             return new PhpDomEngine(
                 new StaticAccessibilityChecker,
@@ -252,7 +288,6 @@ class ServiceProvider extends AddonServiceProvider
         $this->app->bind(Scans::class, fn ($app) => new Scans(
             $app->make(ScanEngine::class),
             $app->make(EntryRenderer::class),
-            $app->make(GateSettings::class)->standard->value,
             $app->make(Settings::class)->effective(),
         ));
     }

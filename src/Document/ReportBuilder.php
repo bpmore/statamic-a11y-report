@@ -49,7 +49,7 @@ final class ReportBuilder
 
         $standard = $this->standardFor($scan);
         $criteriaList = Wcag::criteria($standard);
-        $automated = $this->evidence->automatedCriteria($scan);
+        $automated = $this->evidence->automatedCriteria($scan, $standard);
         $failures = $this->evidence->failuresByCriterion($scan);
         $assessments = $this->assessments($scan->site);
         $pagesRead = (int) $scan->pages_scanned;
@@ -263,8 +263,19 @@ final class ReportBuilder
     private function summaryByCriterion(array $failures, string $standard): array
     {
         $rows = [];
+        $inTable = array_map(fn ($c) => $c->number, Wcag::criteria($standard));
 
         foreach ($failures as $number => $f) {
+            // Only criteria this report's table holds. An engine can cite one
+            // the table does not have (axe tags some Level A rules with a AAA
+            // criterion too), and a summary row for a criterion with no row
+            // above it is a number a reader cannot place. The findings
+            // themselves are still listed under Open issues with the label the
+            // engine gave them.
+            if (! in_array($number, $inTable, true)) {
+                continue;
+            }
+
             $rows[] = ['number' => $number, 'name' => Wcag::find($number)?->name ?? '', 'url' => Wcag::urlFor($number, $standard), 'issues' => $f['issues'], 'pages' => $f['pages']];
         }
 

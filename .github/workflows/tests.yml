@@ -68,10 +68,11 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      # The PDF tests skip without Chrome, and a skipped test is reported as
-      # a pass. Fail here instead, where the reason is one line, so a runner
-      # image that drops Chrome cannot make the tagged PDF quietly untested.
-      - name: Confirm Chrome is here so the PDF tests run rather than skip
+      # The PDF tests and the whole axe engine skip without Chrome, and a
+      # skipped test is reported as a pass. Fail here instead, where the reason
+      # is one line, so a runner image that drops Chrome cannot make the tagged
+      # PDF and the second engine quietly untested.
+      - name: Confirm Chrome is here so the PDF and axe tests run rather than skip
         run: google-chrome --version
 
       # veraPDF, for the PDF/UA checks. The test asserts the clauses this

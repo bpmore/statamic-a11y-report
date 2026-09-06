@@ -25,50 +25,17 @@ a breaking change raises the minor version.
 
 ## Install
 
-This addon is not on Packagist and its repository is private, so Composer has
-to be told where to find it and given something to prove you may have it.
-
-Add the repository to the site's `composer.json`:
-
-```json
-"repositories": [
-    {
-        "type": "vcs",
-        "url": "https://github.com/bpmore/statamic-a11y-report.git"
-    }
-]
-```
-
-Then give Composer a GitHub token with read access to it. This writes to
-`~/.composer/auth.json` (or `COMPOSER_HOME/auth.json`) and covers every private
-repository on that host, so it is done once per machine and not once per
-project:
-
-```
-composer config --global --auth github-oauth.github.com <token>
-```
-
-On a deploy server that has no global Composer home, put the same token in an
-`auth.json` beside the site's `composer.json` and keep it out of version
-control, or set `COMPOSER_AUTH` in the environment:
-
-```
-COMPOSER_AUTH='{"github-oauth":{"github.com":"<token>"}}'
-```
-
-Then:
+Not published yet. The repository is private while it is being tested, so
+nothing below works for anybody else today, and this section is what it will
+be once it is on Packagist and the Statamic Marketplace.
 
 ```
 composer require bpmore/statamic-a11y-report
 php please a11y:report:install
 ```
 
-Accessibility Gate is on Packagist and needs none of this. Composer pulls it in
-on its own.
-
-Without the repository entry, `composer require` fails with "your requirements
-could not be resolved": Composer has no idea the package exists. Without the
-token it fails at the clone, asking for credentials it cannot get.
+Accessibility Gate comes with it. It is on Packagist and needs nothing said
+about it here.
 
 The second command creates the tables. By default they go in a SQLite file the
 addon creates for itself under `storage/a11y-report/`, so a flat-file site needs

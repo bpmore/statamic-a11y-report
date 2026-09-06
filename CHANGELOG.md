@@ -180,6 +180,16 @@ resolved time, and reopens if the page comes back with the problem. A scan
 narrowed by `--since`, by site or collection, or by an excluded URL closes
 nothing it could not have met.
 
+**A scan can be ended.** `php please a11y:scan:cancel <scan id>` ends a scan
+that is never going to finish, so scheduled scans can run again. `cancelled`
+was a status a scan could reach and nothing a person could set. Use
+`a11y:scan --resume=<scan id> --sync` wherever the pages can still be read:
+it finishes the scan in one process, needs no queue worker, and leaves a scan
+that can be reported on. A scan that was ended cannot be, ever; what it read
+is kept and still counted on the overview. It asks before it acts unless you
+pass `--force`, and it says when other unfinished scans are still holding the
+schedule up.
+
 **The stale scan warning.** The overview says when a scan has been queued or
 running with nothing read for longer than `scan.stale_after_minutes`, the
 likely cause, and what to run. It reports the oldest scan that has not

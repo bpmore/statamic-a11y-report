@@ -18,15 +18,47 @@ final class ScanEvidence
     public function __construct(private readonly ScanEngine $engine) {}
 
     /**
-     * The criteria the engine that ran the scan can cite. Empty when that
-     * engine is not the one bound now, because then its results cannot be
-     * attributed and the honest answer is that nothing was evaluated.
+     * The criteria the engine that ran the scan can cite, of the ones this
+     * report's table contains.
+     *
+     * Empty when that engine is not the one bound now, because then its
+     * results cannot be attributed and the honest answer is that nothing was
+     * evaluated.
+     *
+     * Narrowed to the standard because an engine may cite more than a table
+     * holds. axe tags some Level A rules with a Level AAA criterion as well,
+     * and counting those would have the limits section say the checks cover
+     * more criteria than the table has rows, which is a claim about an
+     * evaluation of something the document does not report on.
      *
      * @return array<int, string>
      */
-    public function automatedCriteria(Scan $scan): array
+    public function automatedCriteria(Scan $scan, ?string $standard = null): array
     {
-        return $scan->engine === $this->engine->key() ? $this->engine->criteria() : [];
+        // What the engine recorded while it was running, in preference to
+        // asking whichever engine happens to be bound now. A scan run with one
+        // engine and reported on a site configured for the other used to say
+        // nothing had been evaluated automatically.
+        $criteria = is_array($scan->criteria) ? $scan->criteria : null;
+
+        if ($criteria === null) {
+            // Scans from before the criteria were recorded. The engine that
+            // ran is the only one that can answer for them, so a scan by any
+            // other engine is honestly unattributable.
+            if ($scan->engine !== $this->engine->key()) {
+                return [];
+            }
+
+            $criteria = $this->engine->criteria();
+        }
+
+        if ($standard === null) {
+            return $criteria;
+        }
+
+        $inTable = array_map(fn ($c) => $c->number, Wcag::criteria($standard));
+
+        return array_values(array_intersect($criteria, $inTable));
     }
 
     /**

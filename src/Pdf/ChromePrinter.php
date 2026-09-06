@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bpmore\A11yReport\Pdf;
 
+use Bpmore\A11yReport\Chrome\Browser;
+
 /**
  * Headless Chrome, printing a local HTML file to a tagged PDF.
  *
@@ -23,15 +25,8 @@ namespace Bpmore\A11yReport\Pdf;
  */
 final class ChromePrinter
 {
-    public const CANDIDATES = [
-        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-        '/Applications/Chromium.app/Contents/MacOS/Chromium',
-        'google-chrome',
-        'google-chrome-stable',
-        'chromium',
-        'chromium-browser',
-        'chrome',
-    ];
+    /** @deprecated Kept as the address it was published at; `Browser` owns the list. */
+    public const CANDIDATES = Browser::CANDIDATES;
 
     public function __construct(
         private readonly ?string $binary = null,
@@ -41,25 +36,7 @@ final class ChromePrinter
     /** The first Chrome that exists, configured or found, or null. */
     public function binary(): ?string
     {
-        $candidates = $this->binary !== null && $this->binary !== '' ? [$this->binary] : self::CANDIDATES;
-
-        foreach ($candidates as $candidate) {
-            if (str_contains($candidate, '/')) {
-                if (is_executable($candidate)) {
-                    return $candidate;
-                }
-
-                continue;
-            }
-
-            $found = trim((string) shell_exec('command -v '.escapeshellarg($candidate).' 2>/dev/null'));
-
-            if ($found !== '') {
-                return $found;
-            }
-        }
-
-        return null;
+        return (new Browser($this->binary))->binary();
     }
 
     public function available(): bool
@@ -87,14 +64,7 @@ final class ChromePrinter
 
         $command = implode(' ', array_map('escapeshellarg', [
             $binary,
-            '--headless=new',
-            '--disable-gpu',
-            '--no-sandbox',
-            '--no-first-run',
-            '--disable-extensions',
-            '--disable-sync',
-            '--disable-background-networking',
-            '--disable-component-update',
+            ...Browser::FLAGS,
             '--user-data-dir='.$profile,
             '--export-tagged-pdf',
             '--generate-pdf-document-outline',
@@ -145,7 +115,7 @@ final class ChromePrinter
 
             fclose($pipes[2]);
             proc_close($process);
-            self::removeDirectory($profile);
+            Browser::removeDirectory($profile);
         }
 
         if (self::complete($pdfPath)) {
@@ -171,20 +141,5 @@ final class ChromePrinter
         fclose($handle);
 
         return str_contains($tail, '%%EOF');
-    }
-
-    private static function removeDirectory(string $dir): void
-    {
-        if (! is_dir($dir)) {
-            return;
-        }
-
-        $items = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
-
-        foreach ($items as $item) {
-            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
-        }
-
-        @rmdir($dir);
     }
 }

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Bpmore\A11yReport\Commands;
 
+use Bpmore\A11yReport\Engine\AxeEngine;
+use Bpmore\A11yReport\Engine\Engines;
 use Bpmore\A11yReport\Engine\Finding;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
+use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Models\Scan as ScanModel;
 use Bpmore\A11yReport\Scan\Scans;
 use Bpmore\A11yReport\Scan\ScanScope;
@@ -35,7 +38,7 @@ class Scan extends Command
         {--collection=* : Only these collections. Default is what the config says, which is all of them.}
         {--since= : Only entries changed since a date, or since something like "7 days ago".}
         {--sync : Run in this process instead of on the queue, and exit non-zero above the configured thresholds.}
-        {--engine= : Which engine to read pages with. Only "php" exists so far.}
+        {--engine= : Which engine to read pages with: "php" or "axe".}
         {--resume= : The id of a scan to pick up where it stopped.}
         {--scheduled : Record this as a scan started on schedule, and skip it if one is already running. For the scheduler.}';
 
@@ -52,10 +55,21 @@ class Scan extends Command
 
         $engine = $this->option('engine');
 
-        if ($engine !== null && $engine !== PhpDomEngine::KEY) {
-            $this->error("There is no [{$engine}] engine yet. Only [php] is available.");
+        if ($engine !== null && ! Engines::knows($engine)) {
+            $this->error("There is no [{$engine}] engine. Available: ".implode(', ', Engines::KEYS).'.');
 
             return 1;
+        }
+
+        if ($engine !== null) {
+            // The flag decides what this scan is created with, and the row it
+            // writes decides what reads every page of it, in this process or
+            // in a queue worker that never saw the flag. Forgotten as well as
+            // set, because anything already resolved here was built from the
+            // config file.
+            config(['statamic-a11y-report.engine' => $engine]);
+            app()->forgetInstance(ScanEngine::class);
+            $scans = app(Scans::class);
         }
 
         $sync = (bool) $this->option('sync');
@@ -164,6 +178,15 @@ class Scan extends Command
             // ran. A green run is not a clean bill.
             $this->line('<fg=gray>This reads the finished pages. It cannot see anything your stylesheet</>');
             $this->line('<fg=gray>decides, colour contrast included, and a page it finds nothing wrong</>');
+            $this->line('<fg=gray>with has not been proven accessible.</>');
+            $this->line('');
+        }
+
+        if ($scan->engine === AxeEngine::KEY) {
+            // A different engine, and the same caveat, because it is a fact
+            // about automated testing and not about which one ran.
+            $this->line('<fg=gray>This read the pages in a browser, with your stylesheets applied. Most of</>');
+            $this->line('<fg=gray>WCAG is judged on meaning by a person, and a page it found nothing wrong</>');
             $this->line('<fg=gray>with has not been proven accessible.</>');
             $this->line('');
         }

@@ -39,6 +39,7 @@ final class Scan extends ReportModel
         'diff' => 'array',
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
+        'criteria' => 'array',
     ];
 
     public function pages(): HasMany

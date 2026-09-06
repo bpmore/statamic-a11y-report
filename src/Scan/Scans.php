@@ -7,10 +7,10 @@ namespace Bpmore\A11yReport\Scan;
 use Bpmore\A11yGate\Gate\CouldNotRender;
 use Bpmore\A11yGate\Gate\EntryHasNoPage;
 use Bpmore\A11yGate\Gate\EntryRenderer;
+use Bpmore\A11yReport\Engine\Engines;
 use Bpmore\A11yReport\Engine\Finding;
 use Bpmore\A11yReport\Engine\Fingerprint;
 use Bpmore\A11yReport\Engine\RenderedPage;
-use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Jobs\FinalizeScan;
 use Bpmore\A11yReport\Jobs\ScanPage as ScanPageJob;
 use Bpmore\A11yReport\Models\Issue;
@@ -46,22 +46,30 @@ final class Scans
      * @param  array<string, mixed>  $config  the `pro` config block
      */
     public function __construct(
-        private readonly ScanEngine $engine,
+        private readonly Engines $engines,
         private readonly EntryRenderer $renderer,
-        private readonly string $ruleset,
         private readonly array $config,
     ) {}
 
     public function create(ScanScope $scope, string $trigger = Scan::TRIGGER_MANUAL, ?string $initiatedBy = null): Scan
     {
+        // What this machine can actually run, which is where a fall back from
+        // axe to the PHP checker is settled: once, here, and recorded, so the
+        // row never claims an engine that did not read a single page.
+        $engine = $this->engines->configured();
+
         return Scan::create([
             'uuid' => (string) Str::uuid(),
             'site' => $scope->site(),
             'trigger' => $trigger,
             'status' => Scan::QUEUED,
-            'engine' => $this->engine->key(),
-            'engine_version' => $this->engine->version(),
-            'ruleset' => $this->ruleset,
+            'engine' => $engine->key(),
+            'engine_version' => $engine->version(),
+            'ruleset' => $engine->ruleset(),
+            // What this engine could speak to, kept on the row: a report
+            // generated later must not have to ask an engine that was not the
+            // one that ran.
+            'criteria' => $engine->criteria(),
             'scope' => $scope->toArray(),
             'initiated_by' => $initiatedBy,
         ]);
@@ -165,7 +173,7 @@ final class Scans
      */
     public function scanPage(int $scanId, int $pageId): void
     {
-        $page = ScanPage::whereKey($pageId)->where('scan_id', $scanId)->first();
+        $page = ScanPage::with('scan')->whereKey($pageId)->where('scan_id', $scanId)->first();
 
         if ($page === null || $page->status !== ScanPage::PENDING) {
             return;
@@ -202,7 +210,12 @@ final class Scans
         $renderMs = $this->elapsed($started);
 
         try {
-            $result = $this->engine->scan(new RenderedPage($page->url, $html));
+            // The engine this scan says read it, and never whichever one the
+            // config file names now. They are the same process only when the
+            // scan ran with `--sync`: a queued page is read by a worker that
+            // has its own copy of the config, and reading it with the other
+            // engine would fill this row with findings it does not describe.
+            $result = $this->engines->make((string) $page->scan->engine)->scan(new RenderedPage($page->url, $html));
         } catch (Throwable $e) {
             $this->markPage($page, ScanPage::ERROR, error: 'the engine failed: '.$e->getMessage(), renderMs: $renderMs);
 
@@ -324,6 +337,10 @@ final class Scans
         $previous = Scan::where('status', Scan::COMPLETE)
             ->where('id', '<', $scan->id)
             ->where('site', $scan->site)
+            // Against the last scan by the same engine. Comparing axe to the
+            // PHP checker would report every finding of one as new and every
+            // finding of the other as fixed, in a sentence the report prints.
+            ->where('engine', $scan->engine)
             ->orderByDesc('id')
             ->first();
 
@@ -376,6 +393,7 @@ final class Scans
                         IssueState::create([
                             'fingerprint' => $issue->fingerprint,
                             'status' => IssueState::OPEN,
+                            'engine' => $scan->engine,
                             'url' => $issue->url,
                             'site' => $issue->site,
                             'path' => $issue->path,
@@ -417,6 +435,11 @@ final class Scans
                     IssueState::where('site', $site)
                         ->whereIn('path', $onSite->pluck('path'))
                         ->whereIn('status', IssueState::closableByScan())
+                        // Only what an engine of this kind found. Two engines
+                        // are two sets of answers, and axe not looking for
+                        // something the gate's checker found is not evidence
+                        // that anybody fixed it.
+                        ->where('engine', $scan->engine)
                         ->whereNotIn('fingerprint', $current)
                         ->update([
                             'status' => IssueState::FIXED,
@@ -464,6 +487,7 @@ final class Scans
             })
             ->join('a11y_scan_pages', 'a11y_scan_pages.id', '=', 'a11y_issues.page_id')
             ->whereIn('a11y_issue_states.status', IssueState::closableByScan())
+            ->where('a11y_issue_states.engine', $scan->engine)
             ->when($scope->sites !== [], fn ($q) => $q->whereIn('a11y_issue_states.site', $scope->sites))
             ->when($scope->collections !== [], fn ($q) => $q->whereIn('a11y_scan_pages.collection', $scope->collections))
             ->select(['a11y_issue_states.fingerprint', 'a11y_issue_states.site', 'a11y_issue_states.path', 'a11y_issue_states.url'])

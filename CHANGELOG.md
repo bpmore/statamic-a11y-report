@@ -171,6 +171,11 @@ the organisation's words come from config with per-site overrides. Section
 508 and EN 301 549 templates. `a11y:statement:refresh` clears the page from
 the static cache.
 
+The exception register takes the same `report.appendix_limit` as the appendix
+of open issues, keeps the acceptances that run out soonest, and says how many
+it did not list. An accepted issue the register leaves out is still counted
+under its success criterion.
+
 **The remediation queue.** A second page under the utility: every issue the
 scans know about with its status, filtered by status, impact, criterion,
 site, collection and assignee, oldest and most serious first. Bulk change of

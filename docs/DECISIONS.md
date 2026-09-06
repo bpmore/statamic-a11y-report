@@ -12,6 +12,35 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-05: The exception register is capped, and says what it left out
+
+The appendix of open issues has had `report.appendix_limit` since it was
+built, and reports how many it did not list. The exception register beside it
+had no limit at any layer: not in the query, not in the view.
+
+That matters more here than it would elsewhere, because this release also adds
+bulk acceptance: the queue takes everything a filter matches in one press. So a
+long register is one click away rather than something that accumulates. Eight
+hundred accepted issues put eight hundred rows into the document, measured at
+379KB of HTML, beside an appendix holding one.
+
+**Cut, and never quietly.** A compliance document that dropped accepted
+failures without saying so would be worse than a long one: the whole point of
+the register is that an acceptance is written down. So it takes the same limit
+as the appendix and the same sentence about what is not listed, and the
+paragraph above the expired table counts them all rather than the ones on it.
+
+**The ones kept are the ones that run out soonest**, which is the order the
+table was already in. A register that had to be cut keeps the acceptances
+somebody has to look at next, rather than an arbitrary five hundred.
+
+Nothing here touches what the report claims. An accepted issue that is not
+listed in the register is still counted under its success criterion, because
+`ScanEvidence` reads the issues and never the decisions about them, which is
+the rule this whole feature is built under.
+
+---
+
 ## 2026-09-05: The schedule config is read once a screen, not once a line
 
 The overview asks the schedule four questions: what it is called, what the

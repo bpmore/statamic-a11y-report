@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use Bpmore\A11yReport\Document\ReportWriter;
+use Bpmore\A11yReport\Models\Issue;
 use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Report;
 use Bpmore\A11yReport\Models\Scan;
+use Bpmore\A11yReport\Models\ScanPage;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Bpmore\A11yReport\Trends\Overview;
 use Illuminate\Support\Facades\DB;
@@ -331,4 +333,72 @@ it('renders markup Vue can compile once acceptances are on the screen, with a la
         expect($id)->not->toBe('', 'every control has an id to be labelled by');
         expect($xpath->query('//label[@for="'.$id.'"]')->length)->toBe(1, "the control {$id} has exactly one label");
     }
+});
+
+it('caps the exception register the way the appendix is capped, and says what it left out', function () {
+    $scan = policySite();
+    $page = ScanPage::first();
+
+    // The queue accepts everything a filter matches in one press, so a long
+    // register is one click away. Uncapped, every row of it went into the
+    // HTML and into the PDF beside an appendix that has had a limit all
+    // along.
+    config()->set('statamic-a11y-report.report.appendix_limit', 5);
+
+    $rows = [];
+    $states = [];
+
+    for ($i = 0; $i < 12; $i++) {
+        $fingerprint = sha1('accepted-'.$i);
+
+        $rows[] = [
+            'scan_id' => $scan->id, 'page_id' => $page->id, 'fingerprint' => $fingerprint,
+            'rule_id' => 'made-up', 'label' => 'WCAG 1.1.1', 'wcag_criteria' => json_encode(['1.1.1']),
+            'impact' => 'serious', 'message' => 'A problem', 'occurrences' => 1,
+            'created_at' => now(), 'updated_at' => now(),
+        ];
+
+        $states[] = [
+            'fingerprint' => $fingerprint, 'status' => IssueState::WONT_FIX, 'engine' => 'php',
+            'url' => $page->url, 'site' => $page->site, 'path' => $page->path,
+            'rule_id' => 'made-up', 'impact' => 'serious',
+            'first_seen_at' => now(), 'last_seen_at' => now(), 'last_scan_id' => $scan->id,
+            'exception_reason' => 'Accepted for the test',
+            'exception_by' => 'someone@example.test',
+            'exception_at' => now(),
+            // Ascending, so the ones kept are the ones that run out soonest.
+            'exception_expires_at' => now()->copy()->addDays($i + 1),
+            'created_at' => now(), 'updated_at' => now(),
+        ];
+    }
+
+    Issue::insert($rows);
+    IssueState::insert($states);
+
+    $data = app(\Bpmore\A11yReport\Document\ReportBuilder::class)->build($scan->fresh(), 'tester');
+
+    expect($data['remediation']['exceptions'])->toHaveCount(5);
+    expect($data['remediation']['exceptions_omitted'])->toBe(7);
+
+    // The ones a person has to look at next, not an arbitrary five.
+    $kept = array_map(fn ($e) => (string) $e['expires_at'], $data['remediation']['exceptions']);
+    $sorted = $kept;
+    sort($sorted);
+
+    $soonest = IssueState::whereNotNull('exception_expires_at')
+        ->orderBy('exception_expires_at')
+        ->limit(5)
+        ->pluck('exception_expires_at')
+        ->map(fn ($d) => (string) $d)
+        ->all();
+
+    expect($kept)->toBe($sorted);
+    expect($kept)->toBe($soonest);
+
+    // Cut, and never quietly: a compliance document that dropped accepted
+    // failures without saying so would be the worse of the two answers.
+    $html = ReportWriter::html($data);
+
+    expect($html)->toContain('5 of 12 accepted issues are listed here');
+    expect($html)->toContain('still counted under their success criteria');
 });

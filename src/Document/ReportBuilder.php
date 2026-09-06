@@ -369,6 +369,15 @@ final class ReportBuilder
             'oldest_open_days' => $oldest === null ? null : (int) \Illuminate\Support\Carbon::parse($oldest)->diffInDays(now()),
             'exceptions' => $this->exceptions($scan, expired: false),
             'expired_exceptions' => $this->exceptions($scan, expired: true),
+            // Capped like the appendix beside it, and, like the appendix,
+            // saying how many it left out. A register is easy to make long:
+            // the queue accepts everything a filter matches in one press, and
+            // an uncapped one put every row of it into the HTML and into the
+            // PDF. Silently dropping accepted failures out of a compliance
+            // document would be the worse of the two answers, so the count
+            // goes in the sentence above the table.
+            'exceptions_omitted' => max(0, $this->exceptionCount($scan, expired: false) - $this->appendixLimit()),
+            'expired_exceptions_omitted' => max(0, $this->exceptionCount($scan, expired: true) - $this->appendixLimit()),
             'plan' => $this->config['remediation_plan'] ?? null,
         ];
     }
@@ -386,13 +395,7 @@ final class ReportBuilder
      */
     private function exceptions(Scan $scan, bool $expired): array
     {
-        $query = $this->scanIssues($scan);
-
-        $expired
-            ? $query->where('a11y_issue_states.status', IssueState::WONT_FIX)
-                ->whereNotNull('a11y_issue_states.exception_expires_at')
-                ->where('a11y_issue_states.exception_expires_at', '<=', now())
-            : IssueState::accepted($query, 'a11y_issue_states.status');
+        $query = $this->exceptionQuery($scan, $expired);
 
         return $query
             ->select([
@@ -402,8 +405,11 @@ final class ReportBuilder
                 'a11y_issue_states.exception_at', 'a11y_issue_states.exception_expires_at',
                 'a11y_issue_states.first_seen_at',
             ])
+            // Soonest to run out first, so a register that had to be cut keeps
+            // the acceptances somebody has to look at next.
             ->orderBy('a11y_issue_states.exception_expires_at')
             ->orderBy('a11y_scan_pages.path')
+            ->limit($this->appendixLimit())
             ->get()
             ->map(fn ($i) => [
                 'path' => $i->path,
@@ -418,6 +424,27 @@ final class ReportBuilder
                 'expires_at' => $i->exception_expires_at,
             ])
             ->all();
+    }
+
+    /**
+     * The accepted issues of this scan, or the ones whose acceptance has run
+     * out. One definition, so the table and the count of what it left out
+     * cannot come to different answers.
+     */
+    private function exceptionQuery(Scan $scan, bool $expired)
+    {
+        $query = $this->scanIssues($scan);
+
+        return $expired
+            ? $query->where('a11y_issue_states.status', IssueState::WONT_FIX)
+                ->whereNotNull('a11y_issue_states.exception_expires_at')
+                ->where('a11y_issue_states.exception_expires_at', '<=', now())
+            : IssueState::accepted($query, 'a11y_issue_states.status');
+    }
+
+    private function exceptionCount(Scan $scan, bool $expired): int
+    {
+        return $this->exceptionQuery($scan, $expired)->count();
     }
 
     /** @return array<int, array<string, mixed>> */

@@ -59,6 +59,9 @@
     @if ($rem['exceptions'] === [])
         <p>No issue in this report has been accepted.</p>
     @else
+        @if ($rem['exceptions_omitted'] > 0)
+            <p>{{ count($rem['exceptions']) }} of {{ count($rem['exceptions']) + $rem['exceptions_omitted'] }} accepted issues are listed here, the ones whose acceptances run out soonest. The rest are held in the control panel and are still counted under their success criteria above.</p>
+        @endif
         <table>
             <caption>Issues accepted rather than fixed</caption>
             <thead>
@@ -86,11 +89,15 @@
 
     @if ($rem['expired_exceptions'] !== [])
         <h3>Acceptances that have run out</h3>
-        @php($ran = count($rem['expired_exceptions']))
+        @php($listed = count($rem['expired_exceptions']))
+        @php($ran = $listed + $rem['expired_exceptions_omitted'])
         @if ($ran === 1)
             <p>One issue was accepted, and that acceptance has passed the date it was accepted until. It is counted as open in this report and is listed under Open issues above, because the decision was to accept it until a date that has gone.</p>
         @else
             <p>{{ $ran }} issues were accepted, and those acceptances have passed the dates they were accepted until. They are counted as open in this report and are listed under Open issues above, because the decision was to accept them until dates that have gone.</p>
+        @endif
+        @if ($rem['expired_exceptions_omitted'] > 0)
+            <p>{{ $listed }} of them are listed here, the ones that ran out earliest.</p>
         @endif
         <table>
             <caption>Acceptances that have run out</caption>

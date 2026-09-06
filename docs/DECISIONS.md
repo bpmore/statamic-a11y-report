@@ -12,6 +12,46 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-06: A scan can be ended, and an ended scan is not evidence
+
+`cancelled` has been one of the statuses a scan can end at since the scan layer
+was built, and nothing a person could reach ever set it. A scan stuck queued or
+running stops every scheduled scan, and the only lever was an UPDATE against
+the addon's own tables, which is not a lever a commercial addon should be
+asking anybody to pull.
+
+**`--resume --sync` stays the answer wherever the pages can still be read**, and
+the panel still offers it first. It finishes the scan in one process, needs no
+worker, and produces a scan that can be reported on. Cancelling produces one
+that cannot. Offering the destructive one first would have people ending scans
+that only needed a worker.
+
+**It ends through the same roll-up every other scan ends by.** `finalize()`
+already knew that pages left pending means cancelled, and a scan that stopped
+early still has counts to write and a finished time to record. Turned down:
+an update of the status column, which would have been two places that end a
+scan and two to keep in step.
+
+**A cancelled scan is never reported on**, and that needed no new code: only a
+complete scan ever could. What was read is kept, because the pages that were
+read really were read and the overview counts them. What is refused is calling
+any of it a conformance report.
+
+### The comment that was not true when it was written
+
+The command said any job still on the queue would find the scan ended and do
+nothing. It would not have. `scanPage` refuses a page that is not pending, and
+cancelling leaves the pages pending, which is exactly what marks the scan as
+one that stopped early. A worker holding that job would have read the page and
+written findings against a scan whose counts were rolled up before they
+existed.
+
+So `scanPage` now refuses a page whose scan has finished, which is the guard
+that makes the sentence true. Written as a claim, checked, found false, and
+fixed rather than reworded.
+
+---
+
 ## 2026-09-06: The stuck-scan warning asks the oldest unfinished scan, not the newest scan
 
 A scheduled scan is skipped while anything is queued or running, so one wedged

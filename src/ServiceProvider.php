@@ -51,6 +51,7 @@ class ServiceProvider extends AddonServiceProvider
         Commands\Install::class,
         Commands\Report::class,
         Commands\Scan::class,
+        Commands\ScanCancel::class,
         Commands\StatementRefresh::class,
     ];
 

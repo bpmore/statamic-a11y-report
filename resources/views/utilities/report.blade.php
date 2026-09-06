@@ -72,6 +72,8 @@
                 <p>Or finish this scan in one process from the command line, which needs no worker:</p>
                 <pre class="text-sm">php please a11y:scan --resume=@plain($stale['scan']->uuid) --sync</pre>
                 <p>Until it reaches an end, every scheduled scan is skipped: one is never started while another is queued or running.@if ($stale['others'] > 0) {{ $stale['others'] }} other {{ $stale['others'] === 1 ? 'scan has' : 'scans have' }} not finished either, and this is the oldest.@endif</p>
+                <p>Or, where the pages cannot be read at all, end it. A scan that has been ended can never be reported on, and what it read is kept:</p>
+                <pre class="text-sm">php please a11y:scan:cancel @plain($stale['scan']->uuid)</pre>
             </div>
         </ui-card-panel>
     @endif

@@ -179,6 +179,15 @@ final class Scans
             return;
         }
 
+        // A scan that has ended is not added to. Its pages stay pending, which
+        // is what marks it as the scan that stopped early, so a job still on
+        // the queue when somebody cancelled would otherwise find its page
+        // pending and read it: findings written against a scan whose counts
+        // were rolled up before they existed.
+        if ($page->scan?->isFinished()) {
+            return;
+        }
+
         $entry = Entries::find($page->entry_id);
 
         if ($entry === null) {

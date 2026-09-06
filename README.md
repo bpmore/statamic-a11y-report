@@ -81,7 +81,14 @@ php please a11y:scan                      queue every published page
 php please a11y:scan --sync               run in this process; exit non-zero above the thresholds
 php please a11y:scan --site=default --collection=pages --since="7 days ago"
 php please a11y:scan --resume=<scan id>   pick up a scan that stalled
+php please a11y:scan:cancel <scan id>     end one that never can
 ```
+
+A scheduled scan is skipped while anything is queued or running, so a scan
+nobody can finish stops the schedule. `--resume --sync` finishes it in one
+process and needs no queue worker, which is the answer whenever the pages can
+still be read. `a11y:scan:cancel` is for when they cannot. What was read is
+kept; a scan that was ended can never be reported on.
 
 `--sync` is for a deploy pipeline. It exits non-zero when a count is above the
 limits in `config/statamic-a11y-report.php`, and always when a page could not be

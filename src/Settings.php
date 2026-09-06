@@ -60,6 +60,7 @@ final class Settings
         'scan_collections' => 'scan.collections',
         'scan_sites' => 'scan.sites',
         'scan_exclude_urls' => 'scan.exclude_urls',
+        'axe_best_practices' => 'axe.best_practices',
     ];
 
     /**

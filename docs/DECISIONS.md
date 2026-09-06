@@ -12,6 +12,44 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-06: The rules outside WCAG belong on the screen, and only those
+
+`axe.best_practices` was a config-file setting. The rule for what stays in the
+file is written down in the settings test: *a wrong value for any of them stops
+scans rather than changing a sentence.* This one fails that test on both
+halves. A wrong value stops nothing, and it changes a great many sentences: on
+the test site, 296 of 439 findings.
+
+Measured before deciding, and measured with the standard held still, because
+the first comparison was against a scan run at a different WCAG version and the
+difference would have been credited to the wrong cause. At `wcag21aa`: 439
+findings with the rules on, 143 with them off, and **23 criteria evaluated
+either way**. That last number is the one that mattered.
+
+**Why it is safe to expose.** `criteria()` is built from the standard's tags
+and never from this switch, so the conformance table is identical either way. A
+rule that cites no success criterion keeps its own plain name and lands in
+"Findings outside WCAG", where it can never be counted under a criterion. The
+scan row records `+best-practice` or not, so two scans with different numbers
+carry the difference on them. It changes what an organisation chases and not
+what the report claims, which is the same side of the line as the remediation
+policy, which is already on the screen.
+
+**It is read through the settings and not the config**, so a saved screen wins,
+which is the rule every other mapped setting follows. Checked on a real site
+rather than in the suite alone: the config file saying on and the screen saying
+off produced a scan recorded as `wcag21aa`, with the smaller number.
+
+Turned down: leaving it in the file because the screen is already long. The
+person drowning in landmark warnings is a content owner, and a setting only a
+developer can reach is a setting that does not get changed.
+
+Not moved with it: `axe.settle_ms`, `chrome.timeout`, `chrome.binary` and the
+rest. A wrong value for any of those really does stop scans, which is the test
+those settings pass and this one did not.
+
+---
+
 ## 2026-09-06: A scan can be ended, and an ended scan is not evidence
 
 `cancelled` has been one of the statuses a scan can end at since the scan layer

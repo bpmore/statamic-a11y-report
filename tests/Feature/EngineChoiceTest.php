@@ -320,3 +320,34 @@ it('refuses to read a page for a scan run by an engine it does not have', functi
     expect($queued->error)->toContain('pa11y');
     expect(Issue::where('scan_id', $gone->id)->count())->toBe(0);
 });
+
+it('lets the screen turn off the rules no criterion requires', function () {
+    if (! (new Browser)->available()) {
+        test()->markTestSkipped('No Chrome on this machine.');
+    }
+
+    config()->set('statamic-a11y-report.engine', 'axe');
+
+    // The file says run them, which is the shipped default.
+    expect(app(Engines::class)->configured()->ruleset())->toBe('wcag22aa+best-practice');
+
+    saveSettings(['axe_best_practices' => false]);
+    app()->forgetInstance(Engines::class);
+    app()->forgetInstance(ScanEngine::class);
+
+    $engine = app(Engines::class)->configured();
+
+    // The screen wins, and the row says which way it ran, so two scans with
+    // different numbers carry the difference on them.
+    expect($engine->ruleset())->toBe('wcag22aa');
+
+    // And it reaches nothing the report claims. The criteria an engine can
+    // cite come from the standard's tags and never from this switch: turning
+    // it off must not make a criterion look evaluated, or unevaluated, or
+    // anything else it was not.
+    app()->forgetInstance(Engines::class);
+    config()->set('statamic-a11y-report.axe.best_practices', true);
+    $with = app(Engines::class)->make('axe')->criteria();
+
+    expect($engine->criteria())->toBe($with);
+});

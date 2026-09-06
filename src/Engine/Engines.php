@@ -133,7 +133,7 @@ final class Engines
                 (int) config('statamic-a11y-report.axe.settle_ms', 250),
             ),
             $this->reportStandard(),
-            (bool) config('statamic-a11y-report.axe.best_practices', true),
+            $this->bestPractices(),
         );
     }
 
@@ -152,6 +152,27 @@ final class Engines
     private function browser(): Browser
     {
         return new Browser(config('statamic-a11y-report.chrome.binary'));
+    }
+
+    /**
+     * Whether to run axe's own rules that no success criterion requires.
+     *
+     * Through the settings, not the config file, because the screen wins once
+     * somebody has saved it. On a theme with no landmarks these rules can
+     * outnumber everything else, and the person drowning in them is the one
+     * who cannot edit a config file.
+     *
+     * Nothing it decides can reach the conformance table: `criteria()` is
+     * built from the standard's tags and never this one, and a rule that cites
+     * no criterion keeps its own plain name and is reported apart from WCAG.
+     * The scan row records which way it ran, so two scans with different
+     * numbers carry the difference on them.
+     */
+    private function bestPractices(): bool
+    {
+        $block = $this->app->make(Settings::class)->block('axe');
+
+        return (bool) ($block['best_practices'] ?? true);
     }
 
     /**

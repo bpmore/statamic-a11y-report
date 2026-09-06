@@ -217,3 +217,14 @@ tabs:
               type: list
               display: 'Addresses to leave out'
               instructions: 'One pattern per line, matched against the whole address. An asterisk stands for anything: */print/* leaves out every printable version.'
+      -
+        display: 'What a scan reports'
+        instructions: 'What the scan looks for, rather than where it looks. Nothing here can change a row in the conformance table.'
+        fields:
+          -
+            handle: axe_best_practices
+            field:
+              type: toggle
+              display: 'Report findings outside WCAG'
+              instructions: 'The axe engine has rules of its own that no success criterion requires, such as every page having landmarks. They are worth fixing and they are not conformance: they keep their own plain names, are listed apart from WCAG, and are never counted under a criterion. On a theme that was not built with landmarks in mind they can outnumber everything else, which is the reason this switch exists. The PHP checker is unaffected either way.'
+              default: true

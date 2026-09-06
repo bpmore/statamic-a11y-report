@@ -105,6 +105,14 @@ the page as one that could not be read rather than reading it with the other
 one, because a row saying axe filled with the checker's findings would have the
 report name criteria nothing looked at.
 
+axe has rules of its own that no success criterion requires, such as every
+page having landmarks. They are worth fixing and they are not conformance:
+they keep their own plain names, are listed apart from WCAG, and are never
+counted under a criterion. On a theme that was not built with landmarks in
+mind they can outnumber everything else, so there is a switch on the settings
+screen under Scanning, and `axe.best_practices` in the config file until the
+screen is saved.
+
 Level AAA is never run by either. The conformance table has no AAA row.
 
 axe-core is [Deque's](https://github.com/dequelabs/axe-core), MPL-2.0, bundled

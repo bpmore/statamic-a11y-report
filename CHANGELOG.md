@@ -181,6 +181,16 @@ resolved time, and reopens if the page comes back with the problem. A scan
 narrowed by `--since`, by site or collection, or by an excluded URL closes
 nothing it could not have met.
 
+**The rules outside WCAG have a switch on the settings screen.** Addons,
+Accessibility Report, Settings, under Scanning: whether to report axe's own
+rules that no success criterion requires. On a theme with no landmarks they
+can outnumber everything else, and the person drowning in them is the one who
+cannot edit a config file. `axe.best_practices` still answers until the screen
+is saved. Nothing it decides can reach the conformance table: the criteria an
+engine can cite come from the standard, a rule citing no criterion keeps its
+own name and is reported apart from WCAG, and the scan row records which way
+it ran.
+
 **A scan can be ended.** `php please a11y:scan:cancel <scan id>` ends a scan
 that is never going to finish, so scheduled scans can run again. `cancelled`
 was a status a scan could reach and nothing a person could set. Use

@@ -7,7 +7,7 @@ it knows, leads its section.
 
 Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
-## Unreleased
+## 0.1.0 - 2026-09-06
 
 ### Added
 
@@ -62,10 +62,11 @@ have run out. Each report records the targets that were in force when it was
 generated, so a document filed months ago still makes sense after you change
 them.
 
-**Upgrading:** run `php please a11y:report:install` to add the columns. Issues
-already marked "won't fix" keep that status and are given a review date counted
-from the upgrade, with whatever note and name they carried. They are not
-reopened, and they do not stay accepted forever.
+`a11y:report:install` creates the columns the register needs, and creates them
+on an install that already has the tables too: an issue already marked "won't
+fix" keeps that status and is given a review date counted from the day the
+columns arrive, with whatever note and name it carried. Not reopened, and not
+accepted for ever.
 
 
 **The scan layer.** `a11y:report:install` creates the tables, on a SQLite file
@@ -198,33 +199,7 @@ page while the block stays, and it says that scheduled scans are skipped until
 that one ends. Any others that have not finished are counted. Not scoped to a
 site: the scan holding up the queue may be another site's.
 
-### Changed
-
-**Two engines never speak for each other.** Issues now record which engine
-found them. A scan only closes findings from an engine of its own kind, and the
-"against the last scan" line compares against the last scan by the same engine.
-Without this the first axe scan of a site marked everything the PHP checker had
-ever found as fixed, and the report printed the number.
-
-The consequence is worth knowing before you switch: the old engine's open
-issues stay open, because nothing has said they are gone. Scan once with the
-old engine after switching if you want them closed, or close them in the queue.
-
-**Every scan records the criteria its engine could cite**, so a report
-generated later says what the engine that ran could speak to rather than what
-whichever engine is configured now can. **And the `ruleset` on a scan is now
-the rules that ran** rather than the standard that was asked for: axe's reads
-`wcag22aa+best-practice`.
-
-**Upgrading:** run `php please a11y:report:install` to add the two columns.
-Existing issues are credited to the engine that last saw them, which before
-this release was the only one there was.
-
-### Fixed
-
-**`scan.schedule` now actually schedules a scan.** It has been in the config
-file since the first release and nothing read it, so every install was told it
-scanned weekly and none of them did. It takes `daily`, `weekly` (Sunday),
+**`scan.schedule` schedules a scan.** It takes `daily`, `weekly` (Sunday),
 `monthly` (the 1st), any cron expression, or `false`. `scan.schedule_at` sets
 the time of day for the named ones and defaults to `02:00`.
 
@@ -244,3 +219,24 @@ A scheduled scan does not start while another is queued or running, and unlike
 `--sync` it does not report a failure for issue counts or for a page that could
 not be read. Those are still on the screen and in the report. A weekly job that
 fails every week for a known reason is a job whose mail gets ignored.
+
+### Changed
+
+**Two engines never speak for each other.** Issues now record which engine
+found them. A scan only closes findings from an engine of its own kind, and the
+"against the last scan" line compares against the last scan by the same engine.
+Without this the first axe scan of a site marked everything the PHP checker had
+ever found as fixed, and the report printed the number.
+
+The consequence is worth knowing before you switch: the old engine's open
+issues stay open, because nothing has said they are gone. Scan once with the
+old engine after switching if you want them closed, or close them in the queue.
+
+**Every scan records the criteria its engine could cite**, so a report
+generated later says what the engine that ran could speak to rather than what
+whichever engine is configured now can. **And the `ruleset` on a scan is now
+the rules that ran** rather than the standard that was asked for: axe's reads
+`wcag22aa+best-practice`.
+
+`a11y:report:install` creates the two columns this needs. Where the tables are
+already there, every issue on them is credited to the engine that last saw it.

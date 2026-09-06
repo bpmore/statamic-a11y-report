@@ -18,9 +18,10 @@ finding, records which engine read it and how much of it that engine could
 see, and follows each problem from one scan to the next by a fingerprint of
 rule, target, site and path.
 
-Nothing is released yet. Everything above is under Unreleased in the
+This is 0.1.0, the first release. What is in it is in the
 [changelog](CHANGELOG.md), and the reasoning behind the choices that are not
-obvious from the code is in the [decision log](docs/DECISIONS.md).
+obvious from the code is in the [decision log](docs/DECISIONS.md). Before 1.0,
+a breaking change raises the minor version.
 
 ## Install
 

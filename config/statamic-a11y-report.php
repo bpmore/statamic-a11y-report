@@ -26,12 +26,18 @@ return [
     |---------------------------------------------------------------------------
     |
     | What reads each page. 'php' is the same checker Accessibility Gate runs
-    | before a publish, run out of band across the whole site. 'axe' runs
-    | axe-core in headless Chrome, covers far more, and needs Chrome on the
-    | machine. Every scan records which one ran and at what version, so a
-    | report never has to guess what its numbers mean.
+    | before a publish, run out of band across the whole site: it reads markup,
+    | needs nothing installed, and can speak to six success criteria. 'axe'
+    | runs axe-core in headless Chrome against the page as the site serves it,
+    | speaks to two dozen criteria including colour contrast, and needs Chrome
+    | on the machine and the site reachable from it. Every scan records which
+    | one ran, at what version, and with which rules, so a report never has to
+    | guess what its numbers mean.
     |
-    | Only 'php' exists yet. Asking for 'axe' logs a warning and uses 'php'.
+    | Asking for 'axe' with no Chrome on the machine logs a warning and scans
+    | with 'php' rather than failing every page. The scan row says which one
+    | actually ran, and the report says what that engine could and could not
+    | see, so a scan that fell back cannot be mistaken for one that did not.
     |
     */
 
@@ -40,6 +46,31 @@ return [
     'chrome' => [
         'binary' => env('A11Y_CHROME_PATH'),
         'timeout' => 30,
+    ],
+
+    /*
+    |---------------------------------------------------------------------------
+    | axe
+    |---------------------------------------------------------------------------
+    |
+    | 'best_practices' runs axe's own rules that cite no success criterion.
+    | They are house rules by the definition this addon already uses: they keep
+    | their plain name and are reported apart from WCAG, never as it. Some of
+    | them ('region', 'landmark-unique') fire on nearly every page of a theme
+    | that was not built with them in mind, which is the reason there is a
+    | switch at all.
+    |
+    | 'settle_ms' is how long to wait after a page finishes loading before
+    | reading it, for markup that scripts write a moment later.
+    |
+    | Level AAA is never run, whatever this says. The conformance table has no
+    | AAA row and there will not be one.
+    |
+    */
+
+    'axe' => [
+        'best_practices' => env('A11Y_AXE_BEST_PRACTICES', true),
+        'settle_ms' => 250,
     ],
 
     /*
@@ -54,11 +85,25 @@ return [
     | 'sites' and 'collections' take handles, or ['*'] for all of them.
     | 'exclude_urls' takes wildcard patterns matched against the full URL.
     |
+    | 'schedule' is 'daily', 'weekly' (Sunday), 'monthly' (the 1st), any cron
+    | expression, or false for no scheduled scan. 'schedule_at' is the time of
+    | day the named frequencies run at. It needs Laravel's scheduler running on
+    | the server:
+    |
+    |     * * * * * cd /path/to/site && php artisan schedule:run >> /dev/null 2>&1
+    |
+    | Without that line nothing here runs, and the report overview says so
+    | rather than leaving you to find out from a document with a stale date on
+    | it. 'hourly' is deliberately not a frequency you can name: a scan renders
+    | every published page, and a cron expression is the deliberate act that
+    | asking for that should be.
+    |
     */
 
     'scan' => [
         'concurrency' => 3,
         'schedule' => 'weekly',
+        'schedule_at' => '02:00',
         // After this many minutes with no page read, the overview says the
         // scan is not moving and what to run. A queue nobody works looks
         // exactly like a queue that is about to start, otherwise.

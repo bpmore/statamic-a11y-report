@@ -32,5 +32,11 @@
         @endif
     </p>
 
-    <p><strong>What was read.</strong> The automated checks read the finished pages as the site served them at the time of the scan, on the pages listed under Evaluation methods. They read the markup and cannot see anything a stylesheet decides, colour contrast included. A page the scan could not read is counted separately and never as clean.</p>
+    <p><strong>What was read.</strong>
+        @if ($r['scan']['engine'] === \Bpmore\A11yReport\Engine\AxeEngine::KEY)
+            The automated checks opened each page in a browser and read the document the site served, with its stylesheets applied, on the pages listed under Evaluation methods. Where a check could not reach a determination it is recorded as such rather than as a pass, and how much of each page was decided is listed under Evaluation methods. A page the browser could not open, or that answered with an error rather than the page, is counted separately and never as clean.
+        @else
+            The automated checks read the finished pages as the site served them at the time of the scan, on the pages listed under Evaluation methods. They read the markup and cannot see anything a stylesheet decides, colour contrast included. A page the scan could not read is counted separately and never as clean.
+        @endif
+    </p>
 </section>

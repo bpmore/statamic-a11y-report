@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Bpmore\A11yReport;
 
-use Bpmore\A11yGate\Accessibility\StaticAccessibilityChecker;
 use Bpmore\A11yGate\Gate\EntryRenderer;
-use Bpmore\A11yGate\Gate\GateSettings;
 use Bpmore\A11yReport\Document\Brand;
 use Bpmore\A11yReport\Document\ReportBuilder;
 use Bpmore\A11yReport\Document\ReportWriter;
+use Bpmore\A11yReport\Engine\Engines;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Scan\Scans;
+use Bpmore\A11yReport\Scan\ScanSchedule;
 use Bpmore\A11yReport\Statement\StatementBuilder;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Bpmore\A11yReport\Support\VueSafe;
@@ -20,7 +20,6 @@ use Bpmore\A11yReport\Trends\Overview;
 use Bpmore\A11yReport\Trends\TrendChart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\Log;
 use Statamic\Facades\Addon;
 use Statamic\Facades\Permission;
 use Statamic\Facades\Site;
@@ -64,6 +63,29 @@ class ServiceProvider extends AddonServiceProvider
     ];
 
     protected $viewNamespace = 'a11y-report';
+
+    /**
+     * The recurring scan. `scan.schedule` sat in the config file from the
+     * first release with nothing reading it, so every install was told it
+     * scanned weekly and none of them did.
+     *
+     * Statamic's own hook, which its boot sequence calls only when running in
+     * console. That is the right gate: the scheduler is a console concern and
+     * registering it on every web request is work nobody reads.
+     *
+     * The registration itself waits for the application to finish booting.
+     * Statamic's chain calls this hook several steps *before* it merges the
+     * addon's config, so reading `scan.schedule` here gets null and quietly
+     * schedules nothing, which is the exact bug this method exists to fix,
+     * reintroduced one line lower down.
+     */
+    protected function schedule(\Illuminate\Console\Scheduling\Schedule $schedule)
+    {
+        $this->app->booted(fn () => ScanSchedule::register(
+            $schedule,
+            (array) config('statamic-a11y-report.scan', []),
+        ));
+    }
 
     /**
      * The settings screen, with the brand section added in PHP.
@@ -194,6 +216,7 @@ class ServiceProvider extends AddonServiceProvider
             'queueIsSync' => config('queue.default') === 'sync',
             'queueConnection' => (string) config('queue.default'),
             'stale' => $installed ? $overview->stale((int) config('statamic-a11y-report.scan.stale_after_minutes', 10)) : null,
+            'schedule' => $installed ? $overview->schedule() : null,
             'engine' => (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY),
         ];
     }
@@ -204,24 +227,17 @@ class ServiceProvider extends AddonServiceProvider
 
         $this->app->bind(EntryRenderer::class, fn ($app) => new EntryRenderer($app));
 
-        $this->app->bind(ScanEngine::class, function ($app) {
-            $settings = $app->make(GateSettings::class);
-            $wanted = (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY);
+        // One place builds engines, and it answers two different questions:
+        // what a new scan should run with, and how to rebuild exactly the one
+        // a scan row already names. See `Engines`.
+        $this->app->singleton(Engines::class, fn ($app) => new Engines($app));
 
-            if ($wanted !== PhpDomEngine::KEY) {
-                // Said out loud rather than swapped quietly. The scan row will
-                // carry "php" as its engine either way, so nothing downstream
-                // can mistake the result for the fuller one.
-                Log::warning("a11y-report: the [{$wanted}] engine is not available yet; scanning with the PHP checker instead.");
-            }
-
-            return new PhpDomEngine(
-                new StaticAccessibilityChecker,
-                (string) (Addon::get('bpmore/statamic-a11y-gate')?->version() ?: 'dev'),
-                $settings->standard,
-                $settings->optedIn,
-            );
-        });
+        // A singleton, not a binding. The axe engine holds a headless Chrome
+        // open across pages because starting one costs the better part of a
+        // second, and `Scans` is resolved once per queued page: bound rather
+        // than shared, every page would start and stop its own browser and the
+        // saving would be exactly reversed.
+        $this->app->singleton(ScanEngine::class, fn ($app) => $app->make(Engines::class)->configured());
 
         $this->app->bind(Settings::class, fn () => new Settings);
 
@@ -252,9 +268,8 @@ class ServiceProvider extends AddonServiceProvider
         ));
 
         $this->app->bind(Scans::class, fn ($app) => new Scans(
-            $app->make(ScanEngine::class),
+            $app->make(Engines::class),
             $app->make(EntryRenderer::class),
-            $app->make(GateSettings::class)->standard->value,
             $app->make(Settings::class)->effective(),
         ));
     }

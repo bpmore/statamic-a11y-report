@@ -12,6 +12,347 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-05: The schedule config is read once a screen, not once a line
+
+The overview asks the schedule four questions: what it is called, what the
+expression is, when it last ran, when it runs next. Each one read the config
+and worked the answer out for itself, and each one said what was wrong with it
+on the way past. A `schedule_at` of "half past two" was four identical lines in
+the log for one page, every time anybody opened the screen.
+
+Counted rather than guessed at: four for a valid frequency with a bad time, two
+for a frequency that is neither a name nor a cron expression.
+
+`expression()` stays the one place that reads the config and says what is wrong
+with it. `previousRun()`, `nextRun()` and `label()` are given the expression
+instead, so a caller reads the config once and the warning is said once.
+
+Turned down: remembering the answer in a static keyed on the config values. It
+would have made the count one per process rather than one per screen, and it
+would have made a test's warning depend on whether an earlier test in the same
+run happened to use the same config, which is the kind of order dependence that
+is found months later.
+
+---
+
+## 2026-09-05: A quiet socket is not a closed one, and PHP says it is
+
+The engine was meant to tell two failures apart. A browser that died is worth
+throwing away and asking once more; a page that never finishes loading will do
+the same thing the second time, and retrying costs a browser start on every
+broken route on the site. `PageNotReadable` exists for exactly that split.
+
+The split did not work, and not for the reason it looked like. **PHP raises a
+stream's end-of-file flag when a read times out.** So `feof()` is true on a
+socket that is perfectly healthy and merely quiet, the read loop reported every
+silence as "the connection to Chrome closed", and its own deadline below was
+never reached at all. Every stuck page was a browser thrown away, restarted,
+and asked the same question again for the same answer.
+
+Found by writing the test for something else: a page whose image hangs threw
+`ChromeProtocolError: the connection closed` when the whole point of the test
+was that it should not. The naive check reads correctly and is wrong, which is
+the kind that survives review.
+
+So the timeout is asked about first, through `stream_get_meta_data()['timed_out']`,
+and only then is `feof` believed. And it gets its own type, `ChromeTimedOut`,
+because what silence means is the caller's to say: waiting on the answer to a
+command it is a browser that has stopped talking, and waiting on a page to load
+it is the page.
+
+Turned down: checking the deadline before `feof` and letting the loop fall out
+on time. It would have fixed the timing and left "the connection closed" as the
+message for a connection that was open, which is a support ticket about the
+wrong thing.
+
+**Two other things in the same pass.** A control frame's length lives in seven
+bits, and `sendControl` framed whatever it was given: a pong echoing an
+over-long ping would have set the bit meaning "two more bytes of length" and
+put the stream out of step from there on. Chrome obeys the limit, so this is
+about the peer that does not. And reading the rules out of the axe bundle cut a
+copy of the whole half-megabyte source per rule to find one offset; searched
+backwards instead, which the parity test against a real `axe.getRules()` proves
+is the same answer.
+
+---
+
+## 2026-09-05: The engine is a property of the scan, not of the process reading it
+
+`a11y:scan --engine=axe` set the config in the console process and queued the
+pages. The worker is another process: it read the config file, built the PHP
+checker, and read every page with it. The row said `axe`, carried axe's version,
+its ruleset and its two dozen criteria, and the document generated from it
+printed "automated checks for the parts of this criterion they test found no
+failures" under criteria nothing had looked at.
+
+It never became a false `supports` — `AssessmentMerger` rule 3 held, and no
+criterion without a person's locked judgement can be anything but "not
+evaluated". So it was a false sentence of evidence rather than a false
+conformance claim, which is the difference between a serious bug and the one
+this product must never ship. It was still a document making a statement about
+work nobody did.
+
+**The fix is that a page is read by the engine its own scan row names.**
+`Scans::scanPage` builds it from `$page->scan->engine`, and the flag needs to
+reach nothing but the row it writes. `--resume` is covered by the same rule,
+free: a scan resumed a week later on a differently configured machine still
+runs what it started as.
+
+**So `Engines` answers two questions and they are deliberately not one lookup.**
+`configured()` is "what should a new scan run with", and it may fall back:
+asking for axe with no Chrome scans with the PHP checker and says so, because
+the alternative is failing every page, and the row records the one that ran.
+`make()` is "build exactly this key", and it never falls back. The two used to
+be the same question, which was correct only while every process agreed on the
+answer.
+
+**A worker that cannot build the scan's engine refuses the page.** It does not
+quietly use the other one. That is the same rule as the fallback, applied at
+the point where it is no longer free: before the first page is read, falling
+back costs nothing because nothing has been claimed yet; after the row exists,
+falling back would fill a scan with findings it does not describe. So a queue
+whose workers have no Chrome fails a scan loudly instead of filing the lesser
+engine's results under the fuller one's name.
+
+Turned down: refusing `--engine` unless `--sync` is also given. It would have
+closed the hole in one line, and it would have left the same hole open for
+`--resume`, for a config file edited while a scan was queued, and for a queue
+whose workers were deployed from a different branch. The bug was not the flag.
+It was that the engine was looked up per process rather than carried on the
+record, in a product whose whole rule is that the record carries what it was
+made with.
+
+Checked by breaking it: both regression tests go red when `scanPage` is put
+back to the configured engine.
+
+---
+
+## 2026-09-04: axe-core in headless Chrome, and the four things that had to change around it
+
+The second engine, and the reason `ScanEngine` was an interface from the
+start. The PHP checker reads markup and can speak to six success criteria. On
+statamic-testing this reads two dozen, colour contrast among them, which is the
+failure a real site has most of and the one no amount of reading markup will
+ever find. The same site went from "6 of 50 criteria had automated checks" to
+"22 of 50".
+
+**It goes to the page.** The scan renders each entry through the gate before
+calling the engine, and the axe engine ignores that markup and navigates
+Chrome to the entry's own address. Feeding it the rendered HTML would throw
+away computed colour, layout and the accessibility tree, which is the entire
+reason for a browser, and leave a slower copy of the engine we already have.
+The cost is real and is stated in the document: the site has to be reachable
+from the machine running the scan. Turned down: injecting the markup with the
+frame's URL as its base, which keeps stylesheets working and still misses
+everything the page's own scripts do.
+
+**Bundled, not fetched or installed.** A conformance report has to be
+reproducible: the same install scanning the same site next year must run the
+same rules. A version resolved from a CDN, or from whatever `npm install` last
+wrote, is a number the document cannot stand behind, and a site with no
+outbound network would not scan at all. axe-core is MPL-2.0, travels with its
+licence header, and nothing here modifies it.
+
+**Level A and AA, and never AAA.** The conformance table has no AAA row, for
+the reason written down when it was built. Running AAA rules would produce
+findings citing criteria the document has nowhere to put. The tag set follows
+the report's own standard, so a report set to 2.1 is never handed a 2.2
+finding either.
+
+**axe's best-practice rules are house rules**, by exactly the definition this
+product already uses: they cite no success criterion, so they keep their plain
+name into the database and into the "Findings outside WCAG" section, and they
+can be switched off. `region` and `landmark-unique` fire on nearly every page
+of a theme that was not built with them in mind, which is why there is a switch
+at all.
+
+**A WebSocket client, written rather than depended on.** The whole of what this
+needs is one opcode in each direction against a socket on 127.0.0.1: no TLS, no
+extensions, no compression, one peer, and that peer is Chrome. A dependency for
+that is a dependency to keep current for the life of a commercial addon. The
+four things that are not optional are in the class comment, because each one
+loses data quietly rather than loudly, and quiet data loss here is a page
+reported clean because its findings never arrived. The accept-key check was
+written with the wrong magic GUID, which Chrome rejected; it was settled by
+asking Chrome for the accept of the RFC's own example key and comparing, which
+is also now the test.
+
+**One browser, held open.** Starting Chrome costs about a second and a half. A
+scan is hundreds of pages in one worker, so the session outlives the page, and
+axe-core's half a megabyte is sent once per session rather than once per page.
+That made the engine binding a singleton rather than a binding: `Scans` is
+resolved once per queued page, so bound rather than shared, every page would
+have started and stopped its own browser and the saving would have been exactly
+reversed. A full scan of statamic-testing's 51 pages takes 33 seconds.
+
+**A page that is not readable is not a browser that is broken.** Both end as a
+page that could not be read, and they deserve opposite treatment. A renderer
+killed under memory pressure is worth throwing the browser away and trying
+once more. A 404, a host that does not resolve and a page that never finishes
+loading will do the same thing the second time, and retrying would cost a
+browser start on every broken route on the site. Hence `PageNotReadable`, and
+a count of how many browsers a session has had to start, which is what the
+test asserts: a browser thrown away and immediately restarted is open too, so
+"is it open" proved nothing.
+
+**The document's own HTTP status is checked.** A published entry whose route is
+broken serves the site's 404 page. Scanning that would file the 404 page's
+problems against the entry, in a document somebody hands to a regulator.
+
+**A result from an axe that is not the bundled one is refused.** A site with its
+own copy on the page wins, because it loads after the injected script. Every
+scan row and every report records the bundled version, so a result produced by
+some other axe would be attributed to rules that did not produce it.
+
+### The three things running it broke
+
+None of these were visible from reading the code, and each was found by
+scanning a real site or generating a real report from it.
+
+**One engine was closing the other's findings.** The first axe scan of
+statamic-testing reported "32 new, 94 fixed" and marked 94 real issues fixed.
+Two engines are two sets of answers: axe not looking for something the gate's
+checker found is not evidence anybody fixed it. So the issue states carry the
+engine that found them, a scan only closes what an engine of its own kind
+found, and the diff compares against the last scan by the same engine. The
+consequence is deliberate and worth knowing: after switching engines the old
+engine's open issues stay open, because nothing has said they are gone.
+
+**The report asked the wrong engine what had been evaluated.** A report
+generated from an axe scan on a site configured for the PHP checker said no
+criterion had been evaluated automatically, of a scan that evaluated
+twenty-two. It was asking whichever engine was bound at generation time. The
+scan now records what its engine could cite, on the row, while it is running:
+the same rule as the mark on the cover and the remediation policy, which is
+that the record carries what it was made with.
+
+**A scan row named the standard somebody asked for rather than the rules that
+ran.** `ruleset` came from the gate's settings and was handed to `Scans`. It is
+now the engine's to answer, because two engines reading one site run different
+sets of rules and the difference between two scans' numbers has to have an
+explanation on the row. axe's reads `wcag22aa+best-practice`.
+
+**Asking for axe with no Chrome scans with the PHP checker and says so.** A
+scan that failed every page is worse than one that runs the lesser engine, and
+it is not a quiet swap: the row carries `php`, and the report's limits section
+lists the criteria that engine can speak to. The document is engine-aware
+throughout, because "they read the markup and cannot see anything a stylesheet
+decides" is false when a browser read it.
+
+**Checked.** The suite, 233 tests. Eighteen guards mutation-tested by breaking
+each and confirming a test went red, including every refusal above, the
+masking of client frames, the 64-bit length, the reassembly of a fragmented
+message and the answering of a ping. Three mutants survived a first pass and
+were killed by strengthening tests rather than code: an assertion true down two
+paths, an "is it open" that a restart also satisfies, and a criteria test where
+both engines resolved to the same one. The WebSocket client is tested against a
+server written to be awkward, because Chrome never fragments and never pings
+during a scan, so driving Chrome proves none of it; writing that server also
+turned up the client's reassembly being correct and the fixture's arithmetic
+being wrong, twice. On statamic-testing: 51 pages in 33 seconds, 32 findings
+against the checker's 94 on the same site, both sets open at once and neither
+closing the other, and a report reading "22 of 50 criteria had automated
+checks" where the checker's said six.
+
+**Not checked.** Windows. A site behind authentication, which this cannot
+reach and has no setting for. Memory over a scan of many hundreds of pages in
+one held-open browser. The control panel screens in a browser. Whether axe's
+own results are correct, which is Deque's business and not something this
+addon can or should second-guess.
+
+---
+
+## 2026-09-04: The weekly scan now happens, and says so when it does not
+
+`scan.schedule => 'weekly'` shipped in the first release and was read by
+nothing. Every install has been told it scans weekly and none of them did. The
+report's whole claim is about a site over time, and time was the part nobody
+wired up.
+
+**Three named frequencies and a cron expression for everything else.** Daily,
+weekly (Sunday), monthly (the 1st), at `scan.schedule_at`. "Hourly" is
+deliberately not a name you can type: a scan renders every published page, and
+a word somebody picks off a list without thinking should not turn the site into
+a load test 24 times a day. Anyone who genuinely wants that writes the cron
+expression, which is a deliberate act rather than a plausible-looking word.
+
+**A value it does not understand schedules nothing and warns.** Turned down:
+falling back to weekly, which is a scan nobody asked for, at a time nobody
+chose, on a machine sized for neither. Turning it off is a supported choice and
+is silent, and a test asserts the absence of the warning, because "schedules
+nothing" was true down both paths and the test could not otherwise tell them
+apart. That was found by mutation: shrinking the list of words meaning "off"
+left every assertion passing.
+
+**Statamic's own hook, but not Statamic's own moment.** `AddonServiceProvider`
+calls `schedule()` only when running in console, which is the right gate. It
+also calls it several steps *before* `bootConfig()`, so reading
+`statamic-a11y-report.scan` inside that hook returns null and quietly
+schedules nothing: the exact bug this change exists to fix, reintroduced one
+line lower. Registration therefore happens in an `app->booted()` callback
+raised from inside the hook, which keeps the console-only gate and gets a
+merged config. Found by running it, not by reading it, and pinned by a test
+that asks the booted application what is on its schedule rather than asking
+the class whether it can register.
+
+**Registered once, however many times the provider boots.** The test harness
+boots the addon twice and put two identical scans on the schedule. Both would
+be stopped from doing anything by `withoutOverlapping()` and by the command's
+own guard, so this is not a double scan, but two identical rows in
+`schedule:list` is a support question and the mitigation was luck.
+
+**A scheduled run does not start on top of one already going.** The command
+refuses, rather than the cache lock alone, because the domain answer works when
+the cache is `array` and the lock is not. A person pressing the button during a
+scan is deliberate; a cron doing it is a pile-up nobody is watching, so the
+guard is on `--scheduled` and not on the command.
+
+**Skipping is not failing, and neither is a page that will not render.** Both
+exit zero. `--sync` still exits non-zero above the CI thresholds and on any
+unreadable page, and must: that is a gate. The scheduler gates nothing, and a
+weekly job that fails every week for the same known reason is a job whose mail
+gets filtered, which is how the run that really broke goes unread. A scheduled
+run reports a failure only when the scan did not finish, which is the one thing
+a person reading cron mail can act on. Found by running it on
+statamic-testing, whose one broken template made the first real scheduled run
+exit 1.
+
+**The overview says when the schedule is not running.** A weekly scan on a
+server with no `schedule:run` in its crontab looks exactly like a weekly scan
+that runs and finds nothing: the same screen, the same numbers, a date that
+quietly stops moving. So the overview carries the crontab line when no
+scheduled scan has ever run, and says so again when two runs in a row have
+been missed. Two and not one, because a screen that cries wolf the morning
+after somebody sets this up is a screen people learn to ignore. Only a scan
+whose trigger is `scheduled` counts: a site where somebody keeps pressing the
+button by hand has not got a working schedule, and mutation testing caught
+that the first version could not tell the difference.
+
+**`schedule_at` is a developer's, in the config file.** The settings-split test
+of 3 September forced the choice as it was built to, and the 2026-09-03 entry
+already settled the principle: a wrong value here stops scans rather than
+changing a sentence.
+
+**Checked.** The suite, 210 tests. Ten guards mutation-tested by breaking each
+and confirming a test went red, including the deferred registration, the
+once-only registration, the skip, the trigger, the two-missed-runs rule, and
+the frozen clock: `CronExpression` builds its own `now` from the string 'now'
+and ignores a frozen one, so the screen and its test disagreed about which
+runs had been missed. Two mutants survived the first pass and were killed by
+strengthening the tests, not the code. On statamic-testing: `schedule:list`
+shows one entry at `0 2 * * 0`; `daily` and a raw cron expression register as
+written; `false` and an unrecognised word register nothing; a real
+`--scheduled` run recorded `trigger=scheduled`, `initiated_by=schedule`, and
+exited zero despite the site's one unreadable page.
+
+**Not checked.** The overview's two schedule panels in a browser. Whether an
+actual crontab fires it on a server, which is the one step this addon cannot
+test from inside itself. Whether Sunday 02:00 is a sensible default for sites
+in other timezones: it uses the application's, and nobody has asked for a
+setting.
+
+---
+
 ## 2026-09-04: Remediation targets and an exception register, which promise things and claim nothing
 
 Asked for: a policy manager. "Policy" in a compliance product means two things

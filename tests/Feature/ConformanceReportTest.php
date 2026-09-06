@@ -347,5 +347,11 @@ it('links to the WCAG 2.1 text when the report is set to 2.1', function () {
 
     expect($html)->toContain('<a href="https://www.w3.org/TR/WCAG21/">WCAG 2.1 Level AA</a>');
     expect($html)->toContain('https://www.w3.org/WAI/WCAG21/Understanding/parsing.html');
-    expect(substr_count($html, 'WCAG22/Understanding'))->toBe(1); // 2.5.8, which 2.1 has no page for
+
+    // Nothing 2.2 is mentioned, because a report set to 2.1 must not offer a
+    // criterion its own table has no row for. The engine can cite 2.5.8, and
+    // the limits statement used to list it here, which counted an evaluation
+    // of something this document does not report on.
+    expect(substr_count($html, 'WCAG22/Understanding'))->toBe(0);
+    expect(str_contains($html, '2.5.8'))->toBeFalse('a 2.1 report says nothing about a 2.2 criterion');
 });

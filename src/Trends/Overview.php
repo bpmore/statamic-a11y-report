@@ -9,6 +9,7 @@ use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Models\ScanPage;
 use Bpmore\A11yReport\Remediation\Policy;
+use Bpmore\A11yReport\Scan\ScanSchedule;
 use Bpmore\A11yReport\Settings;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Illuminate\Support\Carbon;
@@ -71,6 +72,45 @@ final class Overview
             'scan' => $scan,
             'minutes' => (int) $since->diffInMinutes(now()),
             'pages_read' => (int) ScanPage::where('scan_id', $scan->id)->where('status', ScanPage::SCANNED)->count(),
+        ];
+    }
+
+    /**
+     * What the config asks for, and whether it is happening.
+     *
+     * A scan configured to run weekly on a server with no `schedule:run` in
+     * its crontab looks exactly like one that runs weekly and finds nothing:
+     * the same screen, the same numbers, a date that quietly stops moving.
+     * The report's claim is about a site over time, so a schedule nobody runs
+     * is the claim failing silently, which is the one way it must not fail.
+     *
+     * Not scoped to a site. A schedule is the install's, not one site's.
+     *
+     * @return array{label: string, expression: string, last: ?Scan, next: ?\DateTimeInterface, missed: bool}|null
+     */
+    public function schedule(): ?array
+    {
+        $config = (array) config('statamic-a11y-report.scan', []);
+        $expression = ScanSchedule::expression($config);
+
+        if ($expression === null) {
+            return null;
+        }
+
+        $last = Scan::where('trigger', Scan::TRIGGER_SCHEDULED)->orderByDesc('id')->first();
+        // The expression, worked out once above and handed on. Asking for it
+        // again per line would say whatever is wrong with the config once per
+        // line, on every render of this screen.
+        $before = ScanSchedule::previousRun($expression, 1);
+
+        return [
+            'label' => ScanSchedule::label($config, $expression),
+            'expression' => $expression,
+            'last' => $last,
+            'next' => ScanSchedule::nextRun($expression),
+            // Two runs missed, not one: a screen that cries wolf the morning
+            // after somebody sets this up is a screen people learn to ignore.
+            'missed' => $last !== null && $before !== null && $last->created_at?->lessThan($before),
         ];
     }
 

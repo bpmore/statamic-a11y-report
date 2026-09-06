@@ -108,7 +108,9 @@
         <h2 id="methods-heading">Evaluation methods</h2>
         <dl class="cover">
             <dt>Automated engine</dt>
-            <dd>{{ $r['scan']['engine'] }} {{ $r['scan']['engine_version'] }}, ruleset {{ $r['scan']['ruleset'] }}</dd>
+            {{-- The engine's own name, not the config key it is chosen by: the
+                 reader of a conformance document should be able to look it up. --}}
+            <dd>{{ $r['scan']['engine'] === \Bpmore\A11yReport\Engine\AxeEngine::KEY ? 'axe-core' : 'Accessibility Gate checker' }} {{ $r['scan']['engine_version'] }}, ruleset {{ $r['scan']['ruleset'] }}</dd>
             <dt>Pages selected</dt>
             <dd>{{ $r['scan']['scope_text'] }}</dd>
             <dt>Pages read</dt>

@@ -9,6 +9,82 @@ Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
 ## Unreleased
 
+### Fixed
+
+**`scan.schedule` now actually schedules a scan.** It has been in the config
+file since the first release and nothing read it, so every install was told it
+scanned weekly and none of them did. It takes `daily`, `weekly` (Sunday),
+`monthly` (the 1st), any cron expression, or `false`. `scan.schedule_at` sets
+the time of day for the named ones and defaults to `02:00`.
+
+This needs Laravel's scheduler running on the server, which is one line in the
+crontab and covers every scheduled task the site has:
+
+```
+* * * * * cd /path/to/site && php artisan schedule:run >> /dev/null 2>&1
+```
+
+If it is not there, the report overview now says so and gives you that line. A
+schedule nobody runs looks exactly like a schedule that runs and finds nothing,
+and a conformance report is not the place to discover the difference. The
+overview says it again if scheduled scans were running and have stopped.
+
+A scheduled scan does not start while another is queued or running, and unlike
+`--sync` it does not report a failure for issue counts or for a page that could
+not be read. Those are still on the screen and in the report. A weekly job that
+fails every week for a known reason is a job whose mail gets ignored.
+
+### Added
+
+**The axe engine.** Set `engine` to `axe` in `config/statamic-a11y-report.php`,
+or `A11Y_ENGINE=axe`, and scans read each page in headless Chrome with your
+stylesheets applied instead of reading markup. It speaks to around two dozen
+success criteria rather than six, colour contrast included, which is the
+failure most sites have most of and the one reading markup can never find.
+axe-core is bundled, so there is nothing to install and nothing is fetched at
+scan time; the version is recorded on every scan and printed in every report.
+
+It needs Chrome on the machine (the same one the PDF uses; set
+`A11Y_CHROME_PATH` if it is somewhere unusual) and the site reachable from it.
+Ask for axe without Chrome and the scan runs the PHP checker instead and says
+so in the log; the scan row records which one actually ran, so a report can
+never be mistaken for the other engine's.
+
+`php please a11y:scan --engine=axe` runs one scan with it without changing the
+config, on the queue as well as under `--sync`: every page is read by the
+engine its own scan row names, so the worker does not have to be told twice.
+Every machine that works the queue needs Chrome for that; a page a worker
+cannot run the scan's engine on is a page that could not be read, and never a
+page quietly read by the other one. `axe.best_practices` controls axe's own
+rules that cite no success criterion: they are reported apart from WCAG under
+their own names, never as it, and some of them fire on nearly every page of
+some themes.
+
+Level AAA is never run, whatever the standard is set to. The conformance table
+has no AAA row.
+
+### Changed
+
+**Two engines never speak for each other.** Issues now record which engine
+found them. A scan only closes findings from an engine of its own kind, and the
+"against the last scan" line compares against the last scan by the same engine.
+Without this the first axe scan of a site marked everything the PHP checker had
+ever found as fixed, and the report printed the number.
+
+The consequence is worth knowing before you switch: the old engine's open
+issues stay open, because nothing has said they are gone. Scan once with the
+old engine after switching if you want them closed, or close them in the queue.
+
+**Every scan records the criteria its engine could cite**, so a report
+generated later says what the engine that ran could speak to rather than what
+whichever engine is configured now can. **And the `ruleset` on a scan is now
+the rules that ran** rather than the standard that was asked for: axe's reads
+`wcag22aa+best-practice`.
+
+**Upgrading:** run `php please a11y:report:install` to add the two columns.
+Existing issues are credited to the engine that last saw them, which before
+this release was the only one there was.
+
 ### Added
 
 **Remediation targets and an exception register.** How long a problem of each

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bpmore\A11yReport\Chrome\ChromeProtocolError;
+use Bpmore\A11yReport\Chrome\ChromeTimedOut;
 use Bpmore\A11yReport\Chrome\WebSocket;
 
 /**
@@ -125,4 +126,23 @@ it('refuses an address that is not a WebSocket one', function () {
 it('says plainly when nothing is listening', function () {
     expect(fn () => WebSocket::connect('ws://127.0.0.1:1/', 1))
         ->toThrow(ChromeProtocolError::class, 'Could not open a socket to Chrome');
+});
+
+it('tells a quiet socket apart from a closed one', function () {
+    [$process, $url] = wsServer('silent');
+
+    try {
+        $socket = WebSocket::connect($url, 5.0);
+
+        // Nothing is coming, and the connection is open the whole time. PHP
+        // sets the stream's end-of-file flag on a read timeout, so asking
+        // `feof` first reported every silence as Chrome hanging up. The
+        // difference decides whether the browser is thrown away and the page
+        // asked a second time, which for a page that is merely slow buys a
+        // browser start and the same answer.
+        expect(fn () => $socket->receive(microtime(true) + 1.5))
+            ->toThrow(ChromeTimedOut::class, 'stopped answering');
+    } finally {
+        wsStop($process);
+    }
 });

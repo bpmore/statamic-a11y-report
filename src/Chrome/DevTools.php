@@ -300,7 +300,16 @@ final class DevTools
                 throw $pageFault ? new PageNotReadable($timeoutMessage) : new ChromeProtocolError($timeoutMessage);
             }
 
-            $frame = json_decode($this->socket->receive($deadline), true);
+            try {
+                $frame = json_decode($this->socket->receive($deadline), true);
+            } catch (ChromeTimedOut) {
+                // The silence is the page's, not the browser's. Without this
+                // the read timeout arrived first and as the wrong type, and a
+                // page that never finishes loading cost a browser thrown away
+                // and a second wait for the same answer, on every broken route
+                // on the site.
+                throw $pageFault ? new PageNotReadable($timeoutMessage) : new ChromeProtocolError($timeoutMessage);
+            }
 
             if (! is_array($frame) || ! isset($frame['method'])) {
                 continue;

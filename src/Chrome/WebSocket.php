@@ -233,6 +233,14 @@ final class WebSocket
 
     private function sendControl(int $opcode, string $payload): void
     {
+        // A control frame carries at most 125 bytes, and the length goes in
+        // seven bits. A longer payload would set the bit that means "read two
+        // more bytes of length" and the peer would start reading the mask as a
+        // length: not a rejected frame, a stream out of step from there on.
+        // Chrome obeys the limit, so this is about the pong echoing a ping
+        // that did not.
+        $payload = substr($payload, 0, 125);
+
         $mask = random_bytes(4);
         $length = strlen($payload);
         $masked = $length === 0 ? '' : ($payload ^ substr(str_repeat($mask, intdiv($length, 4) + 1), 0, $length));
@@ -251,11 +259,26 @@ final class WebSocket
             $remaining = $deadline - microtime(true);
 
             if ($remaining <= 0) {
-                throw new ChromeProtocolError('Chrome stopped answering: '.strlen($buffer)." of {$bytes} bytes arrived before the timeout.");
+                // Its own type: whether silence is the browser's fault or the
+                // page's is the caller's to say, and it is not the same answer
+                // for a command that went unanswered and a page that never
+                // finished loading.
+                throw new ChromeTimedOut('Chrome stopped answering: '.strlen($buffer)." of {$bytes} bytes arrived before the timeout.");
             }
 
             stream_set_timeout($this->socket, max(1, (int) ceil($remaining)));
             $chunk = @fread($this->socket, $bytes - strlen($buffer));
+
+            // Asked before `feof`, and this order is the whole of it: PHP sets
+            // the stream's end-of-file flag when a read times out, so `feof`
+            // is true on a socket that is perfectly healthy and merely quiet.
+            // Read the other way round, every silence was reported as Chrome
+            // hanging up, the deadline below was never reached, and a page
+            // that simply took its time was a browser thrown away and started
+            // again.
+            if (stream_get_meta_data($this->socket)['timed_out']) {
+                continue;
+            }
 
             if ($chunk === false || ($chunk === '' && feof($this->socket))) {
                 throw new ChromeProtocolError('The connection to Chrome closed while reading a reply.');

@@ -109,14 +109,24 @@ final class AxeSource
         }
 
         foreach ($matches as $match) {
-            $before = substr($source, 0, $match[0][1]);
-            $at = strrpos($before, 'id:"');
+            // Searched backwards from the tags rather than by cutting the
+            // source in half first: the bundle is over half a megabyte and
+            // there are hundreds of rules in it, so a copy per rule is tens of
+            // megabytes of string for an answer that is one offset.
+            $at = strrpos($source, 'id:"', $match[0][1] - strlen($source));
 
             if ($at === false) {
                 continue;
             }
 
-            $id = substr($before, $at + 4, (int) strpos($before, '"', $at + 4) - $at - 4);
+            $opens = $at + 4;
+            $closes = strpos($source, '"', $opens);
+
+            if ($closes === false || $closes > $match[0][1]) {
+                continue;
+            }
+
+            $id = substr($source, $opens, $closes - $opens);
             preg_match_all('/"([^"]+)"/', $match[1][0], $tags);
 
             $rules[$id] = $tags[1];
@@ -136,12 +146,6 @@ final class AxeSource
     }
 
     /**
-     * The success criteria the rules under these tags can cite.
-     *
-     * @param  array<int, string>  $tags
-     * @return array<int, string>
-     */
-    /**
      * The tags to run for a report standard, always Level A and AA and never
      * AAA. The report table has no AAA row and there will not be one, so
      * running the rules would produce findings citing criteria the document
@@ -154,6 +158,12 @@ final class AxeSource
         return self::AA_TAGS[$standard] ?? self::AA_TAGS['wcag22aa'];
     }
 
+    /**
+     * The success criteria the rules under these tags can cite.
+     *
+     * @param  array<int, string>  $tags
+     * @return array<int, string>
+     */
     public static function criteriaFor(array $tags): array
     {
         $criteria = [];

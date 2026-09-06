@@ -152,6 +152,15 @@ switch ($behaviour) {
     case 'close':
         writeAll($client, frame(0x8, pack('n', 1000)));
         break;
+
+    case 'silent':
+        // Connected, healthy, and with nothing to say. The client must tell
+        // this apart from a peer that hung up: PHP raises the stream's
+        // end-of-file flag when a read times out, so the naive check calls a
+        // quiet socket a closed one, and Chrome taking its time over a slow
+        // page reads as Chrome having died.
+        sleep(5);
+        break;
 }
 
 usleep(300000);

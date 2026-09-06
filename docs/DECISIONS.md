@@ -12,6 +12,47 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-05: A quiet socket is not a closed one, and PHP says it is
+
+The engine was meant to tell two failures apart. A browser that died is worth
+throwing away and asking once more; a page that never finishes loading will do
+the same thing the second time, and retrying costs a browser start on every
+broken route on the site. `PageNotReadable` exists for exactly that split.
+
+The split did not work, and not for the reason it looked like. **PHP raises a
+stream's end-of-file flag when a read times out.** So `feof()` is true on a
+socket that is perfectly healthy and merely quiet, the read loop reported every
+silence as "the connection to Chrome closed", and its own deadline below was
+never reached at all. Every stuck page was a browser thrown away, restarted,
+and asked the same question again for the same answer.
+
+Found by writing the test for something else: a page whose image hangs threw
+`ChromeProtocolError: the connection closed` when the whole point of the test
+was that it should not. The naive check reads correctly and is wrong, which is
+the kind that survives review.
+
+So the timeout is asked about first, through `stream_get_meta_data()['timed_out']`,
+and only then is `feof` believed. And it gets its own type, `ChromeTimedOut`,
+because what silence means is the caller's to say: waiting on the answer to a
+command it is a browser that has stopped talking, and waiting on a page to load
+it is the page.
+
+Turned down: checking the deadline before `feof` and letting the loop fall out
+on time. It would have fixed the timing and left "the connection closed" as the
+message for a connection that was open, which is a support ticket about the
+wrong thing.
+
+**Two other things in the same pass.** A control frame's length lives in seven
+bits, and `sendControl` framed whatever it was given: a pong echoing an
+over-long ping would have set the bit meaning "two more bytes of length" and
+put the stream out of step from there on. Chrome obeys the limit, so this is
+about the peer that does not. And reading the rules out of the axe bundle cut a
+copy of the whole half-megabyte source per rule to find one offset; searched
+backwards instead, which the parity test against a real `axe.getRules()` proves
+is the same answer.
+
+---
+
 ## 2026-09-05: The engine is a property of the scan, not of the process reading it
 
 `a11y:scan --engine=axe` set the config in the console process and queued the

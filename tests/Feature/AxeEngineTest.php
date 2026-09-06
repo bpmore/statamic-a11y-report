@@ -307,3 +307,45 @@ it('refuses a result from an axe that is not the one it ships', function () {
     expect(fn () => $chrome['engine']->scan(new RenderedPage($chrome['base'].'/hijack.html', '')))
         ->toThrow(PageNotReadable::class, 'axe-core 1.0.0 ran on');
 })->group('chrome');
+
+it('blames the page, not the browser, when a page never finishes loading', function () {
+    $chrome = axeChrome();
+
+    if ($chrome === null) {
+        test()->markTestSkipped('No Chrome on this machine.');
+    }
+
+    // A socket that accepts and answers nothing. The page's image never
+    // arrives, so the load event never fires, which is the one kind of stuck
+    // page a scan of a real site meets: a third-party script or an image on a
+    // host that has gone away.
+    $sink = stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
+
+    if ($sink === false) {
+        test()->markTestSkipped('No port to hang a request on.');
+    }
+
+    $port = (int) explode(':', (string) stream_socket_get_name($sink, false))[1];
+
+    // Its own engine, on a short deadline, so the test does not wait thirty
+    // seconds for an answer it can have in two.
+    $engine = new AxeEngine(new DevTools(new Browser, 2, 0), 'wcag22aa', true);
+    $starts = new ReflectionProperty(AxeEngine::class, 'chrome');
+
+    try {
+        expect(fn () => $engine->scan(new RenderedPage($chrome['base']."/hang.php?port={$port}", '')))
+            // Not a ChromeProtocolError. The browser is fine and this page is
+            // not, and the two are told apart precisely so this one is not
+            // retried: the read timeout used to arrive first and as the wrong
+            // type, and every stuck page cost a browser thrown away and a
+            // second wait for the same answer.
+            ->toThrow(PageNotReadable::class, 'did not finish loading');
+
+        // One browser, not two. The retry is for a browser that died, and this
+        // is not one.
+        expect($starts->getValue($engine)->starts())->toBe(1);
+    } finally {
+        $engine->close();
+        fclose($sink);
+    }
+})->group('chrome');

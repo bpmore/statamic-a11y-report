@@ -38,7 +38,7 @@ final class Worksheet
     {
         $scan = ScanEvidence::latestScan($site);
         $standard = $scan !== null ? Wcag::standardForRuleset((string) $scan->ruleset) : 'wcag22aa';
-        $automated = $scan !== null ? $this->evidence->automatedCriteria($scan) : [];
+        $automated = $scan !== null ? $this->evidence->automatedCriteria($scan, $standard) : [];
         $failures = $scan !== null ? $this->evidence->failuresByCriterion($scan) : [];
         $pages = (int) ($scan?->pages_scanned ?? 0);
 

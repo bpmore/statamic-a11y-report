@@ -372,8 +372,8 @@ it('can be resumed from the command line by its id', function () {
 });
 
 it('refuses an engine that does not exist rather than quietly using another', function () {
-    $this->artisan('statamic:a11y:scan', ['--engine' => 'axe', '--sync' => true])
-        ->expectsOutputToContain('There is no [axe] engine yet')
+    $this->artisan('statamic:a11y:scan', ['--engine' => 'pa11y', '--sync' => true])
+        ->expectsOutputToContain('There is no [pa11y] engine')
         ->assertExitCode(1);
 
     expect(Scan::count())->toBe(0);

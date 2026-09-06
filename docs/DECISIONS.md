@@ -12,6 +12,233 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-05: A quiet socket is not a closed one, and PHP says it is
+
+The engine was meant to tell two failures apart. A browser that died is worth
+throwing away and asking once more; a page that never finishes loading will do
+the same thing the second time, and retrying costs a browser start on every
+broken route on the site. `PageNotReadable` exists for exactly that split.
+
+The split did not work, and not for the reason it looked like. **PHP raises a
+stream's end-of-file flag when a read times out.** So `feof()` is true on a
+socket that is perfectly healthy and merely quiet, the read loop reported every
+silence as "the connection to Chrome closed", and its own deadline below was
+never reached at all. Every stuck page was a browser thrown away, restarted,
+and asked the same question again for the same answer.
+
+Found by writing the test for something else: a page whose image hangs threw
+`ChromeProtocolError: the connection closed` when the whole point of the test
+was that it should not. The naive check reads correctly and is wrong, which is
+the kind that survives review.
+
+So the timeout is asked about first, through `stream_get_meta_data()['timed_out']`,
+and only then is `feof` believed. And it gets its own type, `ChromeTimedOut`,
+because what silence means is the caller's to say: waiting on the answer to a
+command it is a browser that has stopped talking, and waiting on a page to load
+it is the page.
+
+Turned down: checking the deadline before `feof` and letting the loop fall out
+on time. It would have fixed the timing and left "the connection closed" as the
+message for a connection that was open, which is a support ticket about the
+wrong thing.
+
+**Two other things in the same pass.** A control frame's length lives in seven
+bits, and `sendControl` framed whatever it was given: a pong echoing an
+over-long ping would have set the bit meaning "two more bytes of length" and
+put the stream out of step from there on. Chrome obeys the limit, so this is
+about the peer that does not. And reading the rules out of the axe bundle cut a
+copy of the whole half-megabyte source per rule to find one offset; searched
+backwards instead, which the parity test against a real `axe.getRules()` proves
+is the same answer.
+
+---
+
+## 2026-09-05: The engine is a property of the scan, not of the process reading it
+
+`a11y:scan --engine=axe` set the config in the console process and queued the
+pages. The worker is another process: it read the config file, built the PHP
+checker, and read every page with it. The row said `axe`, carried axe's version,
+its ruleset and its two dozen criteria, and the document generated from it
+printed "automated checks for the parts of this criterion they test found no
+failures" under criteria nothing had looked at.
+
+It never became a false `supports` — `AssessmentMerger` rule 3 held, and no
+criterion without a person's locked judgement can be anything but "not
+evaluated". So it was a false sentence of evidence rather than a false
+conformance claim, which is the difference between a serious bug and the one
+this product must never ship. It was still a document making a statement about
+work nobody did.
+
+**The fix is that a page is read by the engine its own scan row names.**
+`Scans::scanPage` builds it from `$page->scan->engine`, and the flag needs to
+reach nothing but the row it writes. `--resume` is covered by the same rule,
+free: a scan resumed a week later on a differently configured machine still
+runs what it started as.
+
+**So `Engines` answers two questions and they are deliberately not one lookup.**
+`configured()` is "what should a new scan run with", and it may fall back:
+asking for axe with no Chrome scans with the PHP checker and says so, because
+the alternative is failing every page, and the row records the one that ran.
+`make()` is "build exactly this key", and it never falls back. The two used to
+be the same question, which was correct only while every process agreed on the
+answer.
+
+**A worker that cannot build the scan's engine refuses the page.** It does not
+quietly use the other one. That is the same rule as the fallback, applied at
+the point where it is no longer free: before the first page is read, falling
+back costs nothing because nothing has been claimed yet; after the row exists,
+falling back would fill a scan with findings it does not describe. So a queue
+whose workers have no Chrome fails a scan loudly instead of filing the lesser
+engine's results under the fuller one's name.
+
+Turned down: refusing `--engine` unless `--sync` is also given. It would have
+closed the hole in one line, and it would have left the same hole open for
+`--resume`, for a config file edited while a scan was queued, and for a queue
+whose workers were deployed from a different branch. The bug was not the flag.
+It was that the engine was looked up per process rather than carried on the
+record, in a product whose whole rule is that the record carries what it was
+made with.
+
+Checked by breaking it: both regression tests go red when `scanPage` is put
+back to the configured engine.
+
+---
+
+## 2026-09-04: axe-core in headless Chrome, and the four things that had to change around it
+
+The second engine, and the reason `ScanEngine` was an interface from the
+start. The PHP checker reads markup and can speak to six success criteria. On
+statamic-testing this reads two dozen, colour contrast among them, which is the
+failure a real site has most of and the one no amount of reading markup will
+ever find. The same site went from "6 of 50 criteria had automated checks" to
+"22 of 50".
+
+**It goes to the page.** The scan renders each entry through the gate before
+calling the engine, and the axe engine ignores that markup and navigates
+Chrome to the entry's own address. Feeding it the rendered HTML would throw
+away computed colour, layout and the accessibility tree, which is the entire
+reason for a browser, and leave a slower copy of the engine we already have.
+The cost is real and is stated in the document: the site has to be reachable
+from the machine running the scan. Turned down: injecting the markup with the
+frame's URL as its base, which keeps stylesheets working and still misses
+everything the page's own scripts do.
+
+**Bundled, not fetched or installed.** A conformance report has to be
+reproducible: the same install scanning the same site next year must run the
+same rules. A version resolved from a CDN, or from whatever `npm install` last
+wrote, is a number the document cannot stand behind, and a site with no
+outbound network would not scan at all. axe-core is MPL-2.0, travels with its
+licence header, and nothing here modifies it.
+
+**Level A and AA, and never AAA.** The conformance table has no AAA row, for
+the reason written down when it was built. Running AAA rules would produce
+findings citing criteria the document has nowhere to put. The tag set follows
+the report's own standard, so a report set to 2.1 is never handed a 2.2
+finding either.
+
+**axe's best-practice rules are house rules**, by exactly the definition this
+product already uses: they cite no success criterion, so they keep their plain
+name into the database and into the "Findings outside WCAG" section, and they
+can be switched off. `region` and `landmark-unique` fire on nearly every page
+of a theme that was not built with them in mind, which is why there is a switch
+at all.
+
+**A WebSocket client, written rather than depended on.** The whole of what this
+needs is one opcode in each direction against a socket on 127.0.0.1: no TLS, no
+extensions, no compression, one peer, and that peer is Chrome. A dependency for
+that is a dependency to keep current for the life of a commercial addon. The
+four things that are not optional are in the class comment, because each one
+loses data quietly rather than loudly, and quiet data loss here is a page
+reported clean because its findings never arrived. The accept-key check was
+written with the wrong magic GUID, which Chrome rejected; it was settled by
+asking Chrome for the accept of the RFC's own example key and comparing, which
+is also now the test.
+
+**One browser, held open.** Starting Chrome costs about a second and a half. A
+scan is hundreds of pages in one worker, so the session outlives the page, and
+axe-core's half a megabyte is sent once per session rather than once per page.
+That made the engine binding a singleton rather than a binding: `Scans` is
+resolved once per queued page, so bound rather than shared, every page would
+have started and stopped its own browser and the saving would have been exactly
+reversed. A full scan of statamic-testing's 51 pages takes 33 seconds.
+
+**A page that is not readable is not a browser that is broken.** Both end as a
+page that could not be read, and they deserve opposite treatment. A renderer
+killed under memory pressure is worth throwing the browser away and trying
+once more. A 404, a host that does not resolve and a page that never finishes
+loading will do the same thing the second time, and retrying would cost a
+browser start on every broken route on the site. Hence `PageNotReadable`, and
+a count of how many browsers a session has had to start, which is what the
+test asserts: a browser thrown away and immediately restarted is open too, so
+"is it open" proved nothing.
+
+**The document's own HTTP status is checked.** A published entry whose route is
+broken serves the site's 404 page. Scanning that would file the 404 page's
+problems against the entry, in a document somebody hands to a regulator.
+
+**A result from an axe that is not the bundled one is refused.** A site with its
+own copy on the page wins, because it loads after the injected script. Every
+scan row and every report records the bundled version, so a result produced by
+some other axe would be attributed to rules that did not produce it.
+
+### The three things running it broke
+
+None of these were visible from reading the code, and each was found by
+scanning a real site or generating a real report from it.
+
+**One engine was closing the other's findings.** The first axe scan of
+statamic-testing reported "32 new, 94 fixed" and marked 94 real issues fixed.
+Two engines are two sets of answers: axe not looking for something the gate's
+checker found is not evidence anybody fixed it. So the issue states carry the
+engine that found them, a scan only closes what an engine of its own kind
+found, and the diff compares against the last scan by the same engine. The
+consequence is deliberate and worth knowing: after switching engines the old
+engine's open issues stay open, because nothing has said they are gone.
+
+**The report asked the wrong engine what had been evaluated.** A report
+generated from an axe scan on a site configured for the PHP checker said no
+criterion had been evaluated automatically, of a scan that evaluated
+twenty-two. It was asking whichever engine was bound at generation time. The
+scan now records what its engine could cite, on the row, while it is running:
+the same rule as the mark on the cover and the remediation policy, which is
+that the record carries what it was made with.
+
+**A scan row named the standard somebody asked for rather than the rules that
+ran.** `ruleset` came from the gate's settings and was handed to `Scans`. It is
+now the engine's to answer, because two engines reading one site run different
+sets of rules and the difference between two scans' numbers has to have an
+explanation on the row. axe's reads `wcag22aa+best-practice`.
+
+**Asking for axe with no Chrome scans with the PHP checker and says so.** A
+scan that failed every page is worse than one that runs the lesser engine, and
+it is not a quiet swap: the row carries `php`, and the report's limits section
+lists the criteria that engine can speak to. The document is engine-aware
+throughout, because "they read the markup and cannot see anything a stylesheet
+decides" is false when a browser read it.
+
+**Checked.** The suite, 233 tests. Eighteen guards mutation-tested by breaking
+each and confirming a test went red, including every refusal above, the
+masking of client frames, the 64-bit length, the reassembly of a fragmented
+message and the answering of a ping. Three mutants survived a first pass and
+were killed by strengthening tests rather than code: an assertion true down two
+paths, an "is it open" that a restart also satisfies, and a criteria test where
+both engines resolved to the same one. The WebSocket client is tested against a
+server written to be awkward, because Chrome never fragments and never pings
+during a scan, so driving Chrome proves none of it; writing that server also
+turned up the client's reassembly being correct and the fixture's arithmetic
+being wrong, twice. On statamic-testing: 51 pages in 33 seconds, 32 findings
+against the checker's 94 on the same site, both sets open at once and neither
+closing the other, and a report reading "22 of 50 criteria had automated
+checks" where the checker's said six.
+
+**Not checked.** Windows. A site behind authentication, which this cannot
+reach and has no setting for. Memory over a scan of many hundreds of pages in
+one held-open browser. The control panel screens in a browser. Whether axe's
+own results are correct, which is Deque's business and not something this
+addon can or should second-guess.
+
+---
+
 ## 2026-09-03: The gate's panel wears the mark and not the colour, because no colour would work
 
 Asked for: the gate's panel using the same brand as the reports. The mark was

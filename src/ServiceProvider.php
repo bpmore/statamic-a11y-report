@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Bpmore\A11yReport;
 
-use Bpmore\A11yGate\Accessibility\StaticAccessibilityChecker;
 use Bpmore\A11yGate\Gate\EntryRenderer;
-use Bpmore\A11yGate\Gate\GateSettings;
 use Bpmore\A11yReport\Document\Brand;
 use Bpmore\A11yReport\Document\ReportBuilder;
 use Bpmore\A11yReport\Document\ReportWriter;
+use Bpmore\A11yReport\Engine\Engines;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Scan\Scans;
@@ -20,7 +19,6 @@ use Bpmore\A11yReport\Trends\Overview;
 use Bpmore\A11yReport\Trends\TrendChart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\Log;
 use Statamic\Facades\Addon;
 use Statamic\Facades\Permission;
 use Statamic\Facades\Site;
@@ -202,24 +200,17 @@ class ServiceProvider extends AddonServiceProvider
 
         $this->app->bind(EntryRenderer::class, fn ($app) => new EntryRenderer($app));
 
-        $this->app->bind(ScanEngine::class, function ($app) {
-            $settings = $app->make(GateSettings::class);
-            $wanted = (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY);
+        // One place builds engines, and it answers two different questions:
+        // what a new scan should run with, and how to rebuild exactly the one
+        // a scan row already names. See `Engines`.
+        $this->app->singleton(Engines::class, fn ($app) => new Engines($app));
 
-            if ($wanted !== PhpDomEngine::KEY) {
-                // Said out loud rather than swapped quietly. The scan row will
-                // carry "php" as its engine either way, so nothing downstream
-                // can mistake the result for the fuller one.
-                Log::warning("a11y-report: the [{$wanted}] engine is not available yet; scanning with the PHP checker instead.");
-            }
-
-            return new PhpDomEngine(
-                new StaticAccessibilityChecker,
-                (string) (Addon::get('bpmore/statamic-a11y-gate')?->version() ?: 'dev'),
-                $settings->standard,
-                $settings->optedIn,
-            );
-        });
+        // A singleton, not a binding. The axe engine holds a headless Chrome
+        // open across pages because starting one costs the better part of a
+        // second, and `Scans` is resolved once per queued page: bound rather
+        // than shared, every page would start and stop its own browser and the
+        // saving would be exactly reversed.
+        $this->app->singleton(ScanEngine::class, fn ($app) => $app->make(Engines::class)->configured());
 
         $this->app->bind(Settings::class, fn () => new Settings);
 
@@ -250,9 +241,8 @@ class ServiceProvider extends AddonServiceProvider
         ));
 
         $this->app->bind(Scans::class, fn ($app) => new Scans(
-            $app->make(ScanEngine::class),
+            $app->make(Engines::class),
             $app->make(EntryRenderer::class),
-            $app->make(GateSettings::class)->standard->value,
             $app->make(Settings::class)->effective(),
         ));
     }

@@ -53,6 +53,11 @@ final class PhpDomEngine implements ScanEngine
         return $this->version;
     }
 
+    public function ruleset(): string
+    {
+        return $this->standard->value;
+    }
+
     public function criteria(): array
     {
         $criteria = [];

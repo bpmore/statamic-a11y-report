@@ -88,6 +88,31 @@ The queue needs Laravel's `job_batches` table. The install creates it through
 your site's own jobs migration when you have one, so `php artisan migrate`
 keeps working afterwards.
 
+## On a schedule
+
+`scan.schedule` in the config file takes `daily`, `weekly` (Sunday), `monthly`
+(the 1st), any cron expression, or `false` for none. `scan.schedule_at` is the
+time of day for the named ones, `02:00` by default. There is no `hourly`: a
+scan renders every published page, so write the cron expression if you really
+want that.
+
+It needs Laravel's scheduler running on the server. One line in the crontab,
+which covers every scheduled task your site has and not only this one:
+
+```
+* * * * * cd /path/to/site && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Without it nothing runs, so the report overview tells you rather than leaving
+you to notice from a document with an old date on it. It says the same thing
+again if scheduled scans were happening and have stopped. `php artisan
+schedule:list` shows what is registered.
+
+A scheduled scan will not start while another is queued or running. It does not
+fail the way `--sync` does: issue counts and pages that could not be read are
+on the screen and in the report, and a weekly job that reports a failure every
+week is one whose mail stops being read.
+
 ## In the entry sidebar
 
 Accessibility Gate's panel on an entry screen shows this page's open issues

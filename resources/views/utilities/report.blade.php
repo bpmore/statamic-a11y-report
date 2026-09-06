@@ -43,6 +43,21 @@
         </div>
     @endif
 
+    @if ($schedule && ($schedule['last'] === null || $schedule['missed']))
+        <ui-card-panel heading="{{ $schedule['last'] === null ? 'No scan has ever run on schedule' : 'Scheduled scans have stopped' }}">
+            <div class="space-y-2">
+                @if ($schedule['last'] === null)
+                    <p>The config file asks for a <strong>@plain($schedule['label'])</strong> scan, and none has run. A schedule nobody runs looks exactly like one that runs and finds nothing, so this says it out loud rather than letting a report carry a date that quietly stopped moving.</p>
+                @else
+                    <p>The config file asks for a <strong>@plain($schedule['label'])</strong> scan. The last one ran {{ $schedule['last']->created_at->diffForHumans() }} and at least two runs have been missed since.</p>
+                @endif
+                <p>Laravel's scheduler has to be running on the server for any of it to happen. One line in the crontab, which covers every scheduled task the site has and not only this one:</p>
+                <pre class="text-sm">* * * * * cd @plain(base_path()) &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</pre>
+                <p>To check what is registered: <code>php artisan schedule:list</code>. To stop asking for a scheduled scan, set <code>scan.schedule</code> to <code>false</code> in <code>config/statamic-a11y-report.php</code>.</p>
+            </div>
+        </ui-card-panel>
+    @endif
+
     @if ($stale)
         <ui-card-panel heading="This scan is not moving">
             <div class="space-y-2">
@@ -88,6 +103,9 @@
                         <span>{{ ($latest->finished_at ?? $latest->started_at ?? $latest->created_at)->diffForHumans() }}</span>
                     </div>
                     <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                        @if ($schedule && $schedule['last'] !== null && ! $schedule['missed'])
+                            <dt class="opacity-70">Next scheduled</dt><dd>@plain($schedule['label']), next due {{ \Illuminate\Support\Carbon::instance($schedule['next'])->diffForHumans() }}</dd>
+                        @endif
                         <dt class="opacity-70">Pages read</dt><dd>{{ $latest->pages_scanned }} of {{ $latest->pages_total }}</dd>
                         <dt class="opacity-70">Could not be read</dt><dd>{{ $latest->pages_errored }}</dd>
                         <dt class="opacity-70">Issues found</dt><dd>{{ $latest->issues_total }}</dd>

@@ -23,6 +23,11 @@ use Statamic\Console\RunsInPlease;
  * writes rows and normally hands the reading to the queue. `--sync` keeps it in
  * this process and exits non-zero above the configured thresholds, which is
  * the shape a deploy pipeline wants.
+ *
+ * `--scheduled` is the scheduler's, and differs in two ways: the scan row says
+ * it was started on schedule, and it does not start at all while another scan
+ * is queued or running. A person pressing the button during a scan is
+ * deliberate; a cron doing it is a pile-up nobody is watching.
  */
 class Scan extends Command
 {
@@ -34,7 +39,11 @@ class Scan extends Command
         {--since= : Only entries changed since a date, or since something like "7 days ago".}
         {--sync : Run in this process instead of on the queue, and exit non-zero above the configured thresholds.}
         {--engine= : Which engine to read pages with: "php" or "axe".}
-        {--resume= : The id of a scan to pick up where it stopped.}';
+        {--resume= : The id of a scan to pick up where it stopped.}
+        {--scheduled : Record this as a scan started on schedule, and skip it if one is already running. For the scheduler.}';
+
+    /** What the schedule registers, and what recognises it there again. */
+    public const SCHEDULED_SIGNATURE = 'a11y:scan --scheduled';
 
     protected $description = 'Scan every page, keep what was found, and track each problem across scans.';
 
@@ -64,6 +73,21 @@ class Scan extends Command
         }
 
         $sync = (bool) $this->option('sync');
+        $scheduled = (bool) $this->option('scheduled');
+
+        // A scan that outlasts its own interval must not meet the next one.
+        // Two half-finished scans of the same site is worse than a late one,
+        // and the overview already tells a person when a scan has stopped
+        // moving. Skipping is the right outcome and not a failure, so this
+        // exits zero: a scheduler that mails a failure every week for working
+        // correctly gets its mail filtered, and then the real one is missed.
+        if ($scheduled && ($running = ScanModel::whereIn('status', [ScanModel::QUEUED, ScanModel::RUNNING])->orderByDesc('id')->first()) !== null) {
+            $this->line('');
+            $this->line("  Scan <options=bold>{$running->uuid}</> is still {$running->status}, so this scheduled scan was skipped.");
+            $this->line('');
+
+            return 0;
+        }
 
         if ($resume = $this->option('resume')) {
             $scan = ScanModel::where('uuid', $resume)->first();
@@ -85,7 +109,13 @@ class Scan extends Command
                 $this->option('since'),
             );
 
-            $scan = $scans->create($scope, $sync ? ScanModel::TRIGGER_CI : ScanModel::TRIGGER_MANUAL, 'console');
+            $trigger = match (true) {
+                $scheduled => ScanModel::TRIGGER_SCHEDULED,
+                $sync => ScanModel::TRIGGER_CI,
+                default => ScanModel::TRIGGER_MANUAL,
+            };
+
+            $scan = $scans->create($scope, $trigger, $scheduled ? 'schedule' : 'console');
 
             $this->line('');
             $this->line("  Scan <options=bold>{$scan->uuid}</> created.");
@@ -102,7 +132,7 @@ class Scan extends Command
 
         $this->summarise($scan);
 
-        return $this->exitCode($scan);
+        return $this->exitCode($scan, $scheduled);
     }
 
     private function ensureInstalled(ReportDatabase $database): bool
@@ -167,13 +197,25 @@ class Scan extends Command
      * read. The second half is not configurable, for the reason the gate's
      * is not: a build that went green because four pages failed to render is
      * worse than no check at all.
+     *
+     * None of that applies to the scheduler, which gates nothing. A weekly
+     * scan of a site with one page that never renders would fail every week
+     * for ever, and a cron that always fails is a cron whose mail is filtered,
+     * which is how the one that matters gets missed. The counts are still
+     * printed, and the overview and the report are where they are read: a
+     * scheduled run reports a failure only when the scan itself did not
+     * finish, which is the thing a person running cron can act on.
      */
-    private function exitCode(ScanModel $scan): int
+    private function exitCode(ScanModel $scan, bool $scheduled = false): int
     {
         if ($scan->status !== ScanModel::COMPLETE) {
             $this->error("  The scan did not complete: {$scan->status}.");
 
             return 1;
+        }
+
+        if ($scheduled) {
+            return 0;
         }
 
         if ($scan->pages_errored > 0) {

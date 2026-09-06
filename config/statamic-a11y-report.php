@@ -85,11 +85,25 @@ return [
     | 'sites' and 'collections' take handles, or ['*'] for all of them.
     | 'exclude_urls' takes wildcard patterns matched against the full URL.
     |
+    | 'schedule' is 'daily', 'weekly' (Sunday), 'monthly' (the 1st), any cron
+    | expression, or false for no scheduled scan. 'schedule_at' is the time of
+    | day the named frequencies run at. It needs Laravel's scheduler running on
+    | the server:
+    |
+    |     * * * * * cd /path/to/site && php artisan schedule:run >> /dev/null 2>&1
+    |
+    | Without that line nothing here runs, and the report overview says so
+    | rather than leaving you to find out from a document with a stale date on
+    | it. 'hourly' is deliberately not a frequency you can name: a scan renders
+    | every published page, and a cron expression is the deliberate act that
+    | asking for that should be.
+    |
     */
 
     'scan' => [
         'concurrency' => 3,
         'schedule' => 'weekly',
+        'schedule_at' => '02:00',
         // After this many minutes with no page read, the overview says the
         // scan is not moving and what to run. A queue nobody works looks
         // exactly like a queue that is about to start, otherwise.

@@ -229,6 +229,13 @@ resolved time, and reopens if the page comes back with the problem. A scan
 narrowed by `--since`, by site or collection, or by an excluded URL closes
 nothing it could not have met.
 
+**A scan that is not moving stays on the screen until it is cleared.** The
+warning asks for the oldest scan that has not finished rather than the newest
+scan of any kind, so running one by hand no longer takes it off the page while
+the block stays. It says that scheduled scans are skipped until the stuck one
+ends, counts any others that have not finished, and is not scoped to a site,
+because the scan holding up the queue may be another site's.
+
 **The stale scan warning.** The overview says when a scan has been queued or
 running with nothing read for longer than `scan.stale_after_minutes`, the
 likely cause, and what to run. 

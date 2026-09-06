@@ -12,6 +12,40 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-06: The stuck-scan warning asks the oldest unfinished scan, not the newest scan
+
+A scheduled scan is skipped while anything is queued or running, so one wedged
+scan stops the schedule until somebody clears it. The panel that says a scan is
+not moving asked `latest()`: the newest scan of any kind.
+
+Those two questions come apart the moment anybody presses the button. Scan A
+wedges. Somebody runs scan B by hand and it completes. The newest scan is now
+complete, so the panel goes quiet, while A is still running and every scheduled
+scan is still being skipped. The schedule is stopped and the screen says
+nothing.
+
+Run rather than reasoned about, because "the newest scan" reads like the right
+question: a stuck scan, then a manual one, and the panel went from warning to
+silent while the scheduler created nothing and the blocker stayed `running`.
+
+So it asks for the oldest scan that has not finished, which is the one to clear
+first, and counts the others, because clearing it may not be the last step. The
+panel also says out loud what the block costs, which it never did: the reader
+could see a scan was stuck without knowing the schedule had stopped with it.
+
+**Not scoped to a site**, for the same reason the schedule is not. The
+scheduler's own check is install-wide, and the scan holding everything up may
+be another site's. Site scoping is strict for counts, because a number under
+the wrong denominator is wrong; this is not a count, it is the state of the
+install's queue.
+
+Still true, and still deliberate: there is no way to cancel a scan. `--resume`
+with `--sync` finishes one in a process of its own, which is what the panel
+prints, and a scan that cannot be finished has to be ended in the database. A
+cancel is worth having and is not this.
+
+---
+
 ## 2026-09-05: The exception register is capped, and says what it left out
 
 The appendix of open issues has had `report.appendix_limit` since it was

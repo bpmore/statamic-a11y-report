@@ -205,3 +205,54 @@ it('says when a scan is not moving, and what to run', function () {
     config()->set('statamic-a11y-report.scan.stale_after_minutes', 1);
     expect(reportPage())->toContain('has been <strong>running</strong> for 2 minutes');
 });
+
+it('keeps saying a scan is stuck after a later one has finished', function () {
+    app(ReportDatabase::class)->install();
+    page('one', '<p>Fine.</p>');
+
+    // Wedged half an hour ago, on a queue nobody is working.
+    $stuck = runScan();
+    $stuck->update(['status' => Scan::RUNNING, 'finished_at' => null, 'created_at' => now()->subMinutes(30), 'started_at' => now()->subMinutes(30)]);
+    \Bpmore\A11yReport\Models\ScanPage::where('scan_id', $stuck->id)->update(['status' => 'pending', 'scanned_at' => null]);
+
+    expect(reportPage())->toContain('php please a11y:scan --resume='.$stuck->uuid.' --sync');
+
+    // Somebody runs one by hand, and it finishes. Nothing about the wedged
+    // scan has changed: a scheduled scan is still skipped while anything is
+    // queued or running, and it is still the thing to clear.
+    $later = runScan();
+
+    expect($later->status)->toBe(Scan::COMPLETE);
+
+    $text = reportPage();
+
+    // Asking the newest scan instead of the oldest unfinished one took the
+    // panel off the screen here and left the schedule stopped with nothing
+    // on the page saying so.
+    expect($text)->toContain('This scan is not moving');
+    expect($text)->toContain('php please a11y:scan --resume='.$stuck->uuid.' --sync');
+    expect($text)->toContain('every scheduled scan is skipped');
+});
+
+it('names the oldest unfinished scan, and counts the rest', function () {
+    app(ReportDatabase::class)->install();
+    page('one', '<p>Fine.</p>');
+
+    $first = runScan();
+    $second = runScan();
+
+    foreach ([[$first, 40], [$second, 25]] as [$scan, $minutes]) {
+        $scan->update(['status' => Scan::RUNNING, 'finished_at' => null, 'created_at' => now()->subMinutes($minutes), 'started_at' => now()->subMinutes($minutes)]);
+        \Bpmore\A11yReport\Models\ScanPage::where('scan_id', $scan->id)->update(['status' => 'pending', 'scanned_at' => null]);
+    }
+
+    $stale = (new \Bpmore\A11yReport\Trends\Overview(app(ReportDatabase::class)))->stale(10);
+
+    // The oldest, because clearing it is the first step, and a count of the
+    // rest, because it may not be the last.
+    expect($stale['scan']->id)->toBe($first->id);
+    expect($stale['others'])->toBe(1);
+    expect($stale['minutes'])->toBe(40);
+
+    expect(reportPage())->toContain('1 other scan has not finished either');
+});

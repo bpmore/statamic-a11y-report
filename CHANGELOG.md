@@ -182,7 +182,11 @@ nothing it could not have met.
 
 **The stale scan warning.** The overview says when a scan has been queued or
 running with nothing read for longer than `scan.stale_after_minutes`, the
-likely cause, and what to run.
+likely cause, and what to run. It reports the oldest scan that has not
+finished, so a scan run by hand afterwards does not take the warning off the
+page while the block stays, and it says that scheduled scans are skipped until
+that one ends. Any others that have not finished are counted. Not scoped to a
+site: the scan holding up the queue may be another site's.
 
 ### Changed
 

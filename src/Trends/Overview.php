@@ -42,8 +42,8 @@ final class Overview
     }
 
     /**
-     * The latest scan, when it is queued or running and nothing has happened
-     * to it for longer than the configured wait.
+     * The oldest scan that has not finished, when nothing has happened to it
+     * for longer than the configured wait.
      *
      * A scan on a queue nobody is working looks exactly like a scan that is
      * about to start, and it looked that way for an afternoon on a site
@@ -51,13 +51,26 @@ final class Overview
      * was the page's whole advice. Now it says how long it has been, and
      * what to run.
      *
-     * @return array{scan: Scan, minutes: int, pages_read: int}|null
+     * **The oldest unfinished scan, and not the newest scan of any kind.**
+     * A scheduled scan is skipped while anything is queued or running, so a
+     * wedged scan blocks every one of them until somebody clears it. Asking
+     * the newest scan meant one manual run afterwards took the warning off
+     * the screen and left the block exactly where it was: the panel went
+     * quiet, the schedule stayed stopped, and nothing on the page said so.
+     *
+     * **Not scoped to a site**, for the same reason the schedule is not: what
+     * it reports is the state of the install's queue, and the scan that is
+     * blocking may be one of another site's.
+     *
+     * @return array{scan: Scan, minutes: int, pages_read: int, others: int}|null
      */
     public function stale(int $afterMinutes = 10): ?array
     {
-        $scan = $this->latest();
+        $unfinished = Scan::whereIn('status', [Scan::QUEUED, Scan::RUNNING]);
 
-        if ($scan === null || ! in_array($scan->status, [Scan::QUEUED, Scan::RUNNING], true)) {
+        $scan = (clone $unfinished)->orderBy('id')->first();
+
+        if ($scan === null) {
             return null;
         }
 
@@ -72,6 +85,8 @@ final class Overview
             'scan' => $scan,
             'minutes' => (int) $since->diffInMinutes(now()),
             'pages_read' => (int) ScanPage::where('scan_id', $scan->id)->where('status', ScanPage::SCANNED)->count(),
+            // Clearing the oldest is the first step and may not be the last.
+            'others' => (int) (clone $unfinished)->count() - 1,
         ];
     }
 

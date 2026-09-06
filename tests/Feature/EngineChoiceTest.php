@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Bpmore\A11yReport\Chrome\Browser;
 use Bpmore\A11yReport\Engine\AxeEngine;
+use Bpmore\A11yReport\Engine\Engines;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
+use Bpmore\A11yReport\Models\Issue;
 use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Models\ScanPage;
@@ -218,4 +220,103 @@ it('reports what the engine that ran could cite, not what the one bound now can'
     $data = app(\Bpmore\A11yReport\Document\ReportBuilder::class)->build($axe->fresh(), 'tester');
 
     expect($data['methods']['automated_criteria'])->toBe(['1.1.1', '1.4.3', '4.1.2']);
+});
+
+it('reads a queued page with the engine its own scan names, not the one the config names', function () {
+    page('one', '<img src="/a.jpg">');
+    runScan();
+    $done = ScanPage::first();
+
+    // The row a `--engine=axe` run without `--sync` leaves behind. The console
+    // process chose the engine and queued the pages; the worker that reads
+    // them is another process, and its config file still says php.
+    $axe = Scan::create([
+        'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        'trigger' => Scan::TRIGGER_MANUAL,
+        'status' => Scan::RUNNING,
+        'engine' => 'axe',
+        'engine_version' => '4.11.0',
+        'ruleset' => 'wcag22aa+best-practice',
+        'criteria' => ['1.1.1', '1.4.3', '4.1.2'],
+        'scope' => ['sites' => [], 'collections' => [], 'exclude_urls' => [], 'since' => null],
+        'started_at' => now(),
+        'pages_total' => 1,
+    ]);
+
+    $queued = ScanPage::create([
+        'scan_id' => $axe->id,
+        'entry_id' => $done->entry_id,
+        'site' => $done->site,
+        'collection' => $done->collection,
+        'url' => $done->url,
+        'path' => $done->path,
+        'status' => ScanPage::PENDING,
+    ]);
+
+    config()->set('statamic-a11y-report.engine', 'php');
+    config()->set('statamic-a11y-report.chrome.binary', '/nowhere/at/all/chrome');
+
+    app(Scans::class)->scanPage($axe->id, $queued->id);
+
+    // Not read at all, rather than read by the other engine. The page has an
+    // image with no description, which the PHP checker would have found, so
+    // an empty scan is the proof that it never ran: a row saying axe filled
+    // with the checker's findings would have the report claim two dozen
+    // criteria were evaluated of a scan that evaluated six.
+    expect($queued->refresh()->status)->toBe(ScanPage::ERROR);
+    expect($queued->error)->toContain('no Chrome was found');
+    expect(Issue::where('scan_id', $axe->id)->count())->toBe(0);
+});
+
+it('builds the engine a scan row names even while the config names another', function () {
+    if (! (new Browser)->available()) {
+        test()->markTestSkipped('No Chrome on this machine.');
+    }
+
+    config()->set('statamic-a11y-report.engine', 'php');
+
+    $engines = app(Engines::class);
+
+    // Two different questions, and the whole of the fix is that they are not
+    // answered by the same lookup: what a new scan should run with, and how to
+    // rebuild the one a scan row already names.
+    expect($engines->configured())->toBeInstanceOf(PhpDomEngine::class);
+    expect($engines->make('axe'))->toBeInstanceOf(AxeEngine::class);
+
+    // Held, so a scan of hundreds of pages starts one browser and not hundreds.
+    expect($engines->make('axe'))->toBe($engines->make('axe'));
+});
+
+it('refuses to read a page for a scan run by an engine it does not have', function () {
+    page('one', '<img src="/a.jpg">');
+    runScan();
+    $done = ScanPage::first();
+
+    $gone = Scan::create([
+        'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        'trigger' => Scan::TRIGGER_MANUAL,
+        'status' => Scan::RUNNING,
+        'engine' => 'pa11y',
+        'engine_version' => '1.0.0',
+        'ruleset' => 'wcag22aa',
+        'scope' => ['sites' => [], 'collections' => [], 'exclude_urls' => [], 'since' => null],
+        'started_at' => now(),
+        'pages_total' => 1,
+    ]);
+
+    $queued = ScanPage::create([
+        'scan_id' => $gone->id,
+        'entry_id' => $done->entry_id,
+        'site' => $done->site,
+        'collection' => $done->collection,
+        'url' => $done->url,
+        'path' => $done->path,
+        'status' => ScanPage::PENDING,
+    ]);
+
+    app(Scans::class)->scanPage($gone->id, $queued->id);
+
+    expect($queued->refresh()->status)->toBe(ScanPage::ERROR);
+    expect($queued->error)->toContain('pa11y');
+    expect(Issue::where('scan_id', $gone->id)->count())->toBe(0);
 });

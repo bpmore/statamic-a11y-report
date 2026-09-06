@@ -12,6 +12,57 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-05: The engine is a property of the scan, not of the process reading it
+
+`a11y:scan --engine=axe` set the config in the console process and queued the
+pages. The worker is another process: it read the config file, built the PHP
+checker, and read every page with it. The row said `axe`, carried axe's version,
+its ruleset and its two dozen criteria, and the document generated from it
+printed "automated checks for the parts of this criterion they test found no
+failures" under criteria nothing had looked at.
+
+It never became a false `supports` — `AssessmentMerger` rule 3 held, and no
+criterion without a person's locked judgement can be anything but "not
+evaluated". So it was a false sentence of evidence rather than a false
+conformance claim, which is the difference between a serious bug and the one
+this product must never ship. It was still a document making a statement about
+work nobody did.
+
+**The fix is that a page is read by the engine its own scan row names.**
+`Scans::scanPage` builds it from `$page->scan->engine`, and the flag needs to
+reach nothing but the row it writes. `--resume` is covered by the same rule,
+free: a scan resumed a week later on a differently configured machine still
+runs what it started as.
+
+**So `Engines` answers two questions and they are deliberately not one lookup.**
+`configured()` is "what should a new scan run with", and it may fall back:
+asking for axe with no Chrome scans with the PHP checker and says so, because
+the alternative is failing every page, and the row records the one that ran.
+`make()` is "build exactly this key", and it never falls back. The two used to
+be the same question, which was correct only while every process agreed on the
+answer.
+
+**A worker that cannot build the scan's engine refuses the page.** It does not
+quietly use the other one. That is the same rule as the fallback, applied at
+the point where it is no longer free: before the first page is read, falling
+back costs nothing because nothing has been claimed yet; after the row exists,
+falling back would fill a scan with findings it does not describe. So a queue
+whose workers have no Chrome fails a scan loudly instead of filing the lesser
+engine's results under the fuller one's name.
+
+Turned down: refusing `--engine` unless `--sync` is also given. It would have
+closed the hole in one line, and it would have left the same hole open for
+`--resume`, for a config file edited while a scan was queued, and for a queue
+whose workers were deployed from a different branch. The bug was not the flag.
+It was that the engine was looked up per process rather than carried on the
+record, in a product whose whole rule is that the record carries what it was
+made with.
+
+Checked by breaking it: both regression tests go red when `scanPage` is put
+back to the configured engine.
+
+---
+
 ## 2026-09-04: axe-core in headless Chrome, and the four things that had to change around it
 
 The second engine, and the reason `ScanEngine` was an interface from the

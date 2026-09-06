@@ -26,9 +26,14 @@ so in the log; the scan row records which one actually ran, so a report can
 never be mistaken for the other engine's.
 
 `php please a11y:scan --engine=axe` runs one scan with it without changing the
-config. `axe.best_practices` controls axe's own rules that cite no success
-criterion: they are reported apart from WCAG under their own names, never as
-it, and some of them fire on nearly every page of some themes.
+config, on the queue as well as under `--sync`: every page is read by the
+engine its own scan row names, so the worker does not have to be told twice.
+Every machine that works the queue needs Chrome for that; a page a worker
+cannot run the scan's engine on is a page that could not be read, and never a
+page quietly read by the other one. `axe.best_practices` controls axe's own
+rules that cite no success criterion: they are reported apart from WCAG under
+their own names, never as it, and some of them fire on nearly every page of
+some themes.
 
 Level AAA is never run, whatever the standard is set to. The conformance table
 has no AAA row.

@@ -4,15 +4,11 @@ declare(strict_types=1);
 
 namespace Bpmore\A11yReport;
 
-use Bpmore\A11yGate\Accessibility\StaticAccessibilityChecker;
 use Bpmore\A11yGate\Gate\EntryRenderer;
-use Bpmore\A11yGate\Gate\GateSettings;
 use Bpmore\A11yReport\Document\Brand;
 use Bpmore\A11yReport\Document\ReportBuilder;
-use Bpmore\A11yReport\Chrome\Browser;
-use Bpmore\A11yReport\Chrome\DevTools;
 use Bpmore\A11yReport\Document\ReportWriter;
-use Bpmore\A11yReport\Engine\AxeEngine;
+use Bpmore\A11yReport\Engine\Engines;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Scan\Scans;
@@ -23,7 +19,6 @@ use Bpmore\A11yReport\Trends\Overview;
 use Bpmore\A11yReport\Trends\TrendChart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\Log;
 use Statamic\Facades\Addon;
 use Statamic\Facades\Permission;
 use Statamic\Facades\Site;
@@ -156,17 +151,6 @@ class ServiceProvider extends AddonServiceProvider
     }
 
     /**
-     * The WCAG version the report is written against, which is also the set
-     * of rules an engine that can choose should run.
-     */
-    private static function reportStandard(): string
-    {
-        $configured = app(Settings::class)->block('report')['standard'] ?? null;
-
-        return is_string($configured) && isset(\Bpmore\A11yReport\Document\Wcag::STANDARDS[$configured]) ? $configured : 'wcag22aa';
-    }
-
-    /**
      * @return array<string, mixed>
      */
     private function utilityData(Request $request): array
@@ -216,46 +200,17 @@ class ServiceProvider extends AddonServiceProvider
 
         $this->app->bind(EntryRenderer::class, fn ($app) => new EntryRenderer($app));
 
+        // One place builds engines, and it answers two different questions:
+        // what a new scan should run with, and how to rebuild exactly the one
+        // a scan row already names. See `Engines`.
+        $this->app->singleton(Engines::class, fn ($app) => new Engines($app));
+
         // A singleton, not a binding. The axe engine holds a headless Chrome
         // open across pages because starting one costs the better part of a
         // second, and `Scans` is resolved once per queued page: bound rather
         // than shared, every page would start and stop its own browser and the
         // saving would be exactly reversed.
-        $this->app->singleton(ScanEngine::class, function ($app) {
-            $wanted = (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY);
-
-            if ($wanted === AxeEngine::KEY) {
-                $browser = new Browser(config('statamic-a11y-report.chrome.binary'));
-
-                if ($browser->available()) {
-                    return new AxeEngine(
-                        new DevTools(
-                            $browser,
-                            (int) config('statamic-a11y-report.chrome.timeout', 30),
-                            (int) config('statamic-a11y-report.axe.settle_ms', 250),
-                        ),
-                        self::reportStandard(),
-                        (bool) config('statamic-a11y-report.axe.best_practices', true),
-                    );
-                }
-
-                // Scanning with the lesser engine beats failing every page,
-                // and it is not a quiet swap: the scan row carries "php", and
-                // the report says which criteria that engine can speak to.
-                Log::warning('a11y-report: the axe engine needs Chrome and none was found; scanning with the PHP checker instead. Set A11Y_CHROME_PATH to the browser binary.');
-            } elseif ($wanted !== PhpDomEngine::KEY) {
-                Log::warning("a11y-report: there is no [{$wanted}] engine; scanning with the PHP checker instead.");
-            }
-
-            $settings = $app->make(GateSettings::class);
-
-            return new PhpDomEngine(
-                new StaticAccessibilityChecker,
-                (string) (Addon::get('bpmore/statamic-a11y-gate')?->version() ?: 'dev'),
-                $settings->standard,
-                $settings->optedIn,
-            );
-        });
+        $this->app->singleton(ScanEngine::class, fn ($app) => $app->make(Engines::class)->configured());
 
         $this->app->bind(Settings::class, fn () => new Settings);
 
@@ -286,7 +241,7 @@ class ServiceProvider extends AddonServiceProvider
         ));
 
         $this->app->bind(Scans::class, fn ($app) => new Scans(
-            $app->make(ScanEngine::class),
+            $app->make(Engines::class),
             $app->make(EntryRenderer::class),
             $app->make(Settings::class)->effective(),
         ));

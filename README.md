@@ -53,6 +53,13 @@ reachable from it. Ask for axe without Chrome and the scan runs the PHP checker
 instead and says so; the scan row and the report always name the engine that
 actually ran.
 
+Each page is read by the engine its own scan says read it, so `--engine=axe`
+holds on the queue and not only under `--sync`. Every machine that works the
+queue needs Chrome for that. A worker that cannot run the scan's engine marks
+the page as one that could not be read rather than reading it with the other
+one, because a row saying axe filled with the checker's findings would have the
+report name criteria nothing looked at.
+
 Level AAA is never run by either. The conformance table has no AAA row.
 
 axe-core is [Deque's](https://github.com/dequelabs/axe-core), MPL-2.0, bundled

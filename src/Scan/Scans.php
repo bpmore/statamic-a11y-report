@@ -7,10 +7,10 @@ namespace Bpmore\A11yReport\Scan;
 use Bpmore\A11yGate\Gate\CouldNotRender;
 use Bpmore\A11yGate\Gate\EntryHasNoPage;
 use Bpmore\A11yGate\Gate\EntryRenderer;
+use Bpmore\A11yReport\Engine\Engines;
 use Bpmore\A11yReport\Engine\Finding;
 use Bpmore\A11yReport\Engine\Fingerprint;
 use Bpmore\A11yReport\Engine\RenderedPage;
-use Bpmore\A11yReport\Engine\ScanEngine;
 use Bpmore\A11yReport\Jobs\FinalizeScan;
 use Bpmore\A11yReport\Jobs\ScanPage as ScanPageJob;
 use Bpmore\A11yReport\Models\Issue;
@@ -46,25 +46,30 @@ final class Scans
      * @param  array<string, mixed>  $config  the `pro` config block
      */
     public function __construct(
-        private readonly ScanEngine $engine,
+        private readonly Engines $engines,
         private readonly EntryRenderer $renderer,
         private readonly array $config,
     ) {}
 
     public function create(ScanScope $scope, string $trigger = Scan::TRIGGER_MANUAL, ?string $initiatedBy = null): Scan
     {
+        // What this machine can actually run, which is where a fall back from
+        // axe to the PHP checker is settled: once, here, and recorded, so the
+        // row never claims an engine that did not read a single page.
+        $engine = $this->engines->configured();
+
         return Scan::create([
             'uuid' => (string) Str::uuid(),
             'site' => $scope->site(),
             'trigger' => $trigger,
             'status' => Scan::QUEUED,
-            'engine' => $this->engine->key(),
-            'engine_version' => $this->engine->version(),
-            'ruleset' => $this->engine->ruleset(),
+            'engine' => $engine->key(),
+            'engine_version' => $engine->version(),
+            'ruleset' => $engine->ruleset(),
             // What this engine could speak to, kept on the row: a report
             // generated later must not have to ask an engine that was not the
             // one that ran.
-            'criteria' => $this->engine->criteria(),
+            'criteria' => $engine->criteria(),
             'scope' => $scope->toArray(),
             'initiated_by' => $initiatedBy,
         ]);
@@ -168,7 +173,7 @@ final class Scans
      */
     public function scanPage(int $scanId, int $pageId): void
     {
-        $page = ScanPage::whereKey($pageId)->where('scan_id', $scanId)->first();
+        $page = ScanPage::with('scan')->whereKey($pageId)->where('scan_id', $scanId)->first();
 
         if ($page === null || $page->status !== ScanPage::PENDING) {
             return;
@@ -205,7 +210,12 @@ final class Scans
         $renderMs = $this->elapsed($started);
 
         try {
-            $result = $this->engine->scan(new RenderedPage($page->url, $html));
+            // The engine this scan says read it, and never whichever one the
+            // config file names now. They are the same process only when the
+            // scan ran with `--sync`: a queued page is read by a worker that
+            // has its own copy of the config, and reading it with the other
+            // engine would fill this row with findings it does not describe.
+            $result = $this->engines->make((string) $page->scan->engine)->scan(new RenderedPage($page->url, $html));
         } catch (Throwable $e) {
             $this->markPage($page, ScanPage::ERROR, error: 'the engine failed: '.$e->getMessage(), renderMs: $renderMs);
 

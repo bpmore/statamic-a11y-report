@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bpmore\A11yReport\Commands;
 
 use Bpmore\A11yReport\Engine\AxeEngine;
+use Bpmore\A11yReport\Engine\Engines;
 use Bpmore\A11yReport\Engine\Finding;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
@@ -45,21 +46,19 @@ class Scan extends Command
 
         $engine = $this->option('engine');
 
-        if ($engine !== null && ! in_array($engine, [PhpDomEngine::KEY, AxeEngine::KEY], true)) {
-            $this->error("There is no [{$engine}] engine. Available: ".PhpDomEngine::KEY.', '.AxeEngine::KEY.'.');
+        if ($engine !== null && ! Engines::knows($engine)) {
+            $this->error("There is no [{$engine}] engine. Available: ".implode(', ', Engines::KEYS).'.');
 
             return 1;
         }
 
         if ($engine !== null) {
-            // Set before the scan layer is built, then built again: `Scans`
-            // was resolved with the configured engine before this method ran,
-            // and a flag that changed the config and nothing else would report
-            // the engine the file names while running the one it does not.
+            // The flag decides what this scan is created with, and the row it
+            // writes decides what reads every page of it, in this process or
+            // in a queue worker that never saw the flag. Forgotten as well as
+            // set, because anything already resolved here was built from the
+            // config file.
             config(['statamic-a11y-report.engine' => $engine]);
-            // The engine is shared, so it has already been built from the
-            // config file by the time this method runs. Forgotten first, or
-            // the flag would change the config and nothing else.
             app()->forgetInstance(ScanEngine::class);
             $scans = app(Scans::class);
         }

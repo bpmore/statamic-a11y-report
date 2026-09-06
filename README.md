@@ -8,15 +8,19 @@ at 0.7 or later, which stays free. The report is a paid addon.
 
 ## Status
 
-The scan layer, the overview, the HTML and PDF conformance report, the
-accessibility statement, the remediation queue and the criteria worksheet
-are built.
+Every pillar in the brief is built: the scan layer and both engines, the
+overview, the HTML and PDF conformance report, the accessibility statement,
+the remediation queue and its policy, the criteria worksheet, the recurring
+scan, and this page's open issues in the gate's own entry sidebar.
 
 `php please a11y:scan` reads every published page on the queue, keeps every
-finding, records how much of each page the engine could see, and follows each
-problem from one scan to the next by a fingerprint of rule, target, site and
-path. Every pillar in the brief is built. What is not: the gate's entry sidebar
-showing a page's open issues, which belongs in the gate.
+finding, records which engine read it and how much of it that engine could
+see, and follows each problem from one scan to the next by a fingerprint of
+rule, target, site and path.
+
+Nothing is released yet. Everything above is under Unreleased in the
+[changelog](CHANGELOG.md), and the reasoning behind the choices that are not
+obvious from the code is in the [decision log](docs/DECISIONS.md).
 
 ## Install
 

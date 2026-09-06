@@ -87,6 +87,36 @@ this release was the only one there was.
 
 ### Added
 
+**Remediation targets and an exception register.** How long a problem of each
+impact may stay open before the queue and the report call it past target, and
+what has been accepted instead of fixed, by whom, and until when. Set the
+numbers in the control panel under Addons, Accessibility Report, Settings, or
+in `report.remediation` in the config file; zero days means no target for that
+impact.
+
+"Won't fix" now needs a reason and a date it runs out on. The reason is printed
+in the report. There is no permanent acceptance: the date cannot be set further
+ahead than the review period, and past it the issue counts as open again until
+somebody looks. The stored decision is never rewritten by a scan or a job.
+
+**None of this changes what a report claims.** An accepted failure is still a
+failure: it is still counted under its success criterion, the criterion is
+still "Does not support", and the issue is still listed in the document rather
+than left out. Nothing here can move a criterion out of the conformance table
+or mark one as supported.
+
+The report's last section grows from a paragraph into the targets, how they are
+being met, the register of what has been accepted, and any acceptances that
+have run out. Each report records the targets that were in force when it was
+generated, so a document filed months ago still makes sense after you change
+them.
+
+**Upgrading:** run `php please a11y:report:install` to add the columns. Issues
+already marked "won't fix" keep that status and are given a review date counted
+from the upgrade, with whatever note and name they carried. They are not
+reopened, and they do not stay accepted forever.
+
+
 **The scan layer.** `a11y:report:install` creates the tables, on a SQLite file
 the addon owns by default or on any connection the site names. `a11y:scan`
 reads every published page on the queue, keeps every finding, records how much
@@ -140,6 +170,11 @@ conformance status is derived from the latest report and cannot be set;
 the organisation's words come from config with per-site overrides. Section
 508 and EN 301 549 templates. `a11y:statement:refresh` clears the page from
 the static cache.
+
+The exception register takes the same `report.appendix_limit` as the appendix
+of open issues, keeps the acceptances that run out soonest, and says how many
+it did not list. An accepted issue the register leaves out is still counted
+under its success criterion.
 
 **The remediation queue.** A second page under the utility: every issue the
 scans know about with its status, filtered by status, impact, criterion,

@@ -88,7 +88,17 @@
                         <ui-badge color="{{ ['critical' => 'red', 'serious' => 'amber', 'moderate' => 'blue', 'minor' => 'default'][$impact] }}" text="{{ $count }} {{ $impact }}" pill />
                     @endforeach
                 </div>
-                <ui-description text="Counted from the last scan that read each page. A problem somebody marked as won't fix or a false positive is not open." />
+                @if ($overdueTotal > 0 || $expiredExceptions > 0)
+                    <div class="flex flex-wrap gap-2">
+                        @if ($overdueTotal > 0)
+                            <ui-badge color="red" text="{{ $overdueTotal }} past target" />
+                        @endif
+                        @if ($expiredExceptions > 0)
+                            <ui-badge color="amber" text="{{ $expiredExceptions }} {{ $expiredExceptions === 1 ? 'acceptance has' : 'acceptances have' }} run out" />
+                        @endif
+                    </div>
+                @endif
+                <ui-description text="Counted from the last scan that read each page. A problem marked as a false positive is not open, and nor is an accepted one until the date it was accepted until has gone." />
                 <ui-button size="sm" href="@plain($indexUrl)" text="Open the issue queue" />
             </div>
         </ui-card-panel>

@@ -236,7 +236,18 @@
                             <td>@if (($u = \Bpmore\A11yReport\Document\Wcag::urlFor((string) (($i['criteria'] ?? [])[0] ?? ''), $r['standard'])) !== null)<a href="{{ $u }}">{{ $i['label'] }}</a>@else{{ $i['label'] }}@endif</td>
                             <td>{{ ucfirst($i['impact']) }}</td>
                             <td>{{ $i['message'] }}@if ($i['target']) <span class="evidence">({{ $i['target'] }}{{ $i['occurrences'] > 1 ? ', '.$i['occurrences'].' times' : '' }})</span>@endif</td>
-                            <td>{{ str_replace('_', ' ', (string) $i['state']) }}</td>
+                            <td>
+                                @if ($i['acceptance_expired_at'])
+                                    Accepted until {{ \Illuminate\Support\Carbon::parse($i['acceptance_expired_at'])->format('j F Y') }}, now expired
+                                @else
+                                    {{ str_replace('_', ' ', (string) $i['state']) }}
+                                @endif
+                                @if ($i['overdue_days'] !== null)
+                                    <span class="evidence">Past its target by {{ $i['overdue_days'] }} {{ $i['overdue_days'] === 1 ? 'day' : 'days' }}.</span>
+                                @elseif ($i['due_at'])
+                                    <span class="evidence">Due {{ \Illuminate\Support\Carbon::parse($i['due_at'])->format('j F Y') }}.</span>
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -244,14 +255,7 @@
         @endif
     </section>
 
-    <section id="remediation" aria-labelledby="remediation-heading">
-        <h2 id="remediation-heading">Remediation plan</h2>
-        @if ($r['remediation_plan'])
-            <p>{{ $r['remediation_plan'] }}</p>
-        @else
-            <p>No remediation plan has been recorded for this report.</p>
-        @endif
-    </section>
+    @include('a11y-report::report.remediation', ['r' => $r])
 
     <footer>
         <p>Generated {{ \Illuminate\Support\Carbon::parse($r['generated_at'])->format('j F Y, H:i T') }} by {{ $r['generated_by'] ?: 'an unknown user' }} from scan {{ $r['scan']['uuid'] }}, using {{ $r['generator'] }}. This document is a self-assessment. A page the automated checks found nothing wrong with has not been proven accessible.</p>

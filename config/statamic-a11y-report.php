@@ -130,6 +130,15 @@ return [
     | There is no setting that removes the scope and limits statement, and
     | there will not be one.
     |
+    | 'remediation' is the promise, not the claim. 'targets' is how many days
+    | a problem of each impact may stay open before the queue and the report
+    | call it overdue; 0 or null means no target for that impact.
+    | 'exception_days' is the longest an accepted problem may stay accepted
+    | before somebody has to look at it again. Nothing here can move a
+    | criterion, soften a conformance row, or take an issue out of the
+    | document. Each report records the policy it was generated under, so it
+    | stays readable after these numbers change.
+    |
     | 'brand' puts the customer's own mark on the cover, and reaches nothing
     | else: a logo, the words that stand in for it, and one heading colour
     | dark enough to read on white. 'logo' is an asset ('assets::logo.svg'),
@@ -150,6 +159,15 @@ return [
             'email' => null,
         ],
         'remediation_plan' => null,
+        'remediation' => [
+            'targets' => [
+                'critical' => 7,
+                'serious' => 30,
+                'moderate' => 90,
+                'minor' => null,
+            ],
+            'exception_days' => 180,
+        ],
         'appendix_limit' => 1000,
         'brand' => [
             'logo' => null,

@@ -8,7 +8,9 @@ use Bpmore\A11yReport\Engine\Finding;
 use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Models\ScanPage;
+use Bpmore\A11yReport\Remediation\Policy;
 use Bpmore\A11yReport\Scan\ScanSchedule;
+use Bpmore\A11yReport\Settings;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -180,9 +182,44 @@ final class Overview
         return $query;
     }
 
+    /**
+     * How many open problems are past the target the policy sets for their
+     * impact.
+     */
+    public function overdueTotal(): int
+    {
+        return $this->policy()->overdue($this->openStates())->count();
+    }
+
+    /** Acceptances that have run out and are counted as open again. */
+    public function expiredExceptions(): int
+    {
+        return $this->states()
+            ->where('status', IssueState::WONT_FIX)
+            ->whereNotNull('exception_expires_at')
+            ->where('exception_expires_at', '<=', now())
+            ->count();
+    }
+
+    private function policy(): Policy
+    {
+        return Policy::fromConfig(app(Settings::class)->block('report'));
+    }
+
+    /**
+     * Open right now, which includes an acceptance that has run out. One
+     * definition, on the model, shared with the queue and the report: three
+     * copies of this answer used to exist and would have disagreed the first
+     * time one of them changed.
+     */
     private function openStates()
     {
-        $query = IssueState::whereIn('status', [IssueState::OPEN, IssueState::IN_PROGRESS]);
+        return IssueState::openNow($this->states());
+    }
+
+    private function states()
+    {
+        $query = IssueState::query();
 
         if ($this->site !== null) {
             $query->where('site', $this->site);

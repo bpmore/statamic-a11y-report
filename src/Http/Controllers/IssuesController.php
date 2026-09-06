@@ -29,6 +29,15 @@ class IssuesController extends CpController
             'filters' => $query->filters,
             'options' => $installed ? IssueQuery::options() : ['sites' => [], 'assignees' => [], 'collections' => [], 'criteria' => []],
             'counts' => $installed ? $query->countsByStatus() : [],
+            // What the policy says about the queue: past target, and
+            // acceptances near or past the date they run out on.
+            'policyCounts' => $installed ? $query->policyCounts() : ['overdue' => 0, 'expiring' => 0, 'expired' => 0],
+            'policy' => $query->policy,
+            'dueOptions' => IssueQuery::DUE,
+            'expiringWithin' => IssueQuery::EXPIRING_WITHIN_DAYS,
+            // The furthest ahead an acceptance may be set to run to, so the
+            // date control cannot offer one the controller would refuse.
+            'latestExpiry' => $query->policy->latestExpiry()->format('Y-m-d'),
             'issues' => $installed ? $query->paginate((int) $request->query('page', 1)) : null,
             'queryString' => $query->queryString(),
             'canManage' => (bool) User::current()?->can('manage accessibility issues'),

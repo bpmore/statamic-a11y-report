@@ -12,6 +12,7 @@ use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Report;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Models\ScanPage;
+use Bpmore\A11yReport\Remediation\Policy;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Statamic\Facades\Site;
@@ -34,9 +35,12 @@ final class ReportBuilder
         private readonly array $config,
     ) {
         $this->evidence = new ScanEvidence($engine);
+        $this->policy = Policy::fromConfig($config);
     }
 
     private readonly ScanEvidence $evidence;
+
+    private readonly Policy $policy;
 
     /**
      * @return array<string, mixed>
@@ -131,6 +135,7 @@ final class ReportBuilder
             'issues' => $this->issues($scan),
             'issues_omitted' => max(0, $this->openIssueCount($scan) - $this->appendixLimit()),
             'remediation_plan' => $this->config['remediation_plan'] ?? null,
+            'remediation' => $this->remediation($scan),
         ];
     }
 
@@ -309,10 +314,137 @@ final class ReportBuilder
 
     private function openIssueQuery(Scan $scan)
     {
+        return IssueState::openNow($this->scanIssues($scan), 'a11y_issue_states.status');
+    }
+
+    /** This scan's issues, each with what has been decided about it. */
+    private function scanIssues(Scan $scan)
+    {
         return Issue::where('a11y_issues.scan_id', $scan->id)
             ->join('a11y_scan_pages', 'a11y_scan_pages.id', '=', 'a11y_issues.page_id')
-            ->leftJoin('a11y_issue_states', 'a11y_issue_states.fingerprint', '=', 'a11y_issues.fingerprint')
-            ->whereIn('a11y_issue_states.status', [IssueState::OPEN, IssueState::IN_PROGRESS]);
+            ->leftJoin('a11y_issue_states', 'a11y_issue_states.fingerprint', '=', 'a11y_issues.fingerprint');
+    }
+
+    /**
+     * What was promised, how it is being kept, and what has been accepted
+     * instead of fixed.
+     *
+     * Every number here is counted over the issues in this scan, so the
+     * section shares its denominator with the appendix beside it. An
+     * acceptance the scan did not meet is not this report's to speak about.
+     *
+     * Nothing in this section can change a row in the conformance table. An
+     * accepted failure is still a failure, and it is still counted under its
+     * criterion: `ScanEvidence` reads the issues and never the decisions
+     * about them, which is what stops the register becoming a way to make a
+     * report look clean.
+     *
+     * @return array<string, mixed>
+     */
+    private function remediation(Scan $scan): array
+    {
+        $targets = [];
+
+        foreach (Finding::IMPACTS as $impact) {
+            $open = (clone $this->openIssueQuery($scan))->where('a11y_issue_states.impact', $impact)->count();
+
+            $targets[] = [
+                'impact' => $impact,
+                'days' => $this->policy->targetFor($impact),
+                'open' => $open,
+                'overdue' => $this->policy->targetFor($impact) === null
+                    ? 0
+                    : $this->policy->overdue((clone $this->openIssueQuery($scan))->where('a11y_issue_states.impact', $impact), 'a11y_issue_states.')->count(),
+            ];
+        }
+
+        $oldest = (clone $this->openIssueQuery($scan))->min('a11y_issue_states.first_seen_at');
+
+        return [
+            'policy' => $this->policy->toArray(),
+            'targets' => $targets,
+            'open_total' => array_sum(array_column($targets, 'open')),
+            'overdue_total' => array_sum(array_column($targets, 'overdue')),
+            'untargeted_total' => array_sum(array_map(fn ($t) => $t['days'] === null ? $t['open'] : 0, $targets)),
+            'oldest_open_days' => $oldest === null ? null : (int) \Illuminate\Support\Carbon::parse($oldest)->diffInDays(now()),
+            'exceptions' => $this->exceptions($scan, expired: false),
+            'expired_exceptions' => $this->exceptions($scan, expired: true),
+            // Capped like the appendix beside it, and, like the appendix,
+            // saying how many it left out. A register is easy to make long:
+            // the queue accepts everything a filter matches in one press, and
+            // an uncapped one put every row of it into the HTML and into the
+            // PDF. Silently dropping accepted failures out of a compliance
+            // document would be the worse of the two answers, so the count
+            // goes in the sentence above the table.
+            'exceptions_omitted' => max(0, $this->exceptionCount($scan, expired: false) - $this->appendixLimit()),
+            'expired_exceptions_omitted' => max(0, $this->exceptionCount($scan, expired: true) - $this->appendixLimit()),
+            'plan' => $this->config['remediation_plan'] ?? null,
+        ];
+    }
+
+    /**
+     * The exception register: what has been accepted rather than fixed, with
+     * who accepted it and until when.
+     *
+     * An expired acceptance is listed apart and counted as open, because the
+     * decision was "accepted until this date" and the date has gone. The row
+     * still says "won't fix", which is what the person wrote; nothing here
+     * rewrites it.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function exceptions(Scan $scan, bool $expired): array
+    {
+        $query = $this->exceptionQuery($scan, $expired);
+
+        return $query
+            ->select([
+                'a11y_scan_pages.url', 'a11y_scan_pages.path', 'a11y_scan_pages.site',
+                'a11y_issues.label', 'a11y_issues.impact', 'a11y_issues.message',
+                'a11y_issue_states.exception_reason', 'a11y_issue_states.exception_by',
+                'a11y_issue_states.exception_at', 'a11y_issue_states.exception_expires_at',
+                'a11y_issue_states.first_seen_at',
+            ])
+            // Soonest to run out first, so a register that had to be cut keeps
+            // the acceptances somebody has to look at next.
+            ->orderBy('a11y_issue_states.exception_expires_at')
+            ->orderBy('a11y_scan_pages.path')
+            ->limit($this->appendixLimit())
+            ->get()
+            ->map(fn ($i) => [
+                'path' => $i->path,
+                'url' => $i->url,
+                'site' => $i->site,
+                'label' => $i->label,
+                'impact' => $i->impact,
+                'message' => $i->message,
+                'reason' => $i->exception_reason,
+                'accepted_by' => $i->exception_by,
+                'accepted_at' => $i->exception_at,
+                'expires_at' => $i->exception_expires_at,
+            ])
+            ->all();
+    }
+
+    /**
+     * The accepted issues of this scan, or the ones whose acceptance has run
+     * out. One definition, so the table and the count of what it left out
+     * cannot come to different answers.
+     */
+    private function exceptionQuery(Scan $scan, bool $expired)
+    {
+        $query = $this->scanIssues($scan);
+
+        return $expired
+            ? $query->where('a11y_issue_states.status', IssueState::WONT_FIX)
+                ->whereNotNull('a11y_issue_states.exception_expires_at')
+                ->where('a11y_issue_states.exception_expires_at', '<=', now())
+            : IssueState::accepted($query, 'a11y_issue_states.status');
+    }
+
+    private function exceptionCount(Scan $scan, bool $expired): int
+    {
+        return $this->exceptionQuery($scan, $expired)->count();
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -326,6 +458,7 @@ final class ReportBuilder
                 'a11y_issues.label', 'a11y_issues.wcag_criteria', 'a11y_issues.impact', 'a11y_issues.rule_id',
                 'a11y_issues.message', 'a11y_issues.remedy', 'a11y_issues.pointer', 'a11y_issues.selector', 'a11y_issues.occurrences',
                 'a11y_issue_states.status as state', 'a11y_issue_states.first_seen_at',
+                'a11y_issue_states.exception_expires_at',
             ])
             ->orderByRaw($rank)
             ->orderBy('a11y_scan_pages.path')
@@ -346,6 +479,12 @@ final class ReportBuilder
                 'occurrences' => (int) $i->occurrences,
                 'state' => $i->state,
                 'first_seen_at' => $i->first_seen_at,
+                // Computed from the policy in force, and printed rather than
+                // stored: the report carries the policy it was made under, so
+                // this date stays explicable when the promise changes.
+                'due_at' => $this->policy->dueAt((string) $i->impact, $i->first_seen_at)?->toIso8601String(),
+                'overdue_days' => $this->policy->overdueDays((string) $i->impact, $i->first_seen_at),
+                'acceptance_expired_at' => $i->exception_expires_at,
             ])
             ->all();
     }

@@ -110,7 +110,7 @@ it('resolves and unresolves with the status, and clears an assignee with a dash'
     seedQueue();
     $fp = IssueState::first()->fingerprint;
 
-    $this->actingAs($this->user)->post(cp_route('utilities.a11y-report.issues.update'), ['fingerprints' => [$fp], 'status' => 'wont_fix', 'assigned_to' => 'sam']);
+    $this->actingAs($this->user)->post(cp_route('utilities.a11y-report.issues.update'), ['fingerprints' => [$fp], 'status' => 'wont_fix', 'assigned_to' => 'sam', 'exception_reason' => 'Supplier widget.']);
     expect(IssueState::find($fp)->resolved_at)->not->toBeNull();
     expect(IssueState::find($fp)->assigned_to)->toBe('sam');
 

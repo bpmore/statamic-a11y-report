@@ -12,6 +12,29 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-05: The schedule config is read once a screen, not once a line
+
+The overview asks the schedule four questions: what it is called, what the
+expression is, when it last ran, when it runs next. Each one read the config
+and worked the answer out for itself, and each one said what was wrong with it
+on the way past. A `schedule_at` of "half past two" was four identical lines in
+the log for one page, every time anybody opened the screen.
+
+Counted rather than guessed at: four for a valid frequency with a bad time, two
+for a frequency that is neither a name nor a cron expression.
+
+`expression()` stays the one place that reads the config and says what is wrong
+with it. `previousRun()`, `nextRun()` and `label()` are given the expression
+instead, so a caller reads the config once and the warning is said once.
+
+Turned down: remembering the answer in a static keyed on the config values. It
+would have made the count one per process rather than one per screen, and it
+would have made a test's warning depend on whether an earlier test in the same
+run happened to use the same config, which is the kind of order dependence that
+is found months later.
+
+---
+
 ## 2026-09-05: A quiet socket is not a closed one, and PHP says it is
 
 The engine was meant to tell two failures apart. A browser that died is worth

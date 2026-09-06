@@ -185,6 +185,30 @@ it('says on the overview when a schedule is configured and nothing has ever run 
     expect($text)->toContain('schedule:run');
 });
 
+it('says what is wrong with the config once per screen, not once per line on it', function () {
+    // The overview asks the schedule four questions. Each one used to read the
+    // config for itself, so a typo in one key was four identical lines in the
+    // log for one page, every time anybody opened the screen. A warning that
+    // repeats like that is a warning nobody is reading by the second week.
+    config()->set('statamic-a11y-report.scan.schedule', 'weekly');
+    config()->set('statamic-a11y-report.scan.schedule_at', 'half past two');
+
+    $warnings = 0;
+
+    Log::listen(function ($message) use (&$warnings) {
+        if ($message->level === 'warning' && str_contains($message->message, 'schedule_at')) {
+            $warnings++;
+        }
+    });
+
+    $status = (new Overview(app(ReportDatabase::class)))->schedule();
+
+    expect($warnings)->toBe(1);
+
+    // And it still falls back to the documented time rather than throwing.
+    expect($status['expression'])->toBe('0 2 * * 0');
+});
+
 it('says nothing about the schedule when the config asks for no scheduled scan', function () {
     config()->set('statamic-a11y-report.scan.schedule', false);
 

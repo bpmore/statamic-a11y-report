@@ -149,36 +149,31 @@ final class ScanSchedule
     }
 
     /**
-     * When the expression was last due to run, counting back `$nth` runs.
-     * Null when nothing is scheduled.
+     * When an expression was last due to run, counting back `$nth` runs.
+     *
+     * Given the expression rather than the config, along with the two below,
+     * so that reading the config is something a caller does once. Working it
+     * out again per question meant a screen that asks four of them said the
+     * same "that is not a time" four times over, and a warning repeated on
+     * every page load is a warning nobody reads by the second week.
      */
-    public static function previousRun(array $config, int $nth = 0): ?\DateTimeInterface
+    public static function previousRun(string $expression, int $nth = 0): \DateTimeInterface
     {
-        $expression = self::expression($config);
-
         // `now()` rather than the string 'now': `CronExpression` would build
         // its own clock and ignore a frozen one, so a test and the screen it
         // tests would disagree about which runs have been missed.
-        return $expression === null ? null : (new CronExpression($expression))->getPreviousRunDate(now(), $nth);
+        return (new CronExpression($expression))->getPreviousRunDate(now(), $nth);
     }
 
-    /** When the expression is next due to run. Null when nothing is scheduled. */
-    public static function nextRun(array $config): ?\DateTimeInterface
+    /** When an expression is next due to run. */
+    public static function nextRun(string $expression): \DateTimeInterface
     {
-        $expression = self::expression($config);
-
-        return $expression === null ? null : (new CronExpression($expression))->getNextRunDate(now());
+        return (new CronExpression($expression))->getNextRunDate(now());
     }
 
     /** The frequency as a person wrote it, for a screen to repeat back. */
-    public static function label(array $config): ?string
+    public static function label(array $config, string $expression): string
     {
-        $expression = self::expression($config);
-
-        if ($expression === null) {
-            return null;
-        }
-
         $wanted = strtolower(trim((string) ($config['schedule'] ?? '')));
 
         return in_array($wanted, self::FREQUENCIES, true) ? $wanted : $expression;

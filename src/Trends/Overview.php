@@ -96,13 +96,16 @@ final class Overview
         }
 
         $last = Scan::where('trigger', Scan::TRIGGER_SCHEDULED)->orderByDesc('id')->first();
-        $before = ScanSchedule::previousRun($config, 1);
+        // The expression, worked out once above and handed on. Asking for it
+        // again per line would say whatever is wrong with the config once per
+        // line, on every render of this screen.
+        $before = ScanSchedule::previousRun($expression, 1);
 
         return [
-            'label' => (string) ScanSchedule::label($config),
+            'label' => ScanSchedule::label($config, $expression),
             'expression' => $expression,
             'last' => $last,
-            'next' => ScanSchedule::nextRun($config),
+            'next' => ScanSchedule::nextRun($expression),
             // Two runs missed, not one: a screen that cries wolf the morning
             // after somebody sets this up is a screen people learn to ignore.
             'missed' => $last !== null && $before !== null && $last->created_at?->lessThan($before),

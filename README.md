@@ -181,10 +181,15 @@ change them.
 
 ## Settings
 
-Addons, then Accessibility Report, then Settings: the WCAG version to
-report against, who evaluated the site, your mark on the cover of a report,
-the remediation plan and its targets, everything the public statement says
-about you, and which collections, sites and addresses a scan covers. The screen wins once it has been saved; until then the config
+Addons, then Accessibility Report, then Settings. Not the same place as the
+utility, which is under Tools, then Utilities: the settings screen is where
+the addon is configured, and the utility is where its numbers are read.
+
+The screen holds the WCAG version to report against, who evaluated the site,
+your mark on the cover of a report, the remediation plan and its targets,
+whether to report the findings that no success criterion requires, everything
+the public statement says about you, and which collections, sites and
+addresses a scan covers. It wins once it has been saved; until then the config
 file answers. The database, engine, browser, queue and deploy thresholds stay
 in the config file and `.env`, because a wrong value for any of them stops
 scans rather than changing a sentence.
@@ -266,10 +271,11 @@ cache.
 
 ## In the control panel
 
-Tools, then Accessibility Report: what is open now by impact, the last scan, a
-line of issues per scan over 90 days, and every scan so far. A button runs a
-scan on the queue; it needs the `run accessibility scans` permission, which is
-separate from seeing the page because it makes the site render every page.
+Tools, then Utilities, then Accessibility Report: what is open now by impact,
+the last scan, a line of issues per scan over 90 days, and every scan so far.
+A button runs a scan on the queue; it needs the `run accessibility scans`
+permission, which is separate from seeing the page because it makes the site
+render every page.
 
 Issues, the second page under the utility, is the remediation queue: every
 problem with its status, filtered by status, impact, criterion, site,

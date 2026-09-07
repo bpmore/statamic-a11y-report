@@ -226,8 +226,10 @@ it('heads the chart with what it draws, not the window it searched', function ()
     // was included rather than a claim about the axis.
     expect($text)->toContain('Scans from the last 90 days are shown');
 
-    // And the description carries the span actually drawn.
-    expect($text)->toMatch('/at the time it finished, \d+ \w+ \d\d:\d\d to \d\d:\d\d\./');
+    // And the description carries the span actually drawn, with the zone those
+    // clock times are in. Beside Statamic's own "21 minutes ago" a bare 22:44
+    // is read as local, and on a site that never set `APP_TIMEZONE` it is not.
+    expect($text)->toMatch('/at the time it finished, \d+ \w+ \d\d:\d\d to \d\d:\d\d [A-Z]{2,5}\./');
 });
 
 it('does not say a site has no pages when the scan has not listed them yet', function () {

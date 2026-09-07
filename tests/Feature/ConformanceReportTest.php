@@ -418,3 +418,30 @@ it('counts the same table three ways without pretending they add up', function (
     expect($report->coverage_note)->not->toContain('1 carry');
     expect($report->coverage_note)->not->toContain('were assessed');
 });
+
+it('says which zone the clock times in a document are in', function () {
+    $user = User::make()->email('super@example.test')->makeSuper();
+    $user->save();
+
+    page('one', '<img src="/a.jpg">');
+    $scan = runScan();
+
+    [$report, $html] = document($scan);
+
+    // The footer has always carried the zone. The evaluation period did not,
+    // and it is the line that says when the site was actually looked at: a
+    // clock time with nothing to place it against is half a date, in a
+    // document filed as evidence and read by people in other countries.
+    // Pulled out of its own <dd> and asserted on alone. A dot-all `.*` across
+    // the whole document happily reached the footer's zone and passed while
+    // this line had none, which is the test proving the wrong thing.
+    preg_match('/Evaluation period<\/dt>\s*<dd>(.*?)<\/dd>/s', $html, $m);
+    expect($m[1] ?? '')->toMatch('/\d\d:\d\d to .*\d\d:\d\d [A-Z]{2,5}/');
+
+    // And the machine-readable copy was never ambiguous: ISO 8601 carries the
+    // offset, which is why this is a fix to what a person reads and not to
+    // what the JSON says.
+    $data = json_decode((string) file_get_contents(app(ReportWriter::class)->absolutePath($report->json_path)), true);
+    expect($data['generated_at'])->toMatch('/[+-]\d\d:\d\d$|Z$/');
+    expect($data['scan']['finished_at'])->toMatch('/[+-]\d\d:\d\d$|Z$/');
+});

@@ -7,6 +7,18 @@ it knows, leads its section.
 
 Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
+## Unreleased
+
+### Fixed
+
+**Clock times say which clock.** A report's evaluation period, the line saying
+when the site was actually looked at, printed a time with no zone beside a
+footer that has always carried one. The overview's chart says the zone once
+under it rather than on every label. Dates follow the application's timezone as
+they always have, which on a site that never set `APP_TIMEZONE` is UTC; the
+change is that they now say so. The JSON was never ambiguous, since ISO 8601
+carries the offset.
+
 ## 0.3.0 - 2026-09-07
 
 ### Changed

@@ -338,6 +338,22 @@ An axe-core engine in headless Chrome is planned and is what the report will be
 sold on. Asking for it before it exists logs a warning and uses the PHP checker,
 and the scan records which one ran.
 
+## Support
+
+Report a bug or ask a question by opening an issue:
+
+<https://github.com/bpmore/statamic-a11y-report/issues>
+
+Every bug report gets a reply. Aim for a few working days. There is no
+guaranteed response time, and there is no support channel that can stop a site
+being scanned: nothing here phones home, so a support problem is never an
+outage.
+
+A useful report says which version of the addon and of Statamic you are on and
+which engine ran. `composer show bpmore/statamic-a11y-report statamic/cms`
+gives the first two, and the overview in the control panel names the engine of
+the last scan.
+
 ## Licence
 
 Proprietary. See `LICENSE.md`.

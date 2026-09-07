@@ -12,6 +12,39 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-07: The latest scan is the latest scan, whatever it covered
+
+The "generate a report" button produced a document from a scan five hours old
+while a scan from twenty-six minutes earlier sat complete beside it. Nothing on
+the screen said which scan it had used, and a conformance report names its scan
+inside, where nobody compares it against a clock.
+
+Two lookups, the same mistake in both. The controller asked for
+`where('site', $site)` with nothing chosen, which in SQL is `site is null`, and
+`ScanEvidence::latestScan()` preferred `whereNull('site')` over anything newer.
+Both were reaching for the same idea: with no site asked for, a scan of every
+site is the one that speaks for the whole install.
+
+**A preference that beats recency is not a preference. It is a way to report on
+the wrong week.** A scan carries a site as soon as the scope names one, and the
+settings screen writes exactly that the moment anybody saves it. So on an
+ordinary single-site install, every scan after the day somebody opened the
+settings is named, none of them can ever be chosen, and the document comes from
+whichever scan predated the save. For ever, silently, getting worse by the day.
+
+So with no site asked for it is the newest complete scan and nothing else. Ask
+for a site and you still get that site's, which is the case the preference was
+there to serve and which the first branch already handled.
+
+The controller now goes through that one lookup rather than keeping a copy of
+the query, which is how the two came to disagree with the worksheet in the
+first place.
+
+**Found by pressing the button on a real screen**, and only noticed because the
+report named a scan somebody happened to recognise as the wrong one.
+
+---
+
 ## 2026-09-06: A scan that was never listed is started, not finished
 
 Pressing "run a scan now" on a site whose queue has no worker leaves a row at

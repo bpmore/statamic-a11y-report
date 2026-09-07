@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bpmore\A11yReport\Http\Controllers;
 
 use Bpmore\A11yReport\Document\ReportWriter;
+use Bpmore\A11yReport\Document\ScanEvidence;
 use Bpmore\A11yReport\Models\Scan;
 use Illuminate\Http\Request;
 use Statamic\Facades\Site;
@@ -25,7 +26,15 @@ class GenerateReportController extends CpController
         $site = $request->input('site');
         $site = is_string($site) && Site::get($site) ? $site : null;
 
-        $scan = Scan::where('status', Scan::COMPLETE)->where('site', $site)->orderByDesc('id')->first();
+        // Through the same lookup the statement and the worksheet use, and
+        // not a `where('site', $site)` of its own. With no site chosen that
+        // read as `site is null`, which matches only a scan that covered
+        // every site: on an install whose scope names one site, every scan
+        // carries that name, none of them matched, and the button reported on
+        // whichever all-sites scan happened to be the oldest. A conformance
+        // document from a scan hours out of date, with nothing on the screen
+        // to say so.
+        $scan = ScanEvidence::latestScan($site);
 
         if ($scan === null) {
             return back()->with('error', 'There is no complete scan to report on'.($site ? " for the {$site} site" : '').'. Run a scan first.');

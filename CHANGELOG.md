@@ -20,6 +20,15 @@ on and marked all of them "page removed". A whole remediation queue could close
 in one go, and a closed queue looks exactly like a site somebody fixed.
 Resuming a scan with no pages now starts it.
 
+**The report button reports on the latest scan.** With no site chosen it asked
+for a scan whose site was null, which is only a scan of every site. A scan
+carries a site as soon as the scope names one, and the settings screen writes
+that the moment it is saved, so on an ordinary install every scan after that
+day was invisible to the button and the document came from whichever scan
+predated the save. The worksheet's lookup preferred an all-sites scan over a
+newer one for the same reason. Both now take the newest complete scan when no
+site is asked for.
+
 **The queue's deadline filter is called "Deadlines".** It was "Against the
 policy", which named the idea behind its options rather than the options, and
 the first person asked to use it could not find the control on the screen.

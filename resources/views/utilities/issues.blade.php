@@ -176,7 +176,7 @@
                     <p>Nothing matches.</p>
                 @endif
             @else
-                <p class="text-sm">{{ $issues->total() }} {{ $issues->total() === 1 ? 'issue' : 'issues' }} match, oldest and most serious first{{ $issues->lastPage() > 1 ? ', page '.$issues->currentPage().' of '.$issues->lastPage() : '' }}.</p>
+                <p class="text-sm">{{ $issues->total() }} {{ $issues->total() === 1 ? 'issue' : 'issues' }} match, oldest and most serious first{{ $issues->lastPage() > 1 ? ', page '.$issues->currentPage().' of '.$issues->lastPage() : '' }}.@if ($canManage) Tick any of them and use <a href="#a11y-bulk" class="{{ $link }}">Change the ticked issues</a>, below the table.@endif</p>
 
                 <form method="post" action="@plain($updateUrl)" class="space-y-4">
                     @csrf
@@ -199,7 +199,7 @@
                                 <ui-table-row>
                                     @if ($canManage)
                                         <ui-table-cell>
-                                            <input type="checkbox" name="fingerprints[]" value="@plain($i->fingerprint)" id="a11y-i-@plain(substr($i->fingerprint, 0, 8))" aria-label="Select the issue on @plain($i->path)">
+                                            <input type="checkbox" name="fingerprints[]" value="@plain($i->fingerprint)" id="a11y-i-@plain(substr($i->fingerprint, 0, 8))" aria-label="Select the issue on @plain($i->path)" @checked(in_array($i->fingerprint, (array) old('fingerprints', []), true))>
                                         </ui-table-cell>
                                     @endif
                                     <ui-table-cell>
@@ -269,7 +269,7 @@
                     @endif
 
                     @if ($canManage)
-                        <fieldset class="space-y-3 border border-gray-300 dark:border-gray-700 rounded p-4">
+                        <fieldset id="a11y-bulk" class="space-y-3 border border-gray-300 dark:border-gray-700 rounded p-4">
                             <legend class="px-1 text-sm font-medium">Change the ticked issues</legend>
                             <div class="flex flex-wrap items-end gap-3">
                                 <div>
@@ -277,33 +277,44 @@
                                     <select id="a11y-b-status" name="status" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
                                         <option value="">Leave as is</option>
                                         @foreach ($statuses as $status)
-                                            <option value="{{ $status }}">{{ $label($status) }}</option>
+                                            <option value="{{ $status }}" @selected(old('status') === $status)>{{ $label($status) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div>
                                     <label for="a11y-b-assignee" class="block text-xs font-medium mb-1">Assign to</label>
-                                    <input id="a11y-b-assignee" type="text" name="assigned_to" placeholder="leave as is, or - for nobody" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
+                                    <input id="a11y-b-assignee" type="text" name="assigned_to" value="@plain(old('assigned_to'))" placeholder="leave as is" aria-describedby="a11y-b-assignee-help" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
+                                    <p id="a11y-b-assignee-help" class="text-xs mt-1 opacity-70">A dash clears it.</p>
                                 </div>
                                 <div class="grow">
                                     <label for="a11y-b-note" class="block text-xs font-medium mb-1">Note</label>
-                                    <input id="a11y-b-note" type="text" name="note" placeholder="why, for whoever reads this next" class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
+                                    <input id="a11y-b-note" type="text" name="note" value="@plain(old('note'))" placeholder="why, for whoever reads this next" class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
                                 </div>
                             </div>
                             <div class="flex flex-wrap items-end gap-3">
                                 <div class="grow">
                                     <label for="a11y-b-reason" class="block text-xs font-medium mb-1">Reason, if the status is won't fix</label>
-                                    <input id="a11y-b-reason" type="text" name="exception_reason" aria-describedby="a11y-b-reason-help" class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
+                                    <input id="a11y-b-reason" type="text" name="exception_reason" value="@plain(old('exception_reason'))" aria-describedby="a11y-b-reason-help" class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
                                     <p id="a11y-b-reason-help" class="text-xs mt-1 opacity-70">Required to accept an issue, and printed in the conformance report.</p>
                                 </div>
                                 <div>
                                     <label for="a11y-b-expires" class="block text-xs font-medium mb-1">Accepted until</label>
-                                    <input id="a11y-b-expires" type="date" name="exception_expires_at" max="@plain($latestExpiry)" aria-describedby="a11y-b-expires-help" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
-                                    <p id="a11y-b-expires-help" class="text-xs mt-1 opacity-70">Leave empty for {{ $latestExpiry }}, the furthest the policy allows.</p>
+                                    <input id="a11y-b-expires" type="date" name="exception_expires_at" value="@plain(old('exception_expires_at'))" max="@plain($latestExpiry)" aria-describedby="a11y-b-expires-help" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
+                                    <p id="a11y-b-expires-help" class="text-xs mt-1 opacity-70">Leave this empty and it runs to {{ $latestExpiry }}, which is as far as the policy allows.</p>
                                 </div>
                             </div>
-                            <div class="flex flex-wrap items-center gap-4">
-                                <label class="text-sm"><input type="checkbox" name="all_matching" value="1"> Apply to all {{ $issues->total() }} matching the current filter, not only the ticked ones</label>
+                            {{-- The checkbox that widens this from the ticked rows to every
+                                 row the filter matches used to sit on the same line as the
+                                 button that acts on it, a slip apart from editing hundreds of
+                                 issues in one press. It is its own block now, above the
+                                 button and marked as the different thing it is. --}}
+                            <div class="rounded border border-amber-500/60 bg-amber-50/60 dark:bg-amber-950/20 p-3">
+                                <label class="text-sm flex items-start gap-2">
+                                    <input type="checkbox" name="all_matching" value="1" class="mt-1" @checked(old('all_matching'))>
+                                    <span>Apply to <strong>all {{ $issues->total() }}</strong> {{ $issues->total() === 1 ? 'issue' : 'issues' }} the current filter matches, not only the ticked ones. This reaches rows on other pages of the list.</span>
+                                </label>
+                            </div>
+                            <div>
                                 <ui-button type="submit" variant="primary" size="sm" text="Apply" />
                             </div>
                             <ui-description text="A scan never reopens an issue marked won't fix or false positive. It reopens a fixed one, or one whose page was removed, only if the problem comes back." />

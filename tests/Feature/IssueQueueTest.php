@@ -369,3 +369,45 @@ it("spells won't fix with its apostrophe", function () {
     expect($text)->toContain("Won't fix");
     expect($text)->not->toContain('Wont fix');
 });
+
+it('keeps the ticks and the typing when it refuses a bulk change', function () {
+    seedQueue();
+
+    $fingerprints = IssueState::query()->limit(2)->pluck('fingerprint')->all();
+
+    // The refusal that matters: somebody has chosen issues, written a reason
+    // and picked a date the policy will not take. Before this they lost the
+    // choosing and the writing to correct the date.
+    $response = $this->actingAs($this->user)->post(cp_route('utilities.a11y-report.issues.update'), [
+        'fingerprints' => $fingerprints,
+        'status' => 'wont_fix',
+        'exception_reason' => 'Supplier widget, out of our hands.',
+        'exception_expires_at' => now()->addYears(3)->format('Y-m-d'),
+        'note' => 'Raised with the supplier on Tuesday.',
+    ]);
+
+    $response->assertSessionHas('error');
+    $response->assertSessionHasInput('exception_reason', 'Supplier widget, out of our hands.');
+    $response->assertSessionHasInput('note', 'Raised with the supplier on Tuesday.');
+    $response->assertSessionHasInput('fingerprints', $fingerprints);
+
+    // And the browser comes back to the form rather than the top of fifty rows.
+    expect($response->headers->get('Location'))->toContain('#a11y-bulk');
+
+    // Nothing was changed, which is the point of a refusal.
+    expect(IssueState::where('status', IssueState::WONT_FIX)->count())->toBe(0);
+});
+
+it('does not put the everything checkbox beside the button that acts on it', function () {
+    seedQueue();
+
+    $text = queuePage();
+
+    // One slip apart from editing every issue the filter matches, including
+    // the ones on pages of the list nobody has looked at.
+    expect($text)->toContain('the current filter matches, not only the ticked ones');
+    expect($text)->toContain('This reaches rows on other pages of the list');
+
+    // And the table says where the form is, because it sits under fifty rows.
+    expect($text)->toContain('Change the ticked issues</a>, below the table');
+});

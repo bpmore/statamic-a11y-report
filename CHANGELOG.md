@@ -7,18 +7,9 @@ it knows, leads its section.
 
 Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
-## Unreleased
+## 0.3.0 - 2026-09-07
 
-### Fixed
-
-**Resuming a scan that never listed its pages no longer closes every issue.**
-Pressing "run a scan now" on a site whose queue has no worker leaves a scan at
-"queued" with no pages of its own, because listing them is itself a queued job.
-The overview offers `--resume --sync` on that scan, and running it finished it
-as a complete scan of nothing, which met none of the pages the open issues were
-on and marked all of them "page removed". A whole remediation queue could close
-in one go, and a closed queue looks exactly like a site somebody fixed.
-Resuming a scan with no pages now starts it.
+### Changed
 
 **A refused bulk change keeps what you had done.** Picking a date the policy
 will not take used to come back with nothing ticked, every box empty and the
@@ -42,6 +33,17 @@ run out". It had been "Against the policy", which nobody could find, and then
 "Deadlines", which appeared nowhere else and made three names for one thing.
 The settings group is "Remediation" rather than "Remediation targets", since it
 also holds how long an acceptance may run.
+
+### Fixed
+
+**Resuming a scan that never listed its pages no longer closes every issue.**
+Pressing "run a scan now" on a site whose queue has no worker leaves a scan at
+"queued" with no pages of its own, because listing them is itself a queued job.
+The overview offers `--resume --sync` on that scan, and running it finished it
+as a complete scan of nothing, which met none of the pages the open issues were
+on and marked all of them "page removed". A whole remediation queue could close
+in one go, and a closed queue looks exactly like a site somebody fixed.
+Resuming a scan with no pages now starts it.
 
 **The overview's chart is headed with what it draws.** It said "Issues found,
 last 90 days", which is the window the scans were looked for in and not the
@@ -78,11 +80,6 @@ day was invisible to the button and the document came from whichever scan
 predated the save. The worksheet's lookup preferred an all-sites scan over a
 newer one for the same reason. Both now take the newest complete scan when no
 site is asked for.
-
-**The queue's deadline filter is called "Deadlines".** It was "Against the
-policy", which named the idea behind its options rather than the options, and
-the first person asked to use it could not find the control on the screen.
-Every other filter beside it names a thing: status, impact, site, collection.
 
 **And the overview no longer says such a scan read "0 of 0 pages".** That reads
 as a site with nothing on it, which is a different problem with a different

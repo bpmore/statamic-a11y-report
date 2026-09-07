@@ -114,6 +114,25 @@ final class Scans
      */
     public function resume(Scan $scan, bool $sync = false): Scan
     {
+        // A scan with no pages of its own was never listed, so there is
+        // nothing to pick up: start it instead.
+        //
+        // `StartScan` is itself a queued job, so on a site whose queue has no
+        // worker a scan sits at "queued" having enumerated nothing. Resuming
+        // it dispatched the empty set of pending pages, which finished it as
+        // a complete scan of nothing, and a complete scan that met no page
+        // met none of the pages every open issue was on: the whole queue
+        // closed as "page removed" in one go. The overview offers this exact
+        // command on that exact scan, so the product's own advice was the
+        // shortest path to it.
+        //
+        // A scan of a scope that genuinely holds no pages is not this: it was
+        // listed, found nothing, and finished. It is never resumed, because
+        // it is already complete.
+        if (ScanPage::where('scan_id', $scan->id)->doesntExist()) {
+            return $this->start($scan, $sync);
+        }
+
         if ($scan->status === Scan::CANCELLED || $scan->status === Scan::QUEUED) {
             $scan->update(['status' => Scan::RUNNING, 'started_at' => $scan->started_at ?? now()]);
         }

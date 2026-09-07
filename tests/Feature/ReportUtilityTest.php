@@ -206,6 +206,33 @@ it('says when a scan is not moving, and what to run', function () {
     expect(reportPage())->toContain('has been <strong>running</strong> for 2 minutes');
 });
 
+it('does not say a site has no pages when the scan has not listed them yet', function () {
+    app(ReportDatabase::class)->install();
+
+    // What the control panel's button leaves behind where no worker is
+    // running: listing the pages is itself a queued job, so the scan has
+    // none and `pages_total` is zero.
+    $scan = Scan::create([
+        'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        'trigger' => Scan::TRIGGER_MANUAL,
+        'status' => Scan::QUEUED,
+        'engine' => 'php',
+        'engine_version' => 'test',
+        'ruleset' => 'wcag22aa',
+        'scope' => ['sites' => [], 'collections' => [], 'exclude_urls' => [], 'since' => null],
+        'created_at' => now()->subMinutes(20),
+    ]);
+
+    $text = reportPage();
+
+    expect($text)->toContain('This scan is not moving');
+    // "0 of 0 pages read" reads as a site with nothing on it, which is a
+    // different problem with a different cure, and it sent the first reader
+    // of this screen looking for the wrong one.
+    expect($text)->toContain('has not listed the pages to read yet');
+    expect($text)->not->toContain('0 of 0 pages read');
+});
+
 it('warns that cron may not find the php the crontab line names', function () {
     app(ReportDatabase::class)->install();
     page('one', '<p>Fine.</p>');

@@ -83,7 +83,10 @@
                 <p>The last automated scan found {{ $r['issues_total'] }} {{ $r['issues_total'] === 1 ? 'issue' : 'issues' }} across {{ $r['pages_read'] }} {{ $r['pages_read'] === 1 ? 'page' : 'pages' }}: {{ collect($r['by_impact'])->filter()->map(fn ($n, $impact) => $n.' '.$impact)->implode(', ') ?: 'none rated' }}.</p>
             @endif
             @if ($r['outside_wcag'] !== [])
-                <p>Checks outside WCAG also reported: {{ collect($r['outside_wcag'])->map(fn ($o) => $o['label'].' ('.$o['issues'].' on '.$o['pages'].' '.($o['pages'] === 1 ? 'page' : 'pages').')')->implode(', ') }}.</p>
+                {{-- A colon and semicolons rather than brackets and commas: a name that
+                     has to carry its rule id is already carrying one pair of brackets,
+                     and the counts inside a second pair read as a stammer. --}}
+                <p>Checks outside WCAG also reported: {{ collect($r['outside_wcag'])->map(fn ($o) => $o['name'].': '.$o['issues'].' on '.$o['pages'].' '.($o['pages'] === 1 ? 'page' : 'pages'))->implode('; ') }}.</p>
             @endif
         @endif
     </section>

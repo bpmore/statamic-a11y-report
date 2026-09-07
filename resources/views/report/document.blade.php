@@ -211,7 +211,7 @@
                 <thead><tr><th scope="col">Check</th><th scope="col" class="num">Issues</th><th scope="col" class="num">Pages</th></tr></thead>
                 <tbody>
                     @foreach ($r['summary']['outside_wcag'] as $row)
-                        <tr><th scope="row">{{ $row['label'] }}</th><td class="num">{{ $row['issues'] }}</td><td class="num">{{ $row['pages'] }}</td></tr>
+                        <tr><th scope="row">{{ $row['name'] }}</th><td class="num">{{ $row['issues'] }}</td><td class="num">{{ $row['pages'] }}</td></tr>
                     @endforeach
                 </tbody>
             </table>

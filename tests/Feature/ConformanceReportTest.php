@@ -507,3 +507,51 @@ it('does not call a locked assessment contradicted when it agrees, or when nothi
 
     expect(array_filter($data['criteria'], fn ($c) => $c['contradicted']))->toBe([]);
 });
+
+it('tells two house rules apart when they share a plain name', function () {
+    $user = User::make()->email('super@example.test')->makeSuper();
+    $user->save();
+
+    // The gate's checker calls several rules "Heading structure". The test
+    // template already emits the title as an h1, so a second one in the body
+    // is `heading-multiple-h1`, and the jump from h1 to h3 is
+    // `heading-skipped-level`. Two rules, one name.
+    page('one', '<h1>A second main heading</h1><h3>and a skipped level</h3>');
+    $scan = runScan();
+
+    [$report, $html] = document($scan->fresh());
+
+    $data = json_decode((string) file_get_contents(app(ReportWriter::class)->absolutePath($report->json_path)), true);
+    $outside = collect($data['summary']['outside_wcag'])->where('label', 'Heading structure');
+
+    expect($outside)->toHaveCount(2, 'this test needs two rules sharing one name');
+
+    // Printed by the plain name alone, the table listed "Heading structure"
+    // twice with different numbers, which reads as a mistake in the document
+    // rather than as two checks.
+    expect($outside->pluck('name')->unique())->toHaveCount(2);
+    foreach ($outside as $row) {
+        expect($row['name'])->toContain($row['rule_id']);
+    }
+
+    preg_match('/<caption>Findings outside WCAG<\/caption>.*?<\/table>/s', $html, $m);
+    expect(substr_count($m[0] ?? '', 'heading-'))->toBe(2);
+});
+
+it('leaves a house rule its plain name when nothing shares it', function () {
+    $user = User::make()->email('super@example.test')->makeSuper();
+    $user->save();
+
+    page('one', '<h1>Fine</h1><a href="#">Somewhere</a>');
+    $scan = runScan();
+
+    [$report] = document($scan->fresh());
+    $data = json_decode((string) file_get_contents(app(ReportWriter::class)->absolutePath($report->json_path)), true);
+
+    // The plain name reaches the document, which is the rule. Only a shared
+    // name pays for being shared.
+    foreach ($data['summary']['outside_wcag'] as $row) {
+        expect($row['name'])->toBe($row['label']);
+        expect($row['name'])->not->toContain('(');
+    }
+});

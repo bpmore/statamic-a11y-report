@@ -11,6 +11,14 @@ Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
 ### Fixed
 
+**Two house rules with one plain name are told apart.** The public statement
+read "Heading structure (2 on 2 pages), Heading structure (23 on 22 pages)" and
+the document's Findings outside WCAG table listed the same name twice with
+different numbers, because the gate's checker calls both `heading-missing-h1`
+and `heading-skipped-level` "Heading structure". A name now carries the rule's
+own id where another rule wears the same one, and stays the plain name where it
+does not.
+
 **A locked assessment the scan disagrees with says so.** A person's locked
 judgement still wins outright, which is the rule and stays the rule. Where it
 stands over failures the automated checks found, the worksheet and the

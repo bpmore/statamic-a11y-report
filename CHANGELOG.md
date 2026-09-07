@@ -20,6 +20,14 @@ on and marked all of them "page removed". A whole remediation queue could close
 in one go, and a closed queue looks exactly like a site somebody fixed.
 Resuming a scan with no pages now starts it.
 
+**The overview's chart is headed with what it draws.** It said "Issues found,
+last 90 days", which is the window the scans were looked for in and not the
+span on the axis. Every scan on a young install happens in one afternoon, so it
+read as three months over an axis running five hours. The heading is now
+"Issues found per scan", the description carries the span actually drawn, and
+the window is said underneath where it is a fact about what was included. The
+dashboard widget is headed "Accessibility Report" rather than "Accessibility".
+
 **The report's coverage note counts the same table three ways without adding
 them up.** "23 of 55 criteria had automated checks; 54 were not evaluated; 1
 were assessed by a person" joined three overlapping counts with semicolons,

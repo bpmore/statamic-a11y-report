@@ -155,12 +155,27 @@
 
     </div>
 
-    <ui-card-panel heading="Issues found, last 90 days">
+    {{-- The heading used to say "last 90 days", which is the window the scans
+         were looked for in and not the span the chart draws. On an install
+         whose scans all happened in one afternoon it read as an axis running
+         three months while the axis ran five hours, and a chart that has to be
+         argued with is a chart nobody trusts the rest of the page for. It now
+         names what is drawn, and the window is said underneath where it
+         belongs. --}}
+    <ui-card-panel heading="Issues found per scan">
         @if ($chart === '')
-            <p>No scan has completed in the last 90 days{{ $site !== null ? ' for this site' : '' }}.</p>
+            <p>No scan has completed in the last {{ $trendDays }} days{{ $site !== null ? ' for this site' : '' }}.</p>
         @else
             <div class="text-gray-800 dark:text-gray-200">{!! $chart !!}</div>
-            <ui-description text="One point per completed scan, at the time it finished. Every point is in the table below." />
+            @php
+                $sameDay = $trendSpan && $trendSpan['from']->isSameDay($trendSpan['to']);
+                $span = $trendSpan
+                    ? ', '.$trendSpan['from']->format($sameDay ? 'j M H:i' : 'j M Y').' to '.$trendSpan['to']->format($sameDay ? 'H:i' : 'j M Y')
+                    : '';
+                $chartNote = 'One point per completed scan, at the time it finished'.$span
+                    .'. Scans from the last '.$trendDays.' days are shown; every point is in the table below.';
+            @endphp
+            <ui-description text="@plain($chartNote)" />
         @endif
     </ui-card-panel>
 

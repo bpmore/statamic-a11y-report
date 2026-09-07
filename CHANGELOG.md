@@ -11,6 +11,13 @@ Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
 ### Fixed
 
+**An issue says which element it is on.** A page with five contrast failures
+listed the same sentence five times, in the queue and in the gate's entry
+panel, with nothing to tell them apart. Both showed only the pointer the PHP
+checker gives and ignored the selector axe gives, so every axe finding lost the
+one thing that distinguished it. They now show whichever the engine recorded:
+`.faint`, `a`, `.on-yellow:nth-child(4)`.
+
 **Two house rules with one plain name are told apart.** The public statement
 read "Heading structure (2 on 2 pages), Heading structure (23 on 22 pages)" and
 the document's Findings outside WCAG table listed the same name twice with

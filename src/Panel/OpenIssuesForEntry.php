@@ -74,7 +74,15 @@ final class OpenIssuesForEntry
             ];
         }
 
-        $lines = $issues->take(self::SHOWN)->map(fn ($i) => $i->message.($i->pointer ? ' ('.$i->pointer.')' : ''))->all();
+        // Which element, from whichever of the two the engine gave. The PHP
+        // checker points at a place in the markup and axe gives a selector,
+        // and this printed only the first, so a page with five contrast
+        // failures showed the same sentence five times with nothing to tell
+        // them apart. The engines both knew: `.faint`, `a`,
+        // `.on-yellow:nth-child(4)`, `.tiny-grey`, `button`.
+        $lines = $issues->take(self::SHOWN)
+            ->map(fn ($i) => $i->message.(($where = $i->pointer ?: $i->selector) ? ' ('.$where.')' : ''))
+            ->all();
 
         if ($total > self::SHOWN) {
             $lines[] = 'And '.($total - self::SHOWN).' more.';

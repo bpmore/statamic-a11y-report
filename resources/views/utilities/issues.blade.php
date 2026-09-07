@@ -224,7 +224,7 @@
                                     <ui-table-cell>
                                         <div>@plain($i->message)</div>
                                         <div class="text-xs text-gray-600 dark:text-gray-400">
-                                            @if (($c = $criterion($i)) !== null)<a href="@plain($c->understandingUrl($version))" target="_blank" rel="noopener" class="{{ $link }}">@plain($i->label) @plain($c->name)<span class="sr-only"> (the W3C's explanation, opens in a new tab)</span></a>@else @plain($i->label) @endif @plain(($i->pointer ? ': '.$i->pointer : '') . ($i->occurrences > 1 ? ', '.$i->occurrences.' times' : ''))
+                                            @if (($c = $criterion($i)) !== null)<a href="@plain($c->understandingUrl($version))" target="_blank" rel="noopener" class="{{ $link }}">@plain($i->label) @plain($c->name)<span class="sr-only"> (the W3C's explanation, opens in a new tab)</span></a>@else @plain($i->label) @endif @plain((($where = $i->pointer ?: $i->selector) ? ': '.$where : '') . ($i->occurrences > 1 ? ', '.$i->occurrences.' times' : ''))
                                         </div>
                                         @if ($i->note)<ui-description text="Note: @plain($i->note)" />@endif
                                     </ui-table-cell>

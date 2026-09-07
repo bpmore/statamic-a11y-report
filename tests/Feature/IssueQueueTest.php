@@ -295,21 +295,30 @@ it('leaves out the edit link for somebody who may not edit that collection', fun
     expect($text)->toContain($entry->uri());
 });
 
-it('names the deadline filter after what it filters on', function () {
+it('names the remediation filter the way the rest of the product does', function () {
     seedQueue();
 
     $text = queuePage();
 
     // The other filters name a thing: status, impact, site, collection. This
-    // one named the idea behind its options, and the first person asked to use
-    // it could not find it on the screen.
-    expect($text)->toContain('Deadlines');
+    // one named the idea behind its options ("Against the policy"), which the
+    // person asked to use it could not find, and then a word used nowhere
+    // else in the product ("Deadlines"), which made three names for one
+    // concept. "Remediation" heads that section in the report and on the
+    // settings screen, and targets and acceptances are its two halves.
+    expect($text)->toContain('Remediation');
     expect($text)->not->toContain('Against the policy');
+    expect($text)->not->toContain('Deadlines');
 
     // The options themselves were never the problem, and they still say what
     // they mean in words rather than in a colour.
     expect($text)->toContain('Past target');
     expect($text)->toContain('Acceptance has run out');
+
+    // And one word for one thing across the screens: the badge, the row and
+    // the report all say "target", and none of them says "deadline".
+    expect($text)->not->toContain('deadline');
+    expect($text)->not->toContain('Deadline');
 });
 
 it('does not say nothing is open when a filter is what emptied the list', function () {

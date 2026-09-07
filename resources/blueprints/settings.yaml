@@ -60,7 +60,7 @@ tabs:
               display: 'Remediation plan'
               instructions: 'Printed as the last section of the report. What will be fixed, by when. Leave it empty and the report says no plan has been recorded.'
       -
-        display: 'Remediation targets'
+        display: Remediation
         instructions: 'How long a problem may stay open before the queue and the report call it overdue, and how long an accepted problem may stay accepted. These are a promise about what you will chase. None of them changes a row in the conformance table, and none of them takes an issue out of a report. Each report records the numbers that were in force when it was generated, so an old document still makes sense after you change them.'
         fields:
           -

@@ -20,6 +20,14 @@ on and marked all of them "page removed". A whole remediation queue could close
 in one go, and a closed queue looks exactly like a site somebody fixed.
 Resuming a scan with no pages now starts it.
 
+**One word for the targets and acceptances the queue filters on.** The filter
+is "Remediation", which is what the report's section and the settings screen
+already call it, and its options still say "Past target" and "Acceptance has
+run out". It had been "Against the policy", which nobody could find, and then
+"Deadlines", which appeared nowhere else and made three names for one thing.
+The settings group is "Remediation" rather than "Remediation targets", since it
+also holds how long an acceptance may run.
+
 **The overview's chart is headed with what it draws.** It said "Issues found,
 last 90 days", which is the window the scans were looked for in and not the
 span on the axis. Every scan on a young install happens in one afternoon, so it

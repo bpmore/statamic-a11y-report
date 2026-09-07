@@ -12,6 +12,50 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-07: A clock time says which clock, and that is the whole fix
+
+A reader of the overview saw an axis running 22:44 to 03:47 beside Statamic's
+own "21 minutes ago", at a quarter to six in the afternoon, and reasonably
+concluded the addon was printing the wrong times.
+
+It was not. `app.timezone` was unset on that install, so it is UTC, which is
+Laravel's default and the site's choice to change. Every date the addon prints
+already follows it, which is the correct behaviour and the only behaviour an
+addon should have: a site that sets its timezone gets its timezone everywhere,
+and one that does not gets UTC everywhere.
+
+**The defect was that the times did not say so.** A clock time with nothing to
+place it against is half a date. That matters most in the document, where the
+evaluation period is the line saying when the site was actually looked at, in a
+file read by people in other countries and kept as evidence.
+
+The footer had carried the zone since it was written. The evaluation period
+beside it had not, which is the tell: this was an omission rather than a
+decision.
+
+So the evaluation period carries its zone, and the overview's chart says the
+zone once in the sentence under it rather than on every label along the axis.
+Three lines.
+
+**The JSON was never ambiguous.** `toIso8601String()` carries the offset, so
+every machine-readable date in a report already placed itself. This is a fix to
+what a person reads and nothing else, and a test now says so in both
+directions.
+
+Turned down: showing times in the reader's own timezone. A conformance document
+is filed, and a document whose dates move depending on who opens it is worse
+evidence than one whose dates are fixed and labelled. The control panel could
+reasonably localise, but not at the price of two date systems in one product.
+
+### The test that proved nothing
+
+The first assertion for this used a dot-all `.*` across the whole document, so
+it reached the footer's zone and passed while the evaluation period had none.
+Caught by removing the fix and watching the test stay green. It now pulls the
+one `<dd>` out and asserts on that alone.
+
+---
+
 ## 2026-09-07: One word for one thing, and the word is the report's
 
 The queue's filter over targets and acceptances has now been called three

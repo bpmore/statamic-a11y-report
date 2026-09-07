@@ -86,7 +86,11 @@
             <dt>Evaluation period</dt>
             <dd>
                 @if ($r['scan']['started_at'] && $r['scan']['finished_at'])
-                    {{ \Illuminate\Support\Carbon::parse($r['scan']['started_at'])->format('j F Y, H:i') }} to {{ \Illuminate\Support\Carbon::parse($r['scan']['finished_at'])->format('j F Y, H:i') }}
+                    {{-- With the zone, as the footer has always printed it. A clock
+                         time with nothing to place it against is half a date, and
+                         this document is read by people in other countries and
+                         filed as evidence of when a site was looked at. --}}
+                    {{ \Illuminate\Support\Carbon::parse($r['scan']['started_at'])->format('j F Y, H:i') }} to {{ \Illuminate\Support\Carbon::parse($r['scan']['finished_at'])->format('j F Y, H:i T') }}
                 @else
                     Scan {{ $r['scan']['uuid'] }}
                 @endif

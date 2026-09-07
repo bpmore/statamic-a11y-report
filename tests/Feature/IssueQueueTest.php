@@ -411,3 +411,28 @@ it('does not put the everything checkbox beside the button that acts on it', fun
     // And the table says where the form is, because it sits under fifty rows.
     expect($text)->toContain('Change the ticked issues</a>, below the table');
 });
+
+it('says which element each issue is on, from whichever locator the engine gave', function () {
+    seedQueue();
+
+    // The PHP checker points at a place in the markup. Two issues from one
+    // rule on one page are otherwise the same sentence twice.
+    $withPointer = IssueState::query()->whereNotNull('fingerprint')->get()
+        ->first(fn ($s) => \Bpmore\A11yReport\Models\Issue::where('fingerprint', $s->fingerprint)->whereNotNull('pointer')->exists());
+
+    expect($withPointer)->not->toBeNull('the fixture needs an issue with a pointer');
+
+    $pointer = \Bpmore\A11yReport\Models\Issue::where('fingerprint', $withPointer->fingerprint)->value('pointer');
+
+    expect(queuePage())->toContain($pointer);
+
+    // And where the engine gave a selector instead, which is what axe gives,
+    // that is what has to be shown. A page with five contrast failures listed
+    // the same sentence five times: the engine knew `.faint` from `.tiny-grey`
+    // and the screen did not say.
+    $state = IssueState::first();
+    \Bpmore\A11yReport\Models\Issue::where('fingerprint', $state->fingerprint)
+        ->update(['pointer' => null, 'selector' => '.tiny-grey']);
+
+    expect(queuePage())->toContain('.tiny-grey');
+});

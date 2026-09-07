@@ -96,12 +96,16 @@
                 </div>
                 <div>
                     {{-- Every other filter here names the thing it filters on:
-                         status, impact, site, collection. This one named the
-                         idea behind its options rather than the options, and
-                         the first person to meet it could not find the control
-                         they had been asked to use. All three options are a
-                         date that has passed or is about to. --}}
-                    <label for="a11y-f-due" class="block text-xs font-medium mb-1">Deadlines</label>
+                         status, impact, site, collection. This one first named
+                         the idea behind its options ("Against the policy") and
+                         the person asked to use it could not find it, then
+                         named a word this product uses nowhere else
+                         ("Deadlines") and became the third name for one thing.
+                         "Remediation" is the word already at the head of that
+                         section in the report and on the settings screen, and
+                         its two halves, targets and acceptances, are what the
+                         options underneath say. --}}
+                    <label for="a11y-f-due" class="block text-xs font-medium mb-1">Remediation</label>
                     <select id="a11y-f-due" name="due" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
                         <option value="">Any</option>
                         @foreach ($dueOptions as $due)
@@ -156,7 +160,7 @@
                 @php($narrowed = collect($f)->except('status')->filter(fn ($v) => $v !== '')->isNotEmpty())
                 {{-- "No issue is open or in progress" was printed whenever the
                      status filter was on its default, whatever else was
-                     narrowing the list. With a deadline or a site chosen it
+                     narrowing the list. With a remediation state or a site chosen it
                      said no issue was open while hundreds were, which is the
                      one thing a queue must not say: a person reading it has
                      been told their work is done. --}}

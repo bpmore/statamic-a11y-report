@@ -12,6 +12,34 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-07: One word for one thing, and the word is the report's
+
+The queue's filter over targets and acceptances has now been called three
+things. "Against the policy", which named the idea rather than the options and
+which the first person asked to use it could not find on the screen. Then
+"Deadlines", which is a noun in the shape of the filters beside it and solved
+that, and which appears nowhere else in this product. Then a reader met
+"Deadlines" on the filter, "past target" on the badge and "Remediation targets"
+on the settings screen and had to work out that all three were one thing.
+
+The second name was mine, and it was a fair fix for the first problem that
+created a second. Naming a control well is not only about the control.
+
+**The word was already decided and written down twice.** The report's section
+is headed "Remediation" with "Targets" and "Accepted issues" under it, and the
+settings screen groups the same numbers. So the filter is "Remediation", its
+options still say "Past target" and "Acceptance has run out", and the settings
+group is "Remediation" rather than "Remediation targets", which undersold a
+section that also holds how long an acceptance may run.
+
+One umbrella with two halves, in the queue, on the settings screen and in the
+document, rather than three umbrellas.
+
+**A test asserts the word "deadline" appears nowhere a reader can see it.** The
+name that was wrong twice should not be able to come back by accident.
+
+---
+
 ## 2026-09-07: The latest scan is the latest scan, whatever it covered
 
 The "generate a report" button produced a document from a scan five hours old

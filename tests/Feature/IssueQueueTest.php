@@ -294,3 +294,20 @@ it('leaves out the edit link for somebody who may not edit that collection', fun
     expect($text)->not->toContain('href="'.$entry->editUrl().'"');
     expect($text)->toContain($entry->uri());
 });
+
+it('names the deadline filter after what it filters on', function () {
+    seedQueue();
+
+    $text = queuePage();
+
+    // The other filters name a thing: status, impact, site, collection. This
+    // one named the idea behind its options, and the first person asked to use
+    // it could not find it on the screen.
+    expect($text)->toContain('Deadlines');
+    expect($text)->not->toContain('Against the policy');
+
+    // The options themselves were never the problem, and they still say what
+    // they mean in words rather than in a colour.
+    expect($text)->toContain('Past target');
+    expect($text)->toContain('Acceptance has run out');
+});

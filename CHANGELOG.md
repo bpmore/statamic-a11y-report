@@ -20,6 +20,11 @@ on and marked all of them "page removed". A whole remediation queue could close
 in one go, and a closed queue looks exactly like a site somebody fixed.
 Resuming a scan with no pages now starts it.
 
+**The queue's deadline filter is called "Deadlines".** It was "Against the
+policy", which named the idea behind its options rather than the options, and
+the first person asked to use it could not find the control on the screen.
+Every other filter beside it names a thing: status, impact, site, collection.
+
 **And the overview no longer says such a scan read "0 of 0 pages".** That reads
 as a site with nothing on it, which is a different problem with a different
 cure. It now says the pages have not been listed yet.

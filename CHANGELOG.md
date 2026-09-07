@@ -20,6 +20,21 @@ on and marked all of them "page removed". A whole remediation queue could close
 in one go, and a closed queue looks exactly like a site somebody fixed.
 Resuming a scan with no pages now starts it.
 
+**A refused bulk change keeps what you had done.** Picking a date the policy
+will not take used to come back with nothing ticked, every box empty and the
+page at the top, so correcting one date meant choosing a dozen issues again and
+retyping the reason. The ticks, the status, the assignee, the note, the reason
+and the date all come back, and the browser returns to the form rather than to
+the top of fifty rows.
+
+**And the box that widens a change to every matching issue is no longer beside
+the button.** It sat on the same line as Apply, a slip apart from editing
+hundreds at once, including rows on pages of the list nobody had looked at. It
+is its own marked block above the button, and says that it reaches other pages.
+The table now points down to the form, the "Assign to" hint no longer runs off
+the end of its field, and "Leave empty for 6 March 2027" reads as the cap it is
+rather than a default.
+
 **One word for the targets and acceptances the queue filters on.** The filter
 is "Remediation", which is what the report's section and the settings screen
 already call it, and its options still say "Past target" and "Acceptance has

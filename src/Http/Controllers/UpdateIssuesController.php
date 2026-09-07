@@ -52,7 +52,7 @@ class UpdateIssuesController extends CpController
                 : array_fill_keys(IssueState::EXCEPTION_COLUMNS, null);
 
             if (is_string($acceptance)) {
-                return back()->with('error', $acceptance);
+                return self::refuse($acceptance);
             }
 
             $changes = array_merge($changes, $acceptance);
@@ -67,7 +67,7 @@ class UpdateIssuesController extends CpController
         }
 
         if ($changes === []) {
-            return back()->with('error', 'Nothing to change: pick a status, an assignee, or write a note.');
+            return self::refuse('Nothing to change: pick a status, an assignee, or write a note.');
         }
 
         $fingerprints = $request->boolean('all_matching')
@@ -75,7 +75,7 @@ class UpdateIssuesController extends CpController
             : collect((array) $request->input('fingerprints', []))->filter(fn ($f) => is_string($f) && preg_match('/^[0-9a-f]{40}$/', $f));
 
         if ($fingerprints->isEmpty()) {
-            return back()->with('error', 'No issues were selected.');
+            return self::refuse('No issues were selected.');
         }
 
         $changes['updated_by'] = User::current()?->email();
@@ -84,6 +84,27 @@ class UpdateIssuesController extends CpController
         $count = IssueState::whereIn('fingerprint', $fingerprints->all())->update($changes);
 
         return back()->with('success', $count.' '.($count === 1 ? 'issue' : 'issues').' updated.');
+    }
+
+    /**
+     * Say no without throwing the work away.
+     *
+     * A refusal used to redirect back bare: the page came again with nothing
+     * ticked, every field empty and the view at the top, so a person who had
+     * chosen a dozen issues and written a reason had to choose them, scroll,
+     * and write it again to correct one date. The refusals that matter here
+     * are for a missing reason and a date too far ahead, which are exactly the
+     * moments somebody has already done the typing.
+     *
+     * The fragment brings the browser back to the form rather than the top of
+     * fifty rows.
+     */
+    private static function refuse(string $message)
+    {
+        return redirect()
+            ->to(url()->previous().'#a11y-bulk')
+            ->withInput()
+            ->with('error', $message);
     }
 
     /**

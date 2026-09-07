@@ -7,7 +7,18 @@ it knows, leads its section.
 
 Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
-## Unreleased
+## 0.4.0 - 2026-09-07
+
+### Added
+
+**A locked assessment the scan disagrees with says so.** A person's locked
+judgement still wins outright, which is the rule and stays the rule. Where it
+stands over failures the automated checks found, the worksheet and the
+conformance document now say that in a sentence rather than leaving a reader to
+notice that a green "Supports" and "29 issues on 26 pages" are three columns
+apart. No determination moves and no count changes. A locked "does not support"
+agrees with the failures and is not flagged, and nor is any assessment on a
+criterion nothing failed under.
 
 ### Fixed
 
@@ -25,15 +36,6 @@ different numbers, because the gate's checker calls both `heading-missing-h1`
 and `heading-skipped-level` "Heading structure". A name now carries the rule's
 own id where another rule wears the same one, and stays the plain name where it
 does not.
-
-**A locked assessment the scan disagrees with says so.** A person's locked
-judgement still wins outright, which is the rule and stays the rule. Where it
-stands over failures the automated checks found, the worksheet and the
-conformance document now say that in a sentence rather than leaving a reader to
-notice that a green "Supports" and "29 issues on 26 pages" are three columns
-apart. No determination moves and no count changes. A locked "does not support"
-agrees with the failures and is not flagged, and nor is any assessment on a
-criterion nothing failed under.
 
 **The sentence under the chart says what the axis says.** It asked whether the
 two ends of the span fell on one calendar day, so five hours over midnight

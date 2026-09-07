@@ -7,6 +7,34 @@ it knows, leads its section.
 
 Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
+## 0.2.0 - 2026-09-06
+
+### Added
+
+**The rules outside WCAG have a switch on the settings screen.** Addons,
+Accessibility Report, Settings, under Scanning: whether to report axe's own
+rules that no success criterion requires. On a theme with no landmarks they
+can outnumber everything else, and the person drowning in them is the one who
+cannot edit a config file. `axe.best_practices` still answers until the screen
+is saved. Nothing it decides can reach the conformance table: the criteria an
+engine can cite come from the standard, a rule citing no criterion keeps its
+own name and is reported apart from WCAG, and the scan row records which way
+it ran.
+
+### Changed
+
+**Two ways from a queue row to the page.** Its path opens the entry to edit,
+because a queue is a list of things to fix and fixing happens in the entry.
+"View page" opens the page on the site in a new tab, which is where a contrast
+failure can actually be seen, and says so for a screen reader. The edit link is
+left out rather than offered and refused where the entry has been deleted since
+the scan, or where that person may not edit that collection. The conformance
+document is unchanged and keeps public addresses only.
+
+**Upgrading:** nothing to run. No tables changed and no setting has to be
+touched: the switch above starts on, which is what the config file already
+said.
+
 ## 0.1.0 - 2026-09-06
 
 ### Added
@@ -180,24 +208,6 @@ of its site and collection did not meet is marked "page removed", with a
 resolved time, and reopens if the page comes back with the problem. A scan
 narrowed by `--since`, by site or collection, or by an excluded URL closes
 nothing it could not have met.
-
-**The rules outside WCAG have a switch on the settings screen.** Addons,
-Accessibility Report, Settings, under Scanning: whether to report axe's own
-rules that no success criterion requires. On a theme with no landmarks they
-can outnumber everything else, and the person drowning in them is the one who
-cannot edit a config file. `axe.best_practices` still answers until the screen
-is saved. Nothing it decides can reach the conformance table: the criteria an
-engine can cite come from the standard, a rule citing no criterion keeps its
-own name and is reported apart from WCAG, and the scan row records which way
-it ran.
-
-**Two ways from a queue row to the page.** Its path opens the entry to edit,
-because a queue is a list of things to fix and fixing happens in the entry.
-"View page" opens the page on the site in a new tab, which is where a contrast
-failure can actually be seen, and says so for a screen reader. The edit link is
-left out rather than offered and refused where the entry has been deleted since
-the scan, or where that person may not edit that collection. The conformance
-document is unchanged and keeps public addresses only.
 
 **A scan can be ended.** `php please a11y:scan:cancel <scan id>` ends a scan
 that is never going to finish, so scheduled scans can run again. `cancelled`

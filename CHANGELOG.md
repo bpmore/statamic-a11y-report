@@ -7,7 +7,7 @@ it knows, leads its section.
 
 Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
-## Unreleased
+## 0.2.1 - 2026-09-06
 
 ### Fixed
 

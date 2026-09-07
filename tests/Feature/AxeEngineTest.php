@@ -327,9 +327,14 @@ it('blames the page, not the browser, when a page never finishes loading', funct
 
     $port = (int) explode(':', (string) stream_socket_get_name($sink, false))[1];
 
-    // Its own engine, on a short deadline, so the test does not wait thirty
-    // seconds for an answer it can have in two.
-    $engine = new AxeEngine(new DevTools(new Browser, 2, 0), 'wcag22aa', true);
+    // Its own engine, on a deadline shorter than the thirty seconds a scan
+    // uses but not as short as it could be. One deadline covers both waiting
+    // for a command's reply and waiting for the page to load, so a number
+    // chosen purely for speed makes the two race: on a loaded runner the
+    // navigate command itself timed out first, which is a browser fault, was
+    // retried as one, and the browser count this asserts came back as two.
+    // Ten seconds is long enough that only the load wait can expire.
+    $engine = new AxeEngine(new DevTools(new Browser, 10, 0), 'wcag22aa', true);
     $starts = new ReflectionProperty(AxeEngine::class, 'chrome');
 
     try {

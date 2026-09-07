@@ -118,9 +118,11 @@
             <dt>Scan</dt>
             <dd>{{ $r['scan']['uuid'] }}, started {{ $r['scan']['trigger'] === 'ci' ? 'from a deploy pipeline' : ($r['scan']['trigger'] === 'scheduled' ? 'on schedule' : 'by hand') }}</dd>
             <dt>Automated</dt>
-            <dd>{{ count($r['methods']['automated_criteria']) }} success criteria have automated checks covering part of them</dd>
+            @php($automated = count($r['methods']['automated_criteria']))
+            <dd>{{ $automated }} success {{ $automated === 1 ? 'criterion has' : 'criteria have' }} automated checks covering part of {{ $automated === 1 ? 'it' : 'them' }}</dd>
             <dt>Assessed by a person</dt>
-            <dd>{{ count($r['methods']['assessed_by_people']) }} success criteria carry a locked manual assessment</dd>
+            @php($byPeople = count($r['methods']['assessed_by_people']))
+            <dd>{{ $byPeople }} success {{ $byPeople === 1 ? 'criterion carries' : 'criteria carry' }} a locked manual assessment</dd>
         </dl>
         @if ($r['coverage']['summaries'] !== [])
             <table>

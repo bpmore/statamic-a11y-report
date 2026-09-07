@@ -20,6 +20,18 @@ on and marked all of them "page removed". A whole remediation queue could close
 in one go, and a closed queue looks exactly like a site somebody fixed.
 Resuming a scan with no pages now starts it.
 
+**The report's coverage note counts the same table three ways without adding
+them up.** "23 of 55 criteria had automated checks; 54 were not evaluated; 1
+were assessed by a person" joined three overlapping counts with semicolons,
+which reads as parts of one whole, and 23 and 54 and 1 make more than the 55
+rows they describe. A criterion the checks speak to is still "not evaluated"
+where they found nothing, so it is in both counts on purpose. The sentence now
+says so, and gets its singulars right.
+
+**"Won't fix" has its apostrophe** in the queue's badges and dropdowns. It was
+"Wont fix" there and "won't fix" everywhere else, which reads as two decisions
+rather than one.
+
 **The queue no longer says nothing is open when a filter emptied the list.**
 "No issue is open or in progress" was printed whenever the status filter sat on
 its default, whatever else was narrowing the page. Choose a deadline or a site

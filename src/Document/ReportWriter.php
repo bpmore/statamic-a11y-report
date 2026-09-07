@@ -156,12 +156,24 @@ final class ReportWriter
      */
     private static function coverageNote(array $data): string
     {
+        $total = count($data['criteria']);
+        $automated = count($data['methods']['automated_criteria']);
+        $unevaluated = count($data['methods']['not_evaluated']);
+        $people = count($data['methods']['assessed_by_people']);
+
+        // Three counts of the same table, and never a sum. Semicolons made
+        // them read as parts of one whole and they are not: a criterion the
+        // checks can speak to is still "not evaluated" where they found
+        // nothing, so it is counted twice on purpose, and 23 and 54 and 1
+        // added to more than the 55 rows they describe.
         return sprintf(
-            '%d of %d criteria had automated checks; %d were not evaluated; %d were assessed by a person.',
-            count($data['methods']['automated_criteria']),
-            count($data['criteria']),
-            count($data['methods']['not_evaluated']),
-            count($data['methods']['assessed_by_people']),
+            'Automated checks speak to %d of %d criteria. %d %s marked not evaluated, and %d %s a person\'s assessment.',
+            $automated,
+            $total,
+            $unevaluated,
+            $unevaluated === 1 ? 'is' : 'are',
+            $people,
+            $people === 1 ? 'carries' : 'carry',
         );
     }
 }

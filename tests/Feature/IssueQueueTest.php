@@ -337,3 +337,26 @@ it('does not say nothing is open when a filter is what emptied the list', functi
     IssueState::query()->update(['status' => IssueState::FIXED]);
     expect(queuePage())->toContain('No issue is open or in progress');
 });
+
+it("spells won't fix with its apostrophe", function () {
+    seedQueue();
+
+    $fp = IssueState::first()->fingerprint;
+
+    $this->actingAs($this->user)->post(cp_route('utilities.a11y-report.issues.update'), [
+        'fingerprints' => [$fp],
+        'status' => 'wont_fix',
+        'exception_reason' => 'Supplier widget, out of our hands.',
+    ]);
+
+    // Decoded twice: the utility's HTML rides inside an Inertia attribute, so
+    // one pass leaves the apostrophe as `&#039;`, which is right in the page
+    // and unreadable in an assertion.
+    $text = html_entity_decode(queuePage(['status' => 'all']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    // `wont_fix` is the column's value. "Wont fix" is not a phrase, and the
+    // badge, the dropdown and the report all name the same decision: two
+    // spellings of it read as two different things.
+    expect($text)->toContain("Won't fix");
+    expect($text)->not->toContain('Wont fix');
+});

@@ -7,6 +7,21 @@ it knows, leads its section.
 
 Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
+## 0.4.1 - 2026-09-07
+
+### Fixed
+
+**The gate may now be 0.8, so the mark in the entry sidebar appears.** The
+requirement read `^0.7`, which on a version below 1.0 means "0.7 and nothing
+after it", so Accessibility Gate 0.8 could not be installed beside this addon
+at all. The mark on the gate's panel needs 0.8 and has been documented since
+this addon's first release without ever being reachable: the gate's own seam
+was merged and untagged, the tag when it came was excluded by this line, and
+nothing on screen explained the absence. The requirement is now `^0.7 || ^0.8`,
+which takes either. It is not `^0.8`: the mark is left out on an older gate
+exactly as documented, and an optional logo is no reason to make anybody
+upgrade.
+
 ## 0.4.0 - 2026-09-07
 
 ### Added

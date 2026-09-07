@@ -295,16 +295,41 @@ final class ReportBuilder
      *
      * @return array<int, array{label: string, rule_id: string, issues: int, pages: int}>
      */
+    /**
+     * The house rules this scan found, with a name a reader can tell apart.
+     *
+     * Two rules can share a plain name: the gate's checker calls both
+     * `heading-missing-h1` and `heading-skipped-level` "Heading structure".
+     * Printed by that name alone the document listed "Heading structure" twice
+     * with different numbers, which reads as a mistake in the document rather
+     * than as two checks.
+     *
+     * So a name is the plain one where it is the only rule wearing it, and
+     * carries the rule's own id where it is not. The plain name still reaches
+     * the document, which is the rule; it is only shared names that need more,
+     * and only they pay for it.
+     */
     private function outsideWcag(Scan $scan): array
     {
-        return Issue::where('scan_id', $scan->id)
+        $rows = Issue::where('scan_id', $scan->id)
             ->where('wcag_criteria', '[]')
             ->selectRaw('label, rule_id, count(*) as issues, count(distinct page_id) as pages')
             ->groupBy('label', 'rule_id')
             ->orderBy('label')
-            ->get()
-            ->map(fn ($r) => ['label' => (string) $r->label, 'rule_id' => (string) $r->rule_id, 'issues' => (int) $r->issues, 'pages' => (int) $r->pages])
-            ->all();
+            ->orderBy('rule_id')
+            ->get();
+
+        $shared = $rows->groupBy('label')->filter(fn ($g) => $g->count() > 1)->keys()->all();
+
+        return $rows->map(fn ($r) => [
+            'label' => (string) $r->label,
+            'rule_id' => (string) $r->rule_id,
+            'name' => in_array((string) $r->label, $shared, true)
+                ? (string) $r->label.' ('.$r->rule_id.')'
+                : (string) $r->label,
+            'issues' => (int) $r->issues,
+            'pages' => (int) $r->pages,
+        ])->all();
     }
 
     private function openIssueCount(Scan $scan): int

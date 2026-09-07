@@ -27,12 +27,6 @@
         "orchestra/testbench": "^11.0",
         "pestphp/pest": "^4.0"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/bpmore/statamic-a11y-gate.git"
-        }
-    ],
     "autoload": {
         "psr-4": {
             "Bpmore\\A11yReport\\": "src/"

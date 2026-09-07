@@ -25,6 +25,11 @@ use Bpmore\A11yReport\Models\CriterionAssessment;
  * 4. An unlocked assessment a person has written stands, except against
  *    rule 2: a failure the engine can show beats an unlocked "supports".
  * 5. Nothing else is ever "supports". The default is "not evaluated".
+ *
+ * Rule 1 is the only way a row can claim something the scan disagrees with,
+ * because rule 2 settles every unlocked case against the person. Where it
+ * happens the row is marked `contradicted`, which changes no determination
+ * and only says the two do not agree.
  */
 final class AssessmentMerger
 {
@@ -61,13 +66,18 @@ final class AssessmentMerger
         };
 
         if ($human !== null && $human->locked) {
+            $status = $human->status ?: CriterionAssessment::NOT_EVALUATED;
+
             return self::row(
-                status: $human->status ?: CriterionAssessment::NOT_EVALUATED,
+                status: $status,
                 method: $human->method ?: 'manual',
                 remarks: (string) $human->remarks,
                 evidence: $evidence,
                 human: $human,
                 automated: $covered,
+                // Agreeing with the failures is not a contradiction, and a
+                // criterion nobody has failed has nothing to contradict.
+                contradicted: $failure !== null && $status !== CriterionAssessment::DOES_NOT_SUPPORT,
             );
         }
 
@@ -94,7 +104,7 @@ final class AssessmentMerger
     }
 
     /** @return array<string, mixed> */
-    private static function row(string $status, string $method, string $remarks, string $evidence, ?CriterionAssessment $human, bool $automated): array
+    private static function row(string $status, string $method, string $remarks, string $evidence, ?CriterionAssessment $human, bool $automated, bool $contradicted = false): array
     {
         return [
             'status' => $status,
@@ -105,6 +115,20 @@ final class AssessmentMerger
             'assessed_at' => $human?->assessed_at?->toIso8601String(),
             'locked' => (bool) ($human?->locked ?? false),
             'automated' => $automated,
+            // A person's locked answer standing over failures the scan can
+            // show. Rule 1 says it stands, and it does; this only says that
+            // the two disagree.
+            //
+            // Only a locked row can be here. Rule 2 turns an unlocked answer
+            // into "does not support" the moment the engine finds anything,
+            // which is the product already treating this conflict as
+            // something that matters. Locked, it resolves the other way, and
+            // said nothing at all.
+            //
+            // It is the shortest path in this product to a claim a scan
+            // disagrees with, in a document filed as evidence, and a reader
+            // had to notice a sentence of remarks to see it.
+            'contradicted' => $contradicted,
         ];
     }
 

@@ -66,6 +66,9 @@ final class Worksheet
                 'failure' => $failures[$criterion->number] ?? null,
                 'evidence' => $effective['evidence'],
                 'effective_status' => $effective['status'],
+                // The same flag the document carries, so the person writing
+                // the assessment sees what its reader will.
+                'contradicted' => $effective['contradicted'],
                 'own' => $own,
                 'inherited' => $own === null ? $inherited->get($criterion->number) : null,
             ];

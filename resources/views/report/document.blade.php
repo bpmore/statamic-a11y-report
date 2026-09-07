@@ -34,6 +34,8 @@
         .status-does_not_support { color: #8a1c1c; }
         .status-supports { color: #1c5e2e; }
         .status-partially_supports { color: #7a4d00; }
+        /* Said in words as well, never in the colour alone. */
+        .contradicted { border-left: 3px solid #7a4d00; padding-left: .6em; }
         .evidence { color: #444; font-size: 0.92em; }
         .notice { border: 1px solid #999; padding: 0.75em 1em; background: #fafafa; }
         /* Links go to the W3C's own text for each criterion. Dark enough to
@@ -165,6 +167,11 @@
                         <td class="status status-{{ $c['status'] }}">{{ \Bpmore\A11yReport\Document\AssessmentMerger::label($c['status']) }}</td>
                         <td>{{ $c['locked'] ? ucfirst($c['method']).', locked' : ucfirst($c['method']) }}</td>
                         <td>
+                            {{-- Said before the remarks and the evidence, not left for a
+                                 reader to work out by comparing them. The determination is
+                                 the person's and stands; this only says the scan does not
+                                 agree with it. --}}
+                            @if ($c['contradicted'])<p class="contradicted"><strong>A person's assessment, kept over the automated result.</strong> The automated checks found failures under this criterion. The determination above is the assessor's and is what this report states; the evidence below is what the checks found.</p>@endif
                             @if ($c['remarks'] !== '')<p>{{ $c['remarks'] }}</p>@endif
                             <p class="evidence">{{ $c['evidence'] }}</p>
                             @if ($c['assessed_by'])<p class="evidence">Assessed by {{ $c['assessed_by'] }}{{ $c['assessed_at'] ? ' on '.\Illuminate\Support\Carbon::parse($c['assessed_at'])->format('j F Y') : '' }}.</p>@endif

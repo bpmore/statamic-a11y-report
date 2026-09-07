@@ -10,7 +10,12 @@
 @php
     $f = $filters;
     $href = fn (array $extra = []) => $indexUrl.(($qs = http_build_query(array_merge($queryString, $extra))) !== '' ? '?'.$qs : '');
-    $label = fn (string $status) => ucfirst(str_replace('_', ' ', $status));
+    // "wont_fix" is the column's value and "Wont fix" is not a phrase. The
+    // apostrophe is not decoration: the badge, the dropdown and the report all
+    // name the same decision, and two spellings of it read as two things.
+    $label = fn (string $status) => $status === \Bpmore\A11yReport\Models\IssueState::WONT_FIX
+        ? "Won't fix"
+        : ucfirst(str_replace('_', ' ', $status));
     $colour = ['critical' => 'red', 'serious' => 'amber', 'moderate' => 'blue', 'minor' => 'default'];
     // The criterion the engine cited, looked up in the catalogue for its
     // name and the W3C's page on it. A house rule cites none and stays text.

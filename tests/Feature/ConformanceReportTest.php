@@ -72,7 +72,7 @@ it('records who generated it and from which scan, and writes both files', functi
     expect($report->standard)->toBe('wcag22aa');
     expect(is_file(app(ReportWriter::class)->absolutePath($report->html_path)))->toBeTrue();
     expect(is_file(app(ReportWriter::class)->absolutePath($report->json_path)))->toBeTrue();
-    expect($report->coverage_note)->toContain('of 55 criteria had automated checks');
+    expect($report->coverage_note)->toContain('of 55 criteria');
 
     expect($html)->toContain('tester@example.test');
     expect($html)->toContain($scan->uuid);
@@ -159,7 +159,7 @@ it('lets a locked manual assessment win and shows the automated evidence beside 
     expect($html)->toContain('Automated checks found 1 issue on 1 page (image-missing-alt).');
     expect($html)->toContain('Assessed by Reviewer');
     expect($html)->toMatch('/2\.4\.3 Focus Order<\/a><\/th>\s*<td>A<\/td>\s*<td class="status status-partially_supports">Partially supports/');
-    expect($report->coverage_note)->toContain('2 were assessed by a person');
+    expect($report->coverage_note)->toContain("2 carry a person's assessment");
 
     // And a scan is not allowed to write over either row.
     runScan(sites: ['default']);
@@ -269,7 +269,7 @@ it('runs as a command and copies the files where asked', function () {
 
     $this->artisan('statamic:a11y:report', ['--out' => $out, '--format' => 'html'])
         ->expectsOutputToContain('generated from scan')
-        ->expectsOutputToContain('had automated checks')
+        ->expectsOutputToContain('Automated checks speak to')
         ->expectsOutputToContain('A self-assessment, not a certification')
         ->assertExitCode(0);
 
@@ -380,4 +380,41 @@ it('reports on the newest scan when the scope names a site', function () {
     // scan and reported on it: a conformance document hours out of date, with
     // nothing on the screen to say which scan it came from.
     expect(Report::latest('id')->first()->scan_id)->toBe($newest->id);
+});
+
+it('counts the same table three ways without pretending they add up', function () {
+    $user = User::make()->email('super@example.test')->makeSuper();
+    $user->save();
+
+    page('one', '<img src="/a.jpg">');
+    $scan = runScan();
+
+    CriterionAssessment::create([
+        'site' => null, 'criterion' => '1.4.3', 'level' => 'AA',
+        'status' => CriterionAssessment::SUPPORTS, 'method' => 'manual', 'locked' => true,
+        'assessed_by' => 'reviewer@example.test', 'assessed_at' => now(),
+    ]);
+
+    $report = app(ReportWriter::class)->write($scan->fresh(), 'tester@example.test');
+    $data = json_decode((string) file_get_contents(app(ReportWriter::class)->absolutePath($report->json_path)), true);
+
+    $total = count($data['criteria']);
+    $automated = count($data['methods']['automated_criteria']);
+    $unevaluated = count($data['methods']['not_evaluated']);
+    $people = count($data['methods']['assessed_by_people']);
+
+    // The three overlap on purpose: a criterion the checks can speak to is
+    // still "not evaluated" where they found nothing. The old sentence joined
+    // them with semicolons, which reads as parts of one whole, and they added
+    // to more than the table has rows.
+    expect($automated + $unevaluated + $people)->toBeGreaterThan($total);
+
+    expect($report->coverage_note)->toBe(
+        "Automated checks speak to {$automated} of {$total} criteria. {$unevaluated} are marked not evaluated, and 1 carries a person's assessment."
+    );
+
+    // Singular and plural, because "1 were assessed by a person" was printed
+    // to somebody who then wrote it down.
+    expect($report->coverage_note)->not->toContain('1 carry');
+    expect($report->coverage_note)->not->toContain('were assessed');
 });

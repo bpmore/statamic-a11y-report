@@ -204,6 +204,14 @@ class ServiceProvider extends AddonServiceProvider
             'expiredExceptions' => $installed ? $overview->expiredExceptions() : 0,
             'trend' => $trend,
             'chart' => TrendChart::render($trend),
+            // What the chart actually draws, which on most installs is a much
+            // shorter span than the window it was searched over. A heading
+            // naming the window is read as naming the axis.
+            'trendSpan' => $trend === [] ? null : [
+                'from' => $trend[0]['at'],
+                'to' => $trend[count($trend) - 1]['at'],
+            ],
+            'trendDays' => 90,
             'canRun' => (bool) User::current()?->can('run accessibility scans'),
             'runUrl' => cp_route('utilities.a11y-report.run'),
             'indexUrl' => cp_route('utilities.a11y-report.issues'),

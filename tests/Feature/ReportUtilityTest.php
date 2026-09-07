@@ -206,6 +206,30 @@ it('says when a scan is not moving, and what to run', function () {
     expect(reportPage())->toContain('has been <strong>running</strong> for 2 minutes');
 });
 
+it('heads the chart with what it draws, not the window it searched', function () {
+    app(ReportDatabase::class)->install();
+    page('one', '<img src="/a.jpg">');
+    runScan();
+    runScan();
+
+    $text = reportPage();
+
+    // "Issues found, last 90 days" named the window the scans were looked for
+    // in, not the span the chart draws. Every scan on a young install happens
+    // in one afternoon, so it read as an axis running three months over an
+    // axis running five hours, and a chart that has to be argued with takes
+    // the rest of the page down with it.
+    expect($text)->toContain('Issues found per scan');
+    expect($text)->not->toContain('Issues found, last 90 days');
+
+    // The window still gets said, underneath, where it is a fact about what
+    // was included rather than a claim about the axis.
+    expect($text)->toContain('Scans from the last 90 days are shown');
+
+    // And the description carries the span actually drawn.
+    expect($text)->toMatch('/at the time it finished, \d+ \w+ \d\d:\d\d to \d\d:\d\d\./');
+});
+
 it('does not say a site has no pages when the scan has not listed them yet', function () {
     app(ReportDatabase::class)->install();
 

@@ -90,7 +90,13 @@
                     </select>
                 </div>
                 <div>
-                    <label for="a11y-f-due" class="block text-xs font-medium mb-1">Against the policy</label>
+                    {{-- Every other filter here names the thing it filters on:
+                         status, impact, site, collection. This one named the
+                         idea behind its options rather than the options, and
+                         the first person to meet it could not find the control
+                         they had been asked to use. All three options are a
+                         date that has passed or is about to. --}}
+                    <label for="a11y-f-due" class="block text-xs font-medium mb-1">Deadlines</label>
                     <select id="a11y-f-due" name="due" class="rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm">
                         <option value="">Any</option>
                         @foreach ($dueOptions as $due)

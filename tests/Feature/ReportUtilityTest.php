@@ -206,6 +206,26 @@ it('says when a scan is not moving, and what to run', function () {
     expect(reportPage())->toContain('has been <strong>running</strong> for 2 minutes');
 });
 
+it('warns that cron may not find the php the crontab line names', function () {
+    app(ReportDatabase::class)->install();
+    page('one', '<p>Fine.</p>');
+    $scan = runScan();
+
+    $scan->update(['status' => Scan::QUEUED, 'finished_at' => null, 'started_at' => null, 'created_at' => now()->subMinutes(20)]);
+    \Bpmore\A11yReport\Models\ScanPage::where('scan_id', $scan->id)->update(['status' => 'pending', 'scanned_at' => null]);
+
+    $text = reportPage();
+
+    // The line every guide prints, and the reason it is wrong more often than
+    // it is right: cron runs with almost no environment, and on Herd, Valet,
+    // Homebrew or a version manager `php` is not on the PATH it gets. The
+    // line then fails silently for ever, and a schedule that never runs looks
+    // exactly like one nobody set up.
+    expect($text)->toContain('php artisan schedule:run');
+    expect($text)->toContain('which php');
+    expect($text)->toContain("does not use your shell's");
+});
+
 it('keeps saying a scan is stuck after a later one has finished', function () {
     app(ReportDatabase::class)->install();
     page('one', '<p>Fine.</p>');

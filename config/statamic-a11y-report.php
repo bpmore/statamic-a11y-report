@@ -92,6 +92,11 @@ return [
     |
     |     * * * * * cd /path/to/site && php artisan schedule:run >> /dev/null 2>&1
     |
+    | Check which `php` that line finds. Cron does not use your shell's PATH,
+    | so where `which php` answers with anything but a plain /usr/bin/php, put
+    | that whole path in the line instead, quoted if it has a space. A line
+    | naming a php cron cannot find fails silently for ever.
+    |
     | Without that line nothing here runs, and the report overview says so
     | rather than leaving you to find out from a document with a stale date on
     | it. 'hourly' is deliberately not a frequency you can name: a scan renders

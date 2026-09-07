@@ -12,6 +12,42 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-06: The crontab line names a `php` that cron may not have
+
+The overview, the README and the config file all printed the line every
+Laravel guide prints:
+
+    * * * * * cd /path/to/site && php artisan schedule:run >> /dev/null 2>&1
+
+On the machine this addon was built on, that line does nothing. `which php`
+answers with Herd's binary under `~/Library/Application Support`, and cron runs
+with almost no environment: `php` is not on the PATH it gets. The line fails
+silently for ever. A schedule that never runs looks exactly like a schedule
+nobody set up, which is the failure the overview panel exists to catch, and the
+advice on that same panel was causing it.
+
+Found by adding the line to a real crontab and watching it work only once the
+full path was in it.
+
+**The panel does not guess the path.** The obvious fix is to print the
+interpreter this install is running on, and it is wrong: the panel renders
+under FPM, where `PHP_BINARY` is the FPM binary and not the CLI one, and
+`PHP_BINDIR` on this machine is `/bin`, which holds no php at all. A panel
+confidently printing an FPM binary would be worse than one printing `php`,
+because the reader would trust it.
+
+So it names the trap instead and hands the reader the one command that answers
+it for their machine: run `which php`, and if it is anything but a plain
+`/usr/bin/php`, put that path in the line, quoted if it has a space. That is
+true on every machine and cannot go stale.
+
+**The overview's own warning is the second line of defence, not the first.** It
+says scheduled scans have stopped after two missed runs, which for a weekly
+scan is a fortnight. Getting the line right on the day somebody sets it up is
+worth more than telling them a fortnight later.
+
+---
+
 ## 2026-09-06: A queue row goes to the entry, and offers the page beside it
 
 The queue gave one link per row: the path, pointing at the public page, in a

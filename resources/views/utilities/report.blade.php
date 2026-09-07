@@ -168,13 +168,13 @@
         @else
             <div class="text-gray-800 dark:text-gray-200">{!! $chart !!}</div>
             @php
-                $sameDay = $trendSpan && $trendSpan['from']->isSameDay($trendSpan['to']);
+                $withTime = $trendSpan && \Bpmore\A11yReport\Trends\TrendChart::showsTime($trendSpan['from'], $trendSpan['to']);
                 // The zone once, at the end, rather than on both ends or on
                 // every label below. A clock time beside Statamic's own "21
                 // minutes ago" is read as local, and on a site that never set
                 // `APP_TIMEZONE` it is not.
                 $span = $trendSpan
-                    ? ', '.$trendSpan['from']->format($sameDay ? 'j M H:i' : 'j M Y').' to '.$trendSpan['to']->format($sameDay ? 'H:i T' : 'j M Y')
+                    ? ', '.$trendSpan['from']->format($withTime ? 'j M H:i' : 'j M Y').' to '.$trendSpan['to']->format($withTime ? 'j M H:i T' : 'j M Y')
                     : '';
                 $chartNote = 'One point per completed scan, at the time it finished'.$span
                     .'. Scans from the last '.$trendDays.' days are shown; every point is in the table below.';

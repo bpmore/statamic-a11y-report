@@ -11,6 +11,12 @@ Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
 ### Fixed
 
+**The sentence under the chart says what the axis says.** It asked whether the
+two ends of the span fell on one calendar day, so five hours over midnight
+printed "6 Sep 2026 to 7 Sep 2026" while the axis beneath read "6 Sep 22:44" to
+"7 Sep 03:47". The question was never which day but how long the span is, and
+both now ask the chart.
+
 **Clock times say which clock.** A report's evaluation period, the line saying
 when the site was actually looked at, printed a time with no zone beside a
 footer that has always carried one. The overview's chart says the zone once

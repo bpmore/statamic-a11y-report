@@ -30,6 +30,24 @@ final class TrendChart
     /** Points closer together in time than this are spaced evenly instead. */
     private const EVEN_SPACING_BELOW = 86_400;
 
+    /**
+     * Whether the labels on a span this long carry a time of day.
+     *
+     * Public, and asked rather than worked out again, because the sentence
+     * under the chart has to say the same thing the axis does. It did not: it
+     * asked whether the two ends fell on one calendar day, which a span of
+     * five hours over midnight does not, so the axis read "6 Sep 22:44" to
+     * "7 Sep 03:47" while the sentence beneath it read "6 Sep 2026 to 7 Sep
+     * 2026" and dropped the times, and with them the timezone they were
+     * printed to carry.
+     *
+     * The question was never which day. It is how long the span is.
+     */
+    public static function showsTime(\DateTimeInterface $from, \DateTimeInterface $to): bool
+    {
+        return ($to->getTimestamp() - $from->getTimestamp()) < 2 * self::EVEN_SPACING_BELOW;
+    }
+
     public static function render(array $points, int $width = 1000, int $height = 220, bool $sparkline = false): string
     {
         if ($points === []) {
@@ -48,7 +66,7 @@ final class TrendChart
         $t1 = $points[count($points) - 1]['at']->getTimestamp();
         $count = count($points);
         $evenly = ($t1 - $t0) < self::EVEN_SPACING_BELOW;
-        $withTime = ($t1 - $t0) < 2 * self::EVEN_SPACING_BELOW;
+        $withTime = self::showsTime($points[0]['at'], $points[count($points) - 1]['at']);
 
         $coords = [];
 

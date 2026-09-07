@@ -53,6 +53,7 @@
                 @endif
                 <p>Laravel's scheduler has to be running on the server for any of it to happen. One line in the crontab, which covers every scheduled task the site has and not only this one:</p>
                 <pre class="text-sm">* * * * * cd @plain(base_path()) &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</pre>
+                <p><strong>Check which <code>php</code> that line will find.</strong> Cron runs with almost no environment and does not use your shell's <code>PATH</code>. Run <code>which php</code>: if it answers with anything other than a plain <code>/usr/bin/php</code>, which is the ordinary case with Herd, Valet, Homebrew or a version manager, put that whole path in the line instead, in double quotes if it has a space in it. A crontab line naming a <code>php</code> cron cannot find fails silently for ever, and a schedule that never runs looks exactly like one nobody set up.</p>
                 <p>To check what is registered: <code>php artisan schedule:list</code>. To stop asking for a scheduled scan, set <code>scan.schedule</code> to <code>false</code> in <code>config/statamic-a11y-report.php</code>.</p>
             </div>
         </ui-card-panel>

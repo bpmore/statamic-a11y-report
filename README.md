@@ -130,6 +130,21 @@ which covers every scheduled task your site has and not only this one:
 * * * * * cd /path/to/site && php artisan schedule:run >> /dev/null 2>&1
 ```
 
+Check which `php` that line will find before you trust it. Cron runs with
+almost no environment and does not use your shell's `PATH`. Run `which php`:
+if it answers with anything other than a plain `/usr/bin/php`, which is the
+ordinary case with Herd, Valet, Homebrew or a version manager, put that whole
+path in the line instead, in double quotes if it contains a space:
+
+```
+* * * * * cd /path/to/site && "/Users/you/Library/Application Support/Herd/bin/php" artisan schedule:run >> /dev/null 2>&1
+```
+
+A crontab line naming a `php` that cron cannot find fails silently for ever,
+and a schedule that never runs looks exactly like one nobody set up. The
+overview says so after two missed runs, which is the second line of defence
+and not the first.
+
 Without it nothing runs, so the report overview tells you rather than leaving
 you to notice from a document with an old date on it. It says the same thing
 again if scheduled scans were happening and have stopped. `php artisan

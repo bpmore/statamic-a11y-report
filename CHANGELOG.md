@@ -7,6 +7,20 @@ it knows, leads its section.
 
 Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
+## Unreleased
+
+### Fixed
+
+**The crontab line said `php`, which cron often does not have.** The overview,
+the README and the config file all printed the line every Laravel guide
+prints, and on Herd, Valet, Homebrew or a version manager it does nothing at
+all: cron runs with almost no environment and `php` is not on the PATH it
+gets. The line fails silently for ever, which is exactly the failure the
+overview panel exists to catch. All three now say to check `which php` first
+and to use the whole path, quoted where it has a space. The panel does not
+guess the path: it renders under FPM, where the interpreter it could name is
+the wrong one.
+
 ## 0.2.0 - 2026-09-06
 
 ### Added

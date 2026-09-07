@@ -99,6 +99,17 @@ final class ScanEvidence
             }
         }
 
-        return $query->whereNull('site')->first() ?? $query->first();
+        // With no site asked for, the newest complete scan, whatever it
+        // covered. This used to prefer a scan of every site over a newer one
+        // of a named site, and a preference that beats recency is not a
+        // preference, it is a way to report on the wrong week.
+        //
+        // A scan carries a site as soon as the scope names one, which the
+        // settings screen writes the moment anybody saves it. So on the
+        // ordinary single-site install every scan after that day is named,
+        // none of them was ever chosen, and the document came from whichever
+        // scan predated the save. Five hours out of date on the machine this
+        // was found on, with nothing on the screen to say which scan it was.
+        return $query->first();
     }
 }

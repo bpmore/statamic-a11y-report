@@ -355,3 +355,29 @@ it('links to the WCAG 2.1 text when the report is set to 2.1', function () {
     expect(substr_count($html, 'WCAG22/Understanding'))->toBe(0);
     expect(str_contains($html, '2.5.8'))->toBeFalse('a 2.1 report says nothing about a 2.2 criterion');
 });
+
+it('reports on the newest scan when the scope names a site', function () {
+    $user = User::make()->email('super@example.test')->makeSuper();
+    $user->save();
+
+    page('one', '<img src="/a.jpg">');
+
+    // An early scan of every site, as an install has before anybody narrows
+    // the scope. Its `site` is null.
+    $all = runScan();
+    expect($all->site)->toBeNull();
+
+    // Then the scope names a site, which is what the settings screen writes
+    // the moment somebody saves it. Every scan from here carries that name.
+    page('two', '<a href="#">Somewhere</a>');
+    $newest = runScan(sites: ['default']);
+    expect($newest->site)->toBe('default');
+    expect($newest->id)->toBeGreaterThan($all->id);
+
+    $this->actingAs($user)->post(cp_route('utilities.a11y-report.reports.generate'))->assertRedirect();
+
+    // `where('site', null)` reads as `site is null`, so it saw only the first
+    // scan and reported on it: a conformance document hours out of date, with
+    // nothing on the screen to say which scan it came from.
+    expect(Report::latest('id')->first()->scan_id)->toBe($newest->id);
+});

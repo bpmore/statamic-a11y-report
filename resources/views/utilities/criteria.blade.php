@@ -72,6 +72,12 @@
                                 </ui-table-cell>
                                 <ui-table-cell>
                                     <ui-badge text="@plain($label($row['effective_status']))" @if ($row['effective_status'] === 'does_not_support') color="red" @elseif ($row['effective_status'] === 'supports') color="emerald" @elseif ($row['effective_status'] === 'partially_supports') color="amber" @endif />
+                                    {{-- In words, not in the badge's colour: a queue that
+                                         marks a disagreement with a tint fails 1.4.1 on the
+                                         screen of an accessibility product. --}}
+                                    @if (! empty($row['contradicted']))
+                                        <ui-description text="Your assessment is kept over the automated result. The checks found failures under this criterion." />
+                                    @endif
                                     @if ($inh)<ui-description text="@plain('Inherited from the global default'.($inh->assessed_by ? ', assessed by '.$inh->assessed_by : ''))" />@endif
                                     @if ($own && $own->assessed_by)<ui-description text="@plain('Assessed by '.$own->assessed_by.($own->assessed_at ? ' on '.$own->assessed_at->format('j M Y') : ''))" />@endif
                                 </ui-table-cell>

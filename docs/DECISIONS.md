@@ -12,6 +12,41 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-07: A locked answer that the scan disagrees with says so
+
+Found by opening the worksheet: 1.1.1 showed a green "Supports" beside the
+sentence "Automated checks found 29 issues on 26 pages", and the conformance
+document printed the same pair. Nothing said the two disagreed.
+
+**The determination was right and stays.** Rule 1 has always been that a
+person's locked judgement wins outright, and it must: the finding may be a
+false positive, or the criterion may be met by an alternative version, and a
+scan is not the last word on a criterion no scan can fully decide.
+
+**What was missing is that this is the only way it can happen.** Rule 2 turns
+an unlocked answer into "does not support" the moment the engine finds
+anything, so the product already treats a human claim contradicting live
+evidence as something that matters. Locked, it resolves the other way, and
+said nothing at all. That is the shortest path in this product to a claim a
+scan disagrees with, in a document filed as evidence, and the reader had to
+compare a status against a sentence three columns away to notice.
+
+So the row carries `contradicted`, and both the worksheet and the document say
+it in a sentence before the remarks. Nothing is overruled, no determination
+moves, and no count changes. It only says the two do not agree.
+
+**Not a contradiction:** a locked "does not support" agreeing with the
+failures, and any locked answer on a criterion nothing failed under. Both have
+a test, because a flag that fires when there is no disagreement teaches people
+to ignore it.
+
+Turned down: refusing to let a person lock "supports" over failures. That would
+make the scan the last word on criteria it cannot decide, which is the opposite
+of what this product says about automated testing on every page of every
+report.
+
+---
+
 ## 2026-09-07: A clock time says which clock, and that is the whole fix
 
 A reader of the overview saw an axis running 22:44 to 03:47 beside Statamic's

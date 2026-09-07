@@ -11,6 +11,15 @@ Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
 ### Fixed
 
+**A locked assessment the scan disagrees with says so.** A person's locked
+judgement still wins outright, which is the rule and stays the rule. Where it
+stands over failures the automated checks found, the worksheet and the
+conformance document now say that in a sentence rather than leaving a reader to
+notice that a green "Supports" and "29 issues on 26 pages" are three columns
+apart. No determination moves and no count changes. A locked "does not support"
+agrees with the failures and is not flagged, and nor is any assessment on a
+criterion nothing failed under.
+
 **The sentence under the chart says what the axis says.** It asked whether the
 two ends of the span fell on one calendar day, so five hours over midnight
 printed "6 Sep 2026 to 7 Sep 2026" while the axis beneath read "6 Sep 22:44" to

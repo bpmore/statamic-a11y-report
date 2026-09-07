@@ -445,3 +445,65 @@ it('says which zone the clock times in a document are in', function () {
     expect($data['generated_at'])->toMatch('/[+-]\d\d:\d\d$|Z$/');
     expect($data['scan']['finished_at'])->toMatch('/[+-]\d\d:\d\d$|Z$/');
 });
+
+it('says when a person\'s assessment is kept over what the checks found', function () {
+    $user = User::make()->email('super@example.test')->makeSuper();
+    $user->save();
+
+    page('one', '<img src="/a.jpg">');
+    $scan = runScan();
+
+    // A person locks "Supports" on the one criterion the scan has failures
+    // under. Rule 1 says their answer stands, and it does. Nothing said the
+    // two disagreed.
+    CriterionAssessment::create([
+        'site' => null, 'criterion' => '1.1.1', 'level' => 'A',
+        'status' => CriterionAssessment::SUPPORTS, 'method' => 'manual', 'locked' => true,
+        'remarks' => 'Reviewed by hand.', 'assessed_by' => 'Reviewer', 'assessed_at' => now(),
+    ]);
+
+    [$report, $html] = document($scan->fresh());
+
+    preg_match('/1\.1\.1 Non-text Content.*?<\/tr>/s', $html, $m);
+    $row = $m[0] ?? '';
+
+    // The determination is unchanged: it is the assessor's and the report
+    // states it.
+    expect($row)->toContain('Supports');
+    expect($row)->toContain('Reviewed by hand.');
+
+    // And the disagreement is said out loud, before the remarks, rather than
+    // left for a reader to infer from the evidence sentence underneath.
+    expect($row)->toContain("A person's assessment, kept over the automated result.");
+
+    $data = json_decode((string) file_get_contents(app(ReportWriter::class)->absolutePath($report->json_path)), true);
+    $flagged = array_values(array_filter($data['criteria'], fn ($c) => $c['contradicted']));
+    expect($flagged)->toHaveCount(1);
+    expect($flagged[0]['number'])->toBe('1.1.1');
+});
+
+it('does not call a locked assessment contradicted when it agrees, or when nothing failed', function () {
+    $user = User::make()->email('super@example.test')->makeSuper();
+    $user->save();
+
+    page('one', '<img src="/a.jpg">');
+    $scan = runScan();
+
+    // Agreeing with the failures is not a disagreement.
+    CriterionAssessment::create([
+        'site' => null, 'criterion' => '1.1.1', 'level' => 'A',
+        'status' => CriterionAssessment::DOES_NOT_SUPPORT, 'method' => 'manual', 'locked' => true,
+    ]);
+
+    // And a criterion nobody has failed has nothing to contradict.
+    CriterionAssessment::create([
+        'site' => null, 'criterion' => '1.4.3', 'level' => 'AA',
+        'status' => CriterionAssessment::SUPPORTS, 'method' => 'manual', 'locked' => true,
+    ]);
+
+    [$report] = document($scan->fresh());
+
+    $data = json_decode((string) file_get_contents(app(ReportWriter::class)->absolutePath($report->json_path)), true);
+
+    expect(array_filter($data['criteria'], fn ($c) => $c['contradicted']))->toBe([]);
+});

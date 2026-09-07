@@ -5,7 +5,26 @@ What changed in each release, and what you have to do about it.
 Anything that can stop a site being scanned, or make a report claim more than
 it knows, leads its section.
 
-Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
+Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
+Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
+
+## 1.0.0 - 2026-09-07
+
+Nothing the addon does changed between 0.4.1 and this release. The README
+gained a section saying where to get support, and the version number is the
+rest of the change.
+
+The addon goes on sale on the Statamic Marketplace, and 0.x on a paid
+compliance tool asks a buyer to guess whether the thing is finished. It is:
+both engines ship, the conformance document validates against PDF/UA-1 with
+veraPDF, and everything on the listing has been run against a real site. A
+version number that says otherwise is a claim as wrong as any other.
+
+What 1.0 promises from here is the ordinary one. A change that breaks an
+install, a stored scan, or the shape of a generated report raises the major,
+and the note says what to do about it. It is not a promise that the numbers a
+scan produces never change: an engine that gets better finds more, and a
+release that changes what is found says so in its own entry.
 
 ## 0.4.1 - 2026-09-07
 

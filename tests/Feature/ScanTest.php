@@ -482,3 +482,43 @@ it('does not call a page removed when it errored, and leaves a person\'s decisio
     expect(IssueState::where('path', '/broken')->first()->status)->toBe(IssueState::OPEN);
     expect(IssueState::where('path', '/one')->first()->status)->toBe(IssueState::WONT_FIX);
 });
+
+it('starts a scan that was never listed, rather than finishing it empty', function () {
+    page('one', '<img src="/a.jpg">');
+    page('two', '<a href="#">Somewhere</a>');
+    runScan();
+
+    $open = IssueState::openNow(IssueState::query())->count();
+    expect($open)->toBeGreaterThan(0);
+
+    // The row the control panel's button leaves behind on a site whose queue
+    // has no worker: `StartScan` is itself a queued job, so the scan sits at
+    // "queued" having enumerated nothing at all.
+    $stuck = Scan::create([
+        'uuid' => (string) \Illuminate\Support\Str::uuid(),
+        'trigger' => Scan::TRIGGER_MANUAL,
+        'status' => Scan::QUEUED,
+        'engine' => 'php',
+        'engine_version' => 'test',
+        'ruleset' => 'wcag22aa',
+        'scope' => ['sites' => [], 'collections' => [], 'exclude_urls' => [], 'since' => null],
+        'initiated_by' => 'someone@example.test',
+    ]);
+
+    expect(ScanPage::where('scan_id', $stuck->id)->count())->toBe(0);
+
+    // And the command the overview offers for exactly that scan. It used to
+    // dispatch the empty set of pending pages, finish as a complete scan of
+    // nothing, and close every open issue as a page it had not met.
+    app(Scans::class)->resume($stuck->fresh(), sync: true);
+
+    $stuck->refresh();
+
+    expect($stuck->status)->toBe(Scan::COMPLETE);
+    expect($stuck->pages_total)->toBe(2);
+    expect($stuck->pages_scanned)->toBe(2);
+
+    // The queue survives, because the pages were read rather than assumed gone.
+    expect(IssueState::where('status', IssueState::PAGE_REMOVED)->count())->toBe(0);
+    expect(IssueState::openNow(IssueState::query())->count())->toBe($open);
+});

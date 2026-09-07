@@ -7,6 +7,23 @@ it knows, leads its section.
 
 Versions are `MAJOR.MINOR.PATCH`. Before 1.0 a breaking change raises the minor.
 
+## Unreleased
+
+### Fixed
+
+**Resuming a scan that never listed its pages no longer closes every issue.**
+Pressing "run a scan now" on a site whose queue has no worker leaves a scan at
+"queued" with no pages of its own, because listing them is itself a queued job.
+The overview offers `--resume --sync` on that scan, and running it finished it
+as a complete scan of nothing, which met none of the pages the open issues were
+on and marked all of them "page removed". A whole remediation queue could close
+in one go, and a closed queue looks exactly like a site somebody fixed.
+Resuming a scan with no pages now starts it.
+
+**And the overview no longer says such a scan read "0 of 0 pages".** That reads
+as a site with nothing on it, which is a different problem with a different
+cure. It now says the pages have not been listed yet.
+
 ## 0.2.1 - 2026-09-06
 
 ### Fixed

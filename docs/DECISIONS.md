@@ -12,6 +12,56 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-06: A scan that was never listed is started, not finished
+
+Pressing "run a scan now" on a site whose queue has no worker leaves a row at
+`queued` with no pages of its own: listing them is `StartScan`, which is itself
+a queued job. The overview then says the scan is not moving and offers
+`--resume --sync` on that exact scan.
+
+Running it closed the entire remediation queue. `resume()` dispatched the
+pending pages, of which there were none, so the scan finished as a complete
+scan of nothing; and a complete scan that met no page had not met any of the
+pages the open issues were on, so all of them were marked "page removed" in one
+go. 109 open issues to nought, from following the product's own advice on its
+own screen.
+
+**A wiped queue looks exactly like a site somebody fixed.** That is what makes
+this worse than an error: nothing failed, nothing was logged, and the number
+went the direction everybody wants.
+
+**`resume()` on a scan with no pages starts it instead.** There is nothing to
+pick up, so picking up nothing is the wrong verb. The fix is one branch and it
+puts the scan on the path it never took.
+
+### Two fixes turned down on the way
+
+**Failing a scan that read no pages.** It contradicts a decision already made
+and tested: a scan of a scope that holds no pages completes rather than sitting
+at running for ever. Marking it failed broke six tests, and rightly.
+
+**Refusing to close issues when a scan met no page.** It sounds like the same
+rule and it is not. A collection scanned in full whose only page has been
+deleted meets nothing, and that absence is real evidence the page is gone.
+There is a test for it. The difference between the two zeroes is not how many
+pages were met but whether the scope was ever enumerated, which is exactly what
+`resume()` was skipping.
+
+**Refusing to report on a scan that read no pages.** Defensible, and a separate
+question: the document that would be produced makes no false claim, since it
+says nought pages read and evaluates no criterion. It also broke a brand test
+that has been generating its document from an empty scan all along, which is
+worth knowing on its own. Left for a decision rather than folded into a bug fix.
+
+### And the wording that sent the first reader the wrong way
+
+The panel said "0 of 0 pages read and nothing read at all". `pages_total` is
+zero because the pages have not been listed, not because the site has none, and
+"0 of 0" reads as the second. It now says the scan has not listed the pages to
+read yet.
+
+---
+
 ## 2026-09-06: The crontab line names a `php` that cron may not have
 
 The overview, the README and the config file all printed the line every

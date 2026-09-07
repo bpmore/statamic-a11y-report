@@ -64,7 +64,11 @@
             <div class="space-y-2">
                 <p>
                     Scan <code>@plain($stale['scan']->uuid)</code> has been <strong>@plain($stale['scan']->status)</strong> for {{ $stale['minutes'] }} {{ $stale['minutes'] === 1 ? 'minute' : 'minutes' }}
-                    with {{ $stale['pages_read'] }} of {{ $stale['scan']->pages_total }} pages read{{ $stale['pages_read'] === 0 ? ' and nothing read at all' : '' }}.
+                    @if ($stale['scan']->pages_total === 0)
+                        and has not listed the pages to read yet.
+                    @else
+                        with {{ $stale['pages_read'] }} of {{ $stale['scan']->pages_total }} pages read{{ $stale['pages_read'] === 0 ? ' and nothing read at all' : '' }}.
+                    @endif
                 </p>
                 <p>
                     Scans run as jobs on the <code>@plain($queueConnection)</code> queue connection. The usual cause is that no worker is processing that connection: a site running Horizon, for example, works the Redis queue and not the database one. Either run a worker for it:

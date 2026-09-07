@@ -191,6 +191,14 @@ engine can cite come from the standard, a rule citing no criterion keeps its
 own name and is reported apart from WCAG, and the scan row records which way
 it ran.
 
+**Two ways from a queue row to the page.** Its path opens the entry to edit,
+because a queue is a list of things to fix and fixing happens in the entry.
+"View page" opens the page on the site in a new tab, which is where a contrast
+failure can actually be seen, and says so for a screen reader. The edit link is
+left out rather than offered and refused where the entry has been deleted since
+the scan, or where that person may not edit that collection. The conformance
+document is unchanged and keeps public addresses only.
+
 **A scan can be ended.** `php please a11y:scan:cancel <scan id>` ends a scan
 that is never going to finish, so scheduled scans can run again. `cancelled`
 was a status a scan could reach and nothing a person could set. Use

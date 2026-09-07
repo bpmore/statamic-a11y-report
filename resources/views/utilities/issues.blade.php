@@ -171,8 +171,23 @@
                                         </ui-table-cell>
                                     @endif
                                     <ui-table-cell>
-                                        <a href="@plain($i->url)" target="_blank" rel="noopener">@plain($i->path)</a>
+                                        @php($edit = $editUrls[$i->entry_id] ?? null)
+                                        {{-- The path goes to the entry, because in the control panel a
+                                             path is a thing you manage and the queue is a list of things
+                                             to fix. Left as plain text where there is no entry to open:
+                                             deleted since the scan, or not this person's to edit. --}}
+                                        @if ($edit)
+                                            <a href="@plain($edit)" class="{{ $link }}">@plain($i->path)</a>
+                                        @else
+                                            <span>@plain($i->path)</span>
+                                        @endif
                                         <ui-description text="@plain($i->collection . (count($options['sites']) > 1 ? ', '.$i->site : ''))" />
+                                        {{-- And the page itself, said out loud rather than left as the
+                                             path's own behaviour. For a contrast failure the rendered
+                                             page is the only place the problem can be seen at all. --}}
+                                        <div class="text-xs mt-1">
+                                            <a href="@plain($i->url)" target="_blank" rel="noopener" class="{{ $link }}">View page<span class="sr-only"> @plain($i->path) on the site, opens in a new tab</span></a>
+                                        </div>
                                     </ui-table-cell>
                                     <ui-table-cell>
                                         <div>@plain($i->message)</div>

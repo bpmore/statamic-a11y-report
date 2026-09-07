@@ -229,7 +229,7 @@ it('heads the chart with what it draws, not the window it searched', function ()
     // And the description carries the span actually drawn, with the zone those
     // clock times are in. Beside Statamic's own "21 minutes ago" a bare 22:44
     // is read as local, and on a site that never set `APP_TIMEZONE` it is not.
-    expect($text)->toMatch('/at the time it finished, \d+ \w+ \d\d:\d\d to \d\d:\d\d [A-Z]{2,5}\./');
+    expect($text)->toMatch('/at the time it finished, \d+ \w+ \d\d:\d\d to \d+ \w+ \d\d:\d\d [A-Z]{2,5}\./');
 });
 
 it('does not say a site has no pages when the scan has not listed them yet', function () {
@@ -328,4 +328,24 @@ it('names the oldest unfinished scan, and counts the rest', function () {
     expect($stale['minutes'])->toBe(40);
 
     expect(reportPage())->toContain('1 other scan has not finished either');
+});
+
+it('carries the time and the zone across midnight, as the axis does', function () {
+    app(ReportDatabase::class)->install();
+    page('one', '<img src="/a.jpg">');
+
+    // Five hours, over midnight. The axis shows a time of day on a span this
+    // short, and the sentence beneath it asked a different question: whether
+    // the two ends fell on one calendar day. They do not, so it printed dates
+    // alone and dropped the times, and the timezone with them.
+    $first = runScan();
+    $first->update(['finished_at' => \Illuminate\Support\Carbon::parse('2026-09-06 22:44:00')]);
+    $second = runScan();
+    $second->update(['finished_at' => \Illuminate\Support\Carbon::parse('2026-09-07 03:47:00')]);
+
+    $text = reportPage();
+
+    expect($text)->toContain('6 Sep 22:44 to 7 Sep 03:47');
+    expect($text)->toMatch('/7 Sep 03:47 [A-Z]{2,5}\./');
+    expect($text)->not->toContain('6 Sep 2026 to 7 Sep 2026');
 });

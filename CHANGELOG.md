@@ -20,6 +20,13 @@ on and marked all of them "page removed". A whole remediation queue could close
 in one go, and a closed queue looks exactly like a site somebody fixed.
 Resuming a scan with no pages now starts it.
 
+**The queue no longer says nothing is open when a filter emptied the list.**
+"No issue is open or in progress" was printed whenever the status filter sat on
+its default, whatever else was narrowing the page. Choose a deadline or a site
+that matches nothing and the queue told you your work was done while hundreds
+of issues were open. It now says the filters matched nothing, how many are open
+in all, and offers to clear them.
+
 **The report button reports on the latest scan.** With no site chosen it asked
 for a scan whose site was null, which is only a scan of every site. A scan
 carries a site as soon as the scope names one, and the settings screen writes

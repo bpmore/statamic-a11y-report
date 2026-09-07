@@ -328,15 +328,21 @@ A dashboard widget shows the open count by impact and a 30-day line. Add it to
 
 ## What it reads with
 
-The same checker Accessibility Gate runs before a publish, with the same
-standard and the same opt-in checks, so a page the gate refuses and a page the
-scan flags are the same page for the same reason. It reads rendered HTML and
-cannot see anything a stylesheet decides, colour contrast included. A page it
-finds nothing wrong with has not been proven accessible, and every scan says so.
+The `php` engine is the same checker Accessibility Gate runs before a publish,
+with the same standard and the same opt-in checks, so a page the gate refuses
+and a page the scan flags are the same page for the same reason. It reads
+rendered HTML and cannot see anything a stylesheet decides, colour contrast
+included.
 
-An axe-core engine in headless Chrome is planned and is what the report will be
-sold on. Asking for it before it exists logs a warning and uses the PHP checker,
-and the scan records which one ran.
+The `axe` engine reads the page in a browser with your stylesheets applied, so
+it does see contrast, and it speaks to around two dozen criteria rather than
+six. See [Engines](#engines) for how to choose one.
+
+Neither proves a page is accessible. Most of WCAG is judged on meaning by a
+person, and automated testing finds roughly half of issues by volume and far
+fewer criteria. A page an engine finds nothing wrong with has not been proven
+accessible, every scan says so, and every report names which criteria were
+evaluated automatically and which were not evaluated at all.
 
 ## Support
 

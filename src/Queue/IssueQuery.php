@@ -11,6 +11,8 @@ use Bpmore\A11yReport\Settings;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Statamic\Facades\Entry as Entries;
+use Statamic\Facades\User;
 
 /**
  * The remediation queue: every problem the scans know about, with what a
@@ -86,6 +88,11 @@ final class IssueQuery
                 'a11y_issue_states.*',
                 'a11y_issues.label', 'a11y_issues.message', 'a11y_issues.remedy', 'a11y_issues.pointer', 'a11y_issues.selector',
                 'a11y_issues.occurrences', 'a11y_issues.wcag_criteria', 'a11y_scan_pages.collection',
+                // The entry behind the page, so the queue can offer the screen
+                // where the problem is fixed and not only the page where it
+                // shows. Already on the joined table; it was simply not asked
+                // for.
+                'a11y_scan_pages.entry_id',
             ]);
 
         $f = $this->filters;
@@ -185,6 +192,51 @@ final class IssueQuery
                 ->where('exception_expires_at', '<=', now())
                 ->count(),
         ];
+    }
+
+    /**
+     * Where to edit each of these issues' pages, by entry id.
+     *
+     * A person in the queue is working through a list of things to fix, and
+     * fixing happens in the entry. The public page shows the problem; the
+     * entry is where it goes away.
+     *
+     * Null where there is nothing to offer, and the view leaves the link out
+     * rather than printing one that fails:
+     *
+     * - The entry has been deleted since the scan that found the issue. The
+     *   issue is still real and still worth reading; the page it was on is
+     *   gone.
+     * - The person may read the queue and not edit that collection. A link
+     *   that answers 403 is worse than no link, because it looks like the
+     *   product is broken rather than like permission is missing.
+     *
+     * Resolved once per entry for the whole page of results, because a queue
+     * page is fifty rows and many of them are the same page.
+     *
+     * @param  iterable<int, object>  $issues
+     * @return array<string, string|null>
+     */
+    public static function editUrls(iterable $issues): array
+    {
+        $user = User::current();
+        $urls = [];
+
+        foreach ($issues as $issue) {
+            $id = (string) ($issue->entry_id ?? '');
+
+            if ($id === '' || array_key_exists($id, $urls)) {
+                continue;
+            }
+
+            $entry = Entries::find($id);
+
+            $urls[$id] = $entry !== null && $user?->can('edit', $entry)
+                ? $entry->editUrl()
+                : null;
+        }
+
+        return $urls;
     }
 
     /**

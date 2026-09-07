@@ -38,7 +38,11 @@ class IssuesController extends CpController
             // The furthest ahead an acceptance may be set to run to, so the
             // date control cannot offer one the controller would refuse.
             'latestExpiry' => $query->policy->latestExpiry()->format('Y-m-d'),
-            'issues' => $installed ? $query->paginate((int) $request->query('page', 1)) : null,
+            'issues' => $issues = $installed ? $query->paginate((int) $request->query('page', 1)) : null,
+            // Where each page is edited, resolved once for the whole page of
+            // results rather than once a row. Null for an entry that has been
+            // deleted since the scan, or one this person may not edit.
+            'editUrls' => $issues === null ? [] : IssueQuery::editUrls($issues),
             'queryString' => $query->queryString(),
             'canManage' => (bool) User::current()?->can('manage accessibility issues'),
             'updateUrl' => cp_route('utilities.a11y-report.issues.update'),

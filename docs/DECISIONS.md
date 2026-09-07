@@ -12,6 +12,55 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-06: A queue row goes to the entry, and offers the page beside it
+
+The queue gave one link per row: the path, pointing at the public page, in a
+new tab. Nothing reached the entry, so somebody triaging had to work out which
+entry a path belonged to and find it themselves.
+
+**The path now opens the entry.** In the control panel a path is a thing you
+manage, and the queue is a list of things to fix; fixing happens in the entry
+and not on the page it shows on. That inverts what the link used to do, which
+is why it is written down here rather than slipped in.
+
+**And the page is offered beside it, named.** "View page" rather than the path
+silently behaving that way. It is not a convenience: for a colour contrast
+failure the rendered page is the only place the problem exists at all, and the
+markup in the entry will look fine.
+
+**Left out rather than offered and refused.** No edit link where the entry has
+been deleted since the scan that found the issue, and none where the person may
+read the queue but not edit that collection. A link that answers 403 reads as
+the product being broken rather than as permission being missing. The issue
+itself stays listed either way: it is still real, and whether its page is still
+served is not this screen's to decide.
+
+**Resolved once per entry for the whole page of results**, not once a row. A
+queue page is fifty rows and many of them are the same page.
+
+**The document is unchanged.** The HTML and the PDF keep public addresses only.
+Their reader may be a regulator with no control panel, and an edit link in a
+filed conformance report means nothing.
+
+### Two things this pass fixed that were not the ask
+
+The page link opened a new tab with no announcement, while the criterion link
+two lines below it had one. The rule was settled on 3 September — *a new tab a
+screen-reader user is not told about is disorienting* — and this link was
+missed when it was applied. On an accessibility product's own screen.
+
+And the first test written for the deleted-entry case proved nothing. It
+asserted that the old address was absent, which stayed true when the guard was
+removed, because what replaced it was `href=""`: a link that looks live and
+goes nowhere. Found by removing the guard and watching the test stay green. It
+now asserts the path is rendered as text.
+
+Turned down: deep-linking to the element with the selector the scan stored. It
+does not survive a page that has changed since, which is exactly the page
+somebody is looking at when they click.
+
+---
+
 ## 2026-09-06: The rules outside WCAG belong on the screen, and only those
 
 `axe.best_practices` was a config-file setting. The rule for what stays in the

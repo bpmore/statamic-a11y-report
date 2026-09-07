@@ -228,3 +228,69 @@ it('follows the configured standard for the version of WCAG a criterion link ope
 
     expect(queuePage())->toContain('https://www.w3.org/WAI/WCAG21/Understanding/non-text-content.html');
 });
+
+it('offers the entry to edit and the page to look at, and says which is which', function () {
+    seedQueue();
+
+    $entry = \Statamic\Facades\Entry::query()->where('collection', 'pages')->where('slug', 'one')->first();
+    $text = queuePage();
+
+    // The path goes to the entry. A queue is a list of things to fix, and
+    // fixing happens in the entry rather than on the page it shows on.
+    expect($text)->toContain('href="'.$entry->editUrl().'"');
+
+    // And the page itself is offered separately, named rather than left as
+    // the path's own behaviour, because for a contrast failure the rendered
+    // page is the only place the problem can be seen.
+    expect($text)->toContain('View page');
+    expect($text)->toContain($entry->url().'" target="_blank"');
+
+    // The addon's own rule for a control-panel link, applied to its own
+    // screen: a new tab a screen-reader user is not told about is
+    // disorienting, and this link had no note while the criterion link
+    // beside it did.
+    expect($text)->toMatch('/View page<span class="sr-only">[^<]*opens in a new tab<\/span>/');
+});
+
+it('leaves out the edit link when there is no entry to open', function () {
+    seedQueue();
+
+    $entry = \Statamic\Facades\Entry::query()->where('collection', 'pages')->where('slug', 'one')->first();
+    $editUrl = $entry->editUrl();
+    $path = $entry->url();
+
+    expect(queuePage())->toContain('href="'.$editUrl.'"');
+
+    // Deleted since the scan that found it. The issue is still real and still
+    // listed; the page it was on is gone, so the link goes rather than
+    // pointing at a screen that answers 404.
+    $entry->delete();
+
+    $text = queuePage();
+
+    expect($text)->not->toContain('href="'.$editUrl.'"');
+    // Left as text, not left as an anchor with nowhere to go. Asserting only
+    // that the old address is absent passed with an empty href in its place,
+    // which is a link that looks live and does nothing.
+    expect($text)->toContain('<span>'.$path.'</span>');
+    // And the page link stays: the address may still serve something, and
+    // whether it does is not this screen's to decide.
+    expect($text)->toContain('View page');
+});
+
+it('leaves out the edit link for somebody who may not edit that collection', function () {
+    seedQueue();
+
+    $entry = \Statamic\Facades\Entry::query()->where('collection', 'pages')->where('slug', 'one')->first();
+
+    Role::make('triage')->permissions(['access cp', 'access a11y-report utility', 'manage accessibility issues'])->save();
+    $reader = User::make()->email('triage@example.test')->assignRole('triage');
+    $reader->save();
+
+    $text = queuePage([], $reader);
+
+    // A link that answers 403 is worse than no link: it reads as the product
+    // being broken rather than as permission being missing.
+    expect($text)->not->toContain('href="'.$entry->editUrl().'"');
+    expect($text)->toContain($entry->uri());
+});

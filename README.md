@@ -277,6 +277,14 @@ A button runs a scan on the queue; it needs the `run accessibility scans`
 permission, which is separate from seeing the page because it makes the site
 render every page.
 
+Every row in the queue offers two ways to the page: its path opens the entry
+to edit, and "View page" opens the page itself on the site in a new tab, which
+is the only place a contrast failure can actually be seen. The edit link is
+left out where there is nothing to open, either because the entry has been
+deleted since the scan or because that person may not edit that collection.
+The document keeps public addresses only; its reader may have no control panel
+at all.
+
 Issues, the second page under the utility, is the remediation queue: every
 problem with its status, filtered by status, impact, criterion, site,
 collection and assignee, oldest and most serious first. Anybody with the

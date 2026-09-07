@@ -25,10 +25,6 @@ a breaking change raises the minor version.
 
 ## Install
 
-Not published yet. The repository is private while it is being tested, so
-nothing below works for anybody else today, and this section is what it will
-be once it is on Packagist and the Statamic Marketplace.
-
 ```
 composer require bpmore/statamic-a11y-report
 php please a11y:report:install

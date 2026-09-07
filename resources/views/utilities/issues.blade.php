@@ -148,7 +148,24 @@
             </form>
 
             @if ($issues->total() === 0)
-                <p>Nothing matches. @if ($f['status'] === 'active')No issue is open or in progress.@endif</p>
+                @php($narrowed = collect($f)->except('status')->filter(fn ($v) => $v !== '')->isNotEmpty())
+                {{-- "No issue is open or in progress" was printed whenever the
+                     status filter was on its default, whatever else was
+                     narrowing the list. With a deadline or a site chosen it
+                     said no issue was open while hundreds were, which is the
+                     one thing a queue must not say: a person reading it has
+                     been told their work is done. --}}
+                @if ($narrowed)
+                    <p>Nothing matches these filters.
+                        @if (($openNow = $counts[\Bpmore\A11yReport\Models\IssueState::OPEN] + $counts[\Bpmore\A11yReport\Models\IssueState::IN_PROGRESS]) > 0)
+                            {{ $openNow }} {{ $openNow === 1 ? 'issue is' : 'issues are' }} open or in progress in all.
+                        @endif
+                        <a href="@plain($indexUrl)" class="{{ $link }}">Clear the filters</a> to see everything.</p>
+                @elseif ($f['status'] === 'active')
+                    <p>Nothing matches. No issue is open or in progress.</p>
+                @else
+                    <p>Nothing matches.</p>
+                @endif
             @else
                 <p class="text-sm">{{ $issues->total() }} {{ $issues->total() === 1 ? 'issue' : 'issues' }} match, oldest and most serious first{{ $issues->lastPage() > 1 ? ', page '.$issues->currentPage().' of '.$issues->lastPage() : '' }}.</p>
 

@@ -311,3 +311,29 @@ it('names the deadline filter after what it filters on', function () {
     expect($text)->toContain('Past target');
     expect($text)->toContain('Acceptance has run out');
 });
+
+it('does not say nothing is open when a filter is what emptied the list', function () {
+    seedQueue();
+
+    $open = IssueState::openNow(IssueState::query())->count();
+    expect($open)->toBeGreaterThan(0);
+
+    // Every issue was first seen today, so none can be past a target of seven
+    // days or more. The list is empty because of the filter, not because the
+    // work is done.
+    $text = queuePage(['due' => 'overdue']);
+
+    expect($text)->toContain('Nothing matches these filters');
+    expect($text)->toContain($open.' issues are open or in progress in all');
+    // The sentence that was printed instead. A queue telling somebody their
+    // work is finished when it is not is the one thing it must never do.
+    expect($text)->not->toContain('No issue is open or in progress');
+
+    // A criterion that matches nothing says the same, because the reason is
+    // the same.
+    expect(queuePage(['criterion' => '2.4.7']))->toContain('Nothing matches these filters');
+
+    // And with nothing narrowing it, the plain sentence still stands.
+    IssueState::query()->update(['status' => IssueState::FIXED]);
+    expect(queuePage())->toContain('No issue is open or in progress');
+});

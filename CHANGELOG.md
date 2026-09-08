@@ -8,6 +8,25 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.0.2 - 2026-09-08
+
+### Fixed
+
+**The scan database is kept out of the site's repository.** The addon makes
+`storage/a11y-report/` for its own SQLite file, and nothing ignored it, so
+`git status` on a site that had run a scan listed the directory as untracked
+and the next `git add -A` committed the database: every issue, every note, and
+every person's name against a decision they made, pushed to whatever remote the
+site has. Found on a live site, in the untracked list beside the files somebody
+was about to commit.
+
+A `.gitignore` is written into the directory when the addon creates it. A
+directory that was already there is the site's, and so are its ignore rules,
+so nothing is written into one this addon did not make. An install that has
+already run makes the directory once and will not make it again: add
+`storage/a11y-report/` to the site's own `.gitignore`, or delete the directory
+and run `php please a11y:report:install` again.
+
 ## 1.0.1 - 2026-09-08
 
 ### Fixed, and it took a site down

@@ -82,3 +82,50 @@ PHP);
     $again = app(ReportDatabase::class)->install();
     expect(implode("\n", $again))->not->toContain('job_batches');
 });
+
+/**
+ * The scan database is the site's own record of who decided what about which
+ * failure, and it lands in a directory this addon makes inside `storage/`.
+ * A directory nothing ignores is a directory `git status` lists, and the next
+ * `git add -A` on that site commits the database and pushes it to whatever
+ * remote the site has. Found on a live site, where `storage/a11y-report/` sat
+ * in the untracked list next to the files somebody was about to commit.
+ *
+ * Only when this addon made the directory. One that was already there is the
+ * site's, and so are its ignore rules.
+ */
+it('keeps the database directory it creates out of the site repository', function () {
+    $dir = sys_get_temp_dir().'/a11y-ignore-'.bin2hex(random_bytes(6));
+    $path = $dir.'/report.sqlite';
+
+    config(['database.connections.a11y_ignoring' => ['driver' => 'sqlite', 'database' => $path, 'prefix' => '']]);
+    config(['statamic-a11y-report.connection' => 'a11y_ignoring']);
+
+    app(ReportDatabase::class)->defineDefaultConnection();
+    app(ReportDatabase::class)->install();
+
+    expect(is_file($path))->toBeTrue('the database was not created, so this test checked nothing');
+    expect(is_file($dir.'/.gitignore'))->toBeTrue('storage/a11y-report/ is left for the site to commit by accident');
+    expect(file_get_contents($dir.'/.gitignore'))->toBe("*\n!.gitignore\n");
+
+    array_map('unlink', glob($dir.'/{,.}[!.,!..]*', GLOB_BRACE) ?: []);
+    @rmdir($dir);
+});
+
+it('leaves a directory it did not create alone, ignore rules included', function () {
+    $dir = sys_get_temp_dir().'/a11y-theirs-'.bin2hex(random_bytes(6));
+    mkdir($dir, 0755, true);
+    $path = $dir.'/report.sqlite';
+
+    config(['database.connections.a11y_theirs' => ['driver' => 'sqlite', 'database' => $path, 'prefix' => '']]);
+    config(['statamic-a11y-report.connection' => 'a11y_theirs']);
+
+    app(ReportDatabase::class)->defineDefaultConnection();
+    app(ReportDatabase::class)->install();
+
+    expect(is_file($path))->toBeTrue('the database was not created, so this test checked nothing');
+    expect(is_file($dir.'/.gitignore'))->toBeFalse('an ignore file was written into a directory belonging to the site');
+
+    array_map('unlink', glob($dir.'/{,.}[!.,!..]*', GLOB_BRACE) ?: []);
+    @rmdir($dir);
+});

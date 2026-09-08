@@ -8,6 +8,7 @@ use Bpmore\A11yReport\Models\CriterionAssessment;
 use Bpmore\A11yReport\Statement\StatementBuilder;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Statamic\Facades\Collection;
+use Statamic\Facades\Site;
 
 /**
  * The public accessibility statement: its own page, the tag, and what it is
@@ -242,4 +243,29 @@ it('registers no route this addon owns that a route cache cannot hold', function
         ->contains(fn ($route) => $route->getName() === 'a11y-report.statement');
 
     expect($found)->toBeTrue('The statement route was not registered, so this test checked nothing.');
+});
+
+/**
+ * The heading read the Statamic site name while the sentence under it read the
+ * organisation setting, so filling in "Organisation named in the statement"
+ * moved the sentence and left the heading behind. Found on a live site, where
+ * the heading said one name and the next line said another, in the first two
+ * lines of a document filed as evidence. The setting is called "named in the
+ * statement" and the heading is where it is most named.
+ */
+it('names the organisation in the heading, not the site', function () {
+    config()->set('statamic-a11y-report.statement.organization', 'Had A Farm, LLC');
+
+    $html = statement();
+
+    expect($html)->toContain('Accessibility statement for Had A Farm, LLC');
+    expect(str_contains($html, 'Accessibility statement for '.Site::current()->name()))->toBeFalse(
+        'the heading is still reading the Statamic site name over the organisation setting'
+    );
+});
+
+it('falls back to the site name in the heading when no organisation is named', function () {
+    config()->set('statamic-a11y-report.statement.organization', null);
+
+    expect(statement())->toContain('Accessibility statement for '.Site::current()->name());
 });

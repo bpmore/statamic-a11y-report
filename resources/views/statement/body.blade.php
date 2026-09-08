@@ -16,7 +16,13 @@
     $org = $s['organization'] ?: 'This organisation';
 @endphp
 <article class="a11y-statement" lang="{{ $s['site']['lang'] ?? 'en' }}">
-    <{{ $hh }}>Accessibility statement for {{ $s['site']['name'] }}</{{ $hh }}>
+    {{-- The organisation, not the site name. The setting is called
+         "Organisation named in the statement", and the heading is where it is
+         most named: reading the site name here left the heading saying one
+         thing and the sentence under it saying another on every site whose
+         Statamic site name is not its legal name, which is most of them. The
+         two disagreed in the first two lines of a document filed as evidence. --}}
+    <{{ $hh }}>Accessibility statement for {{ $org }}</{{ $hh }}>
 
     <section class="a11y-statement__commitment">
         <p>

@@ -8,6 +8,23 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.0.3 - 2026-09-08
+
+### Fixed
+
+**The heading names the organisation, not the site.** The statement's heading
+read the Statamic site name while the sentence directly under it read the
+"Organisation named in the statement" setting, so filling that setting in moved
+the sentence and left the heading behind. On any site whose Statamic site name
+is not the organisation's name, which is most of them, the page said one name
+and then a different one, in the first two lines of a document filed as
+evidence. Found on a live site.
+
+The heading now reads the same setting the sentence does, and still falls back
+to the site name when the setting is empty, which is what the field's own
+instructions promise. Nothing else about the page changed, and no report is
+affected: this is the statement's heading only.
+
 ## 1.0.2 - 2026-09-08
 
 ### Fixed

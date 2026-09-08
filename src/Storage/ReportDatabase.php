@@ -198,6 +198,17 @@ final class ReportDatabase
 
         if (! is_dir(dirname($path))) {
             mkdir(dirname($path), 0755, true);
+
+            // A directory this addon made is this addon's to keep out of the
+            // site's repository. Without this, `git status` on a site that
+            // has run a scan lists `storage/a11y-report/` as untracked, and
+            // the next `git add -A` commits the scan database: every issue,
+            // every note, every person's name against a decision, pushed to
+            // whatever the site's remote is. It is written only when the
+            // directory did not exist, because a directory that was already
+            // there belongs to the site and its ignore rules are the site's
+            // business.
+            file_put_contents(dirname($path).'/.gitignore', "*\n!.gitignore\n");
         }
 
         touch($path);

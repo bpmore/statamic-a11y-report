@@ -8,6 +8,38 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.0.5 - 2026-09-08
+
+### Fixed, and it took a site down
+
+**A scan that is killed no longer leaves its browser running for ever.** The
+axe engine holds a headless Chrome open for the length of a scan and closes it
+in a destructor, which covers the scan that ends, the scan that throws, and the
+worker that stops. It never covered the process that is killed outright, and
+that is the one that matters: an axe scan on a small server is exactly the
+process the kernel picks when memory runs out, and PHP that is killed runs no
+destructor. The browser it started kept running, holding its share of the
+memory that ran out, until the machine was rebooted.
+
+Found on a live site: three hundred and twenty-five orphaned Chrome processes
+from scans that had died hours earlier, holding six and a half of eight
+gigabytes. The site stopped answering and so did SSH.
+
+Two things changed. Chrome is now asked to close before it is killed, so it
+takes its own children down with it: a browser is a tree, and killing the one
+process this addon started orphaned the rest, which under a snap-installed
+Chromium was almost all of them. And before starting a browser, a scan clears
+up the ones this machine was left holding.
+
+The sweep only touches this addon's own profile directories, and only those
+whose owning process is gone: a profile records the pid that owns it, so a
+browser a second worker is using right now is left alone. Killing that would
+break a scan that is working, which is worse than the leak.
+
+**If you have orphans already**, they are from before this release and nothing
+in it knows about them. The next scan clears them, or `pkill -f
+a11y-report-axe` does it now.
+
 ## 1.0.4 - 2026-09-08
 
 ### Changed, and it can change what a command does

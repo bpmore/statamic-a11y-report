@@ -10,9 +10,11 @@ Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
 ## 1.0.0 - 2026-09-07
 
-Nothing the addon does changed between 0.4.1 and this release. The README
-gained a section saying where to get support, and the version number is the
-rest of the change.
+### Changed
+
+**Version numbers mean the ordinary thing from here.** Nothing the addon does
+changed between 0.4.1 and this release. The README gained a section saying
+where to get support, and the version number is the rest of the change.
 
 The addon goes on sale on the Statamic Marketplace, and 0.x on a paid
 compliance tool asks a buyer to guess whether the thing is finished. It is:

@@ -8,6 +8,34 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.0.1 - 2026-09-08
+
+### Fixed, and it took a site down
+
+**A cached route file no longer breaks every page of the site.** The statement
+page's route was registered with a closure. Laravel writes route defaults into
+`bootstrap/cache/routes-v7.php` with `var_export`, which cannot express a
+closure, so `php artisan route:cache` wrote a file that fatals with "Call to
+undefined method `Closure::__set_state()`" on the first request. Caching itself
+reported success, so nothing in a deploy's output said anything was wrong.
+
+`route:cache` is part of `php artisan optimize`, which is in the deploy script
+Laravel Forge ships by default. On a site that caches routes, installing this
+addon and deploying returned a 500 for every page, the control panel included,
+which is exactly the kind of failure this addon must never cause: a site that
+cannot be reached cannot be scanned, and a compliance tool that takes the site
+off the internet is worse than no compliance tool.
+
+**If you are on 1.0.0 and your site is down**, `php artisan route:clear` brings
+it back immediately, then upgrade.
+
+The route now points at a controller, which is a class name in the cache file
+and caches without complaint. The view and the layout are still decided when
+the page is asked for and not when routes boot: which layout the statement
+sits in depends on what the site actually has, and a value frozen at boot
+answers that before the view finder can. There is a test that fails if any
+route this addon registers ever holds a closure again.
+
 ## 1.0.0 - 2026-09-07
 
 ### Changed

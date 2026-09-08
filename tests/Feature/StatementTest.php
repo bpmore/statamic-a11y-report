@@ -209,3 +209,37 @@ it('refreshes the statement page in the static cache from the command line', fun
         ->expectsOutputToContain('/accessibility')
         ->assertExitCode(0);
 });
+
+/**
+ * The bug that took a live site down in 1.0.0.
+ *
+ * `Route::statamic()` accepts a closure for the view, and a closure stored as
+ * a route default cannot be written by `var_export`. `route:cache` wrote the
+ * file anyway, and every request then fatalled with "Call to undefined method
+ * Closure::__set_state()", the control panel included. `route:cache` is part
+ * of `optimize` and of Forge's own deploy script, so the site went down on
+ * deploy and nothing in the deploy output said why.
+ *
+ * The check is on the defaults rather than on the response, because the
+ * failure is in a file this suite does not run through: what makes it
+ * uncacheable is a closure sitting in `defaults`, and that is the thing to
+ * assert on.
+ */
+it('registers no route this addon owns that a route cache cannot hold', function () {
+    $offenders = collect(app('router')->getRoutes()->getRoutes())
+        ->filter(fn ($route) => str_contains((string) $route->getName(), 'a11y-report')
+            || str_contains((string) $route->uri(), 'accessibility'))
+        ->filter(fn ($route) => collect($route->defaults)->contains(fn ($d) => $d instanceof Closure))
+        ->map(fn ($route) => $route->uri())
+        ->values()
+        ->all();
+
+    expect($offenders)->toBe([], 'A route default holding a closure makes "php artisan route:cache" write a file that fatals on every request: '.implode(', ', $offenders));
+
+    // The filter above must actually be finding this addon's statement route,
+    // or the assertion passes by matching nothing at all.
+    $found = collect(app('router')->getRoutes()->getRoutes())
+        ->contains(fn ($route) => $route->getName() === 'a11y-report.statement');
+
+    expect($found)->toBeTrue('The statement route was not registered, so this test checked nothing.');
+});

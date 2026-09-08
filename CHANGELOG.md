@@ -10,6 +10,24 @@ Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
 ## 1.0.4 - 2026-09-08
 
+### Changed, and it can change what a command does
+
+**`a11y:scan` refuses to start while another scan is running.** It used to
+start a second one, on the reasoning that a person asking twice means it. Two
+axe scans thirty-five seconds apart then took a live site off the internet: the
+axe engine holds a headless Chrome open for the length of a scan, and two of
+those on a small server is not a slow scan, it is the whole box. Both read zero
+pages, so the cost was total and there was nothing to show for it.
+
+The command now exits non-zero and names the scan that is running, how to
+finish it, how to end it, and `--force` for starting a second one anyway.
+Anything scripted around a second scan starting silently needs `--force`.
+
+`--scheduled` is unchanged: it still skips and exits zero, because a weekly job
+that mails a failure for behaving correctly gets its mail filtered. `--resume`
+is unchanged, because it is how a stuck scan is finished. The control-panel
+button calls the scan layer directly and is not covered yet.
+
 ### Changed
 
 **`a11y:scan:cancel` takes the front of a scan id.** A uuid is thirty-six

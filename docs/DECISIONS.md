@@ -12,6 +12,57 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-08: A manual scan refuses to start on top of a running one
+
+This reverses the decision of 2026-09-02, which put the guard on `--scheduled`
+alone on the reasoning that a person pressing the button during a scan is
+deliberate and a cron doing it is a pile-up nobody is watching. The first half
+of that was wrong, and the way it was wrong is that the reasoning was about
+intent and the cost is about hardware.
+
+**What happened.** Two axe scans started thirty-five seconds apart on a live
+site with two CPU threads. The axe engine holds a headless Chrome open for the
+length of a scan, so that is two browsers rendering thirty-nine pages each. The
+site stopped answering, and so did SSH: not a slow scan, the whole box. Both
+scans read zero pages before dying, so the cost was total and the benefit was
+nil. Neither was a scheduled run, and the guard that exists never looked at
+either of them.
+
+**A person asking twice does not mean twice.** It usually means the first one
+gave no visible sign of running, which is exactly true of a queued scan: the
+command returns, the pages go on the queue, and the terminal says nothing more.
+The 2026-09-02 reasoning read a second invocation as consent. It is better read
+as a question, and the answer is the id of the scan already going.
+
+**A refusal and not a skip.** The scheduler skips and exits zero, and that
+stays: a weekly job that mails a failure for behaving correctly gets filtered.
+A person gets a non-zero exit and four lines naming the running scan, how to
+finish it, how to end it, and `--force`. Silence is what makes somebody run it
+again.
+
+**Rejected: a lock instead of a check.** `withoutOverlapping()` and a cache
+lock both work only when the cache is not `array`, and the install that most
+needs this guard is the one nobody has configured. The scan rows are the
+domain's own answer and are true on every install.
+
+**Rejected: refusing `--resume` too.** Resume is how a stuck scan is finished,
+and the scan it would be blocked by is the one it is finishing. That is the way
+out of the state this entry is about.
+
+**Known and not fixed here.** The control-panel button calls `Scans::create()`
+directly (`RunScanController`), so this guard does not cover it. The button is
+a click on a screen that shows the running scan, which is a much better
+position than a terminal, but it is not nothing, and it is the next thing to
+do.
+
+**Checked.** Four tests covering refusal, `--force`, resume, and the
+scheduler's unchanged skip, each asserting the scan count afterwards so none
+can pass by printing the right words. The 2026-09-02 test that asserted the
+opposite is updated in place rather than deleted, and carries the reason it
+changed.
+
+---
+
 ## 2026-09-07: A locked answer that the scan disagrees with says so
 
 Found by opening the worksheet: 1.1.1 showed a green "Supports" beside the

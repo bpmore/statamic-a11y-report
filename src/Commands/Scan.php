@@ -40,7 +40,8 @@ class Scan extends Command
         {--sync : Run in this process instead of on the queue, and exit non-zero above the configured thresholds.}
         {--engine= : Which engine to read pages with: "php" or "axe".}
         {--resume= : The id of a scan to pick up where it stopped.}
-        {--scheduled : Record this as a scan started on schedule, and skip it if one is already running. For the scheduler.}';
+        {--scheduled : Record this as a scan started on schedule, and skip it if one is already running. For the scheduler.}
+        {--force : Start even though another scan has not finished.}';
 
     /** What the schedule registers, and what recognises it there again. */
     public const SCHEDULED_SIGNATURE = 'a11y:scan --scheduled';
@@ -87,6 +88,33 @@ class Scan extends Command
             $this->line('');
 
             return 0;
+        }
+
+        // Nothing stopped a second scan starting beside the first, and the
+        // axe engine drives a headless Chrome per scan. Two of those on a
+        // small server is not a slow scan, it is the box: this was found by
+        // taking a live site off the internet with two axe scans thirty-five
+        // seconds apart, which also took SSH with it.
+        //
+        // A refusal and not a skip, because somebody typed this. The scheduler
+        // skipping is right for a cron nobody is watching; a person who asked
+        // for a scan and got silence would ask again, which is the pile-up.
+        // Exit one, so a scan started from CI beside another fails loudly
+        // rather than reporting a success it never ran.
+        //
+        // `--resume` is exempt: it is how a stuck scan is finished, and the
+        // scan it is finishing is the one that would block it.
+        if (! $scheduled && ! $this->option('force') && ! $this->option('resume')
+            && ($running = ScanModel::whereIn('status', [ScanModel::QUEUED, ScanModel::RUNNING])->orderByDesc('id')->first()) !== null) {
+            $this->line('');
+            $this->error("  Scan {$running->uuid} is still {$running->status}, so this one was not started.");
+            $this->line('  <fg=gray>Two scans at once read every page twice, and with the axe engine that is two browsers.</>');
+            $this->line("  <fg=gray>Finish it:  php please a11y:scan --resume={$running->uuid} --sync</>");
+            $this->line("  <fg=gray>Or end it:  php please a11y:scan:cancel {$running->uuid}</>");
+            $this->line('  <fg=gray>Or run this again with --force, which starts a second scan anyway.</>');
+            $this->line('');
+
+            return 1;
         }
 
         if ($resume = $this->option('resume')) {

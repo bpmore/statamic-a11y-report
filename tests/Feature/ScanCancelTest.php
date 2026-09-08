@@ -196,3 +196,61 @@ it('will not take one or two characters as a scan id', function () {
 
     expect($scan->fresh()->status)->toBe(Scan::RUNNING);
 });
+
+/**
+ * Nothing stopped a second scan starting beside the first, and the axe engine
+ * drives a headless Chrome per scan. Two of those on a small server is not a
+ * slow scan, it is the box: found by taking a live site off the internet with
+ * two axe scans thirty-five seconds apart, which took SSH with it.
+ */
+it('will not start a scan while another is still running', function () {
+    $scan = wedgedScan();
+
+    $this->artisan('statamic:a11y:scan', ['--sync' => true])
+        ->expectsOutputToContain('was not started')
+        ->assertExitCode(1);
+
+    expect(Scan::count())->toBe(1, 'a second scan was created beside the running one');
+    expect($scan->fresh()->status)->toBe(Scan::RUNNING);
+});
+
+it('starts anyway when told to force it', function () {
+    wedgedScan();
+
+    $this->artisan('statamic:a11y:scan', ['--sync' => true, '--force' => true])->assertExitCode(0);
+
+    expect(Scan::count())->toBe(2, '--force did not start a second scan');
+});
+
+/**
+ * Resuming is how a stuck scan is finished, and the scan it is finishing is
+ * the one that would block it. Refusing that would leave no way out.
+ */
+it('still resumes a running scan, which is the way out of one', function () {
+    $scan = wedgedScan();
+
+    // `wedgedScan` marks pages unread that were read, and leaves what they
+    // found behind. A page that really is pending has found nothing yet, so
+    // the rows go with it; without this the resume trips the one-issue-per-
+    // fingerprint-per-scan rule on a page it is reading for the second time.
+    Issue::where('scan_id', $scan->id)->delete();
+
+    $this->artisan('statamic:a11y:scan', ['--resume' => $scan->uuid, '--sync' => true])->assertExitCode(0);
+
+    expect($scan->fresh()->isFinished())->toBeTrue('the stuck scan could not be finished');
+});
+
+/**
+ * The scheduler keeps skipping with a zero exit. A cron that mails a failure
+ * every week for working correctly gets its mail filtered, and then the real
+ * one is missed.
+ */
+it('leaves the scheduler skipping quietly rather than failing', function () {
+    wedgedScan();
+
+    $this->artisan('statamic:a11y:scan', ['--scheduled' => true, '--sync' => true])
+        ->expectsOutputToContain('was skipped')
+        ->assertExitCode(0);
+
+    expect(Scan::count())->toBe(1);
+});

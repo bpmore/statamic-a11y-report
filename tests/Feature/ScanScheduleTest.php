@@ -160,9 +160,16 @@ it('skips a scheduled scan while another is running, and does not call that a fa
     expect(Scan::count())->toBe(1);
     expect(Scan::first()->uuid)->toBe($running->uuid);
 
-    // A person pressing the button during a scan is deliberate, so the same
-    // command without the flag still runs.
-    $this->artisan('statamic:a11y:scan', ['--sync' => true])->assertExitCode(0);
+    // The same command without the flag refuses too, and says so rather than
+    // skipping quietly: somebody typed it and would otherwise type it again.
+    // It used to start a second scan, on the reasoning that a person asking
+    // twice means it. Two axe scans thirty-five seconds apart then took a live
+    // site off the internet, browsers and all, so the deliberate act is now
+    // `--force` rather than the absence of a flag.
+    $this->artisan('statamic:a11y:scan', ['--sync' => true])->assertExitCode(1);
+    expect(Scan::count())->toBe(1);
+
+    $this->artisan('statamic:a11y:scan', ['--sync' => true, '--force' => true])->assertExitCode(0);
     expect(Scan::count())->toBe(2);
 });
 

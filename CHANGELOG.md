@@ -8,6 +8,22 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.0.4 - 2026-09-08
+
+### Changed
+
+**`a11y:scan:cancel` takes the front of a scan id.** A uuid is thirty-six
+characters and nobody types one: it is read off a screen and copied, or read
+off a screen and typed as far as the first dash. The short form was refused
+with "No scan has the id", which tells somebody holding the right id that they
+have the wrong one. It cost a person clearing a blocked schedule on a live site
+a round trip while the schedule stayed blocked.
+
+Four characters is the least it will take, and eight is what every tool that
+shortens a uuid shows. A prefix matching more than one scan is refused with the
+ones it matched, listed with their statuses, rather than resolved to the newest
+and hoped for: ending the wrong scan cannot be undone.
+
 ## 1.0.3 - 2026-09-08
 
 ### Fixed

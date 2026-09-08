@@ -37,7 +37,7 @@ class ScanCancel extends Command
     use RunsInPlease;
 
     protected $signature = 'statamic:a11y:scan:cancel
-        {scan : The id of the scan to end, as the overview and a11y:scan print it.}
+        {scan : The id of the scan to end, as the overview and a11y:scan print it. The first few characters are enough.}
         {--force : Do not ask.}';
 
     protected $description = 'End a scan that cannot finish, so scheduled scans can run again.';
@@ -50,12 +50,9 @@ class ScanCancel extends Command
             return 1;
         }
 
-        $uuid = (string) $this->argument('scan');
-        $scan = ScanModel::where('uuid', $uuid)->first();
+        $scan = $this->find((string) $this->argument('scan'));
 
         if ($scan === null) {
-            $this->error("No scan has the id [{$uuid}].");
-
             return 1;
         }
 
@@ -112,6 +109,58 @@ class ScanCancel extends Command
         $this->line('');
 
         return 0;
+    }
+
+    /**
+     * The scan a person meant, by its whole id or by the front of it.
+     *
+     * A uuid is thirty-six characters and nobody types one: it is read off a
+     * screen and copied, or read off a screen and typed as far as the first
+     * dash. Refusing the short form with "No scan has the id" told somebody
+     * holding the right id that they had the wrong one, which cost a person
+     * clearing a blocked schedule a round trip for nothing.
+     *
+     * Eight characters of a uuid is the form every tool that shows one shortens
+     * it to, and it is enough: a prefix that matches more than one scan is
+     * refused with the ones it matched rather than a guess, because ending the
+     * wrong scan is not undoable.
+     */
+    private function find(string $id): ?ScanModel
+    {
+        if ($scan = ScanModel::where('uuid', $id)->first()) {
+            return $scan;
+        }
+
+        // Four is short enough to type and long enough that a collision is
+        // worth printing rather than worth pretending cannot happen.
+        if (strlen($id) < 4) {
+            $this->error("No scan has the id [{$id}]. Give the whole id, or at least the first four characters of it.");
+
+            return null;
+        }
+
+        $matches = ScanModel::where('uuid', 'like', str_replace(['%', '_'], ['\\%', '\\_'], $id).'%')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get();
+
+        if ($matches->isEmpty()) {
+            $this->error("No scan has the id [{$id}], or starts with it.");
+
+            return null;
+        }
+
+        if ($matches->count() > 1) {
+            $this->error("More than one scan starts with [{$id}]. Give more of it:");
+
+            foreach ($matches as $match) {
+                $this->line("  {$match->uuid}  {$match->status}");
+            }
+
+            return null;
+        }
+
+        return $matches->first();
     }
 
     /**

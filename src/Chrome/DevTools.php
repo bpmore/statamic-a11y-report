@@ -88,7 +88,19 @@ final class DevTools
             throw new ChromeProtocolError('No Chrome or Chromium was found. Set A11Y_CHROME_PATH to the browser binary to scan with axe.');
         }
 
+        // Before starting one, clear up any this machine was left holding. See
+        // `Browser::sweepAbandoned()`: a scan killed outright leaves its Chrome
+        // running for ever, and they accumulate until the machine falls over.
+        Browser::sweepAbandoned();
+
         $this->profile = sys_get_temp_dir().'/a11y-report-axe-'.bin2hex(random_bytes(4));
+
+        // The pid of the process that owns this browser, written where a later
+        // scan can find it. It is the only way to tell a browser whose owner
+        // has died from one a second worker is using right now, and killing
+        // the second is worse than leaving the first.
+        @mkdir($this->profile, 0700, true);
+        @file_put_contents($this->profile.'/'.Browser::OWNER_FILE, (string) getmypid());
 
         $command = implode(' ', array_map('escapeshellarg', [
             $binary,
@@ -356,12 +368,35 @@ final class DevTools
 
     private function shutdown(): void
     {
+        // Asked to close before it is killed. Chrome is a tree: a browser
+        // process, a zygote, a renderer per page, a crash handler. Killing the
+        // one this process started orphans the rest, and under snap the one it
+        // started is a wrapper, so signal 9 there reaps almost nothing. Told to
+        // close, Chrome takes its own children down with it.
+        //
+        // Best effort and short. This runs from a destructor, including while
+        // an exception is on its way out, and a browser that has already
+        // stopped answering must not hold the shutdown up.
+        if ($this->socket !== null) {
+            try {
+                $this->send('Browser.close');
+            } catch (\Throwable) {
+                // It was going to be killed anyway.
+            }
+        }
+
         $this->socket?->close();
         $this->socket = null;
         $this->sessionId = null;
         $this->events = [];
 
         if (is_resource($this->process)) {
+            // A moment for the close above to land, so `proc_close` is not
+            // waiting on a browser that is already on its way out.
+            for ($i = 0; $i < 20 && proc_get_status($this->process)['running']; $i++) {
+                usleep(50_000);
+            }
+
             if (proc_get_status($this->process)['running']) {
                 proc_terminate($this->process, 9);
             }

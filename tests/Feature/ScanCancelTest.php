@@ -143,3 +143,56 @@ it('says when other scans are still holding the schedule up', function () {
         ->expectsOutputToContain('scheduled scans are still skipped')
         ->assertExitCode(0);
 });
+
+/**
+ * A uuid is thirty-six characters and nobody types one. It is read off a
+ * screen and copied, or read off a screen and typed as far as the first dash.
+ * Refusing the short form told somebody holding the right id that they had the
+ * wrong one, and it cost a person clearing a blocked schedule a round trip on
+ * a live site while the schedule stayed blocked.
+ */
+it('takes the front of a scan id, which is what a person reads off a screen', function () {
+    $scan = wedgedScan();
+
+    $this->artisan('statamic:a11y:scan:cancel', ['scan' => substr($scan->uuid, 0, 8), '--force' => true])
+        ->expectsOutputToContain('is now')
+        ->assertExitCode(0);
+
+    expect($scan->fresh()->status)->toBe(Scan::CANCELLED);
+});
+
+/**
+ * Ending the wrong scan is not undoable, so an ambiguous prefix is refused
+ * with what it matched rather than resolved to the newest and hoped for.
+ */
+it('refuses a prefix that matches more than one scan, and says which', function () {
+    $one = wedgedScan();
+    $two = wedgedScan();
+
+    $shared = 'aaaaaaaa';
+    $one->update(['uuid' => $shared.'-1111-1111-1111-111111111111']);
+    $two->update(['uuid' => $shared.'-2222-2222-2222-222222222222']);
+
+    $this->artisan('statamic:a11y:scan:cancel', ['scan' => $shared, '--force' => true])
+        ->expectsOutputToContain('More than one scan starts with')
+        ->expectsOutputToContain($one->fresh()->uuid)
+        ->expectsOutputToContain($two->fresh()->uuid)
+        ->assertExitCode(1);
+
+    expect($one->fresh()->status)->toBe(Scan::RUNNING);
+    expect($two->fresh()->status)->toBe(Scan::RUNNING);
+});
+
+/**
+ * Short enough to be a typo rather than an id. Without the floor, a stray
+ * character would match whatever happened to start with it.
+ */
+it('will not take one or two characters as a scan id', function () {
+    $scan = wedgedScan();
+
+    $this->artisan('statamic:a11y:scan:cancel', ['scan' => substr($scan->uuid, 0, 2), '--force' => true])
+        ->expectsOutputToContain('at least the first four characters')
+        ->assertExitCode(1);
+
+    expect($scan->fresh()->status)->toBe(Scan::RUNNING);
+});

@@ -8,6 +8,18 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.0.6 - 2026-09-10
+
+### Changed, with no difference to what is reported
+
+**A11y Gate 0.9 is now allowed.** The constraint was `^0.7 || ^0.8`, and on a
+0.x package a caret pins the minor, so 0.9 was excluded. A site running this
+addon alongside A11y Gate and A11y Docs could not take the gate release that
+lets A11y Docs draw a refused publish in the panel: composer refused the whole
+update rather than any one part of it, and the reason named this package.
+
+Nothing here changed. 0.9 only adds to the panel seam this addon already uses.
+
 ## 1.0.5 - 2026-09-08
 
 ### Fixed, and it took a site down

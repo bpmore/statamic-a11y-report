@@ -1,10 +1,17 @@
 # The suite, on every pull request. Copied from Accessibility Gate, whose suite
-# this one boots alongside: the gate is a dependency, resolved from GitHub by
-# the repository entry in composer.json.
+# this one boots alongside: the gate is a dependency, resolved from Packagist
+# like any other.
 #
 # Two jobs for the same reason the gate has two: ext-intl is a `suggest` there,
 # and the checker this addon runs behaves differently without it. A scan on a
 # host with no intl must still run.
+#
+# A third is the oldest PHP the manifest allows, with the oldest version of
+# every dependency it allows, the gate included. A floor in composer.json is a
+# promise about a machine nobody on this project runs, and the only thing that
+# makes it true is a runner that is that machine. When this job goes red on a
+# commit that changed nothing, a dependency raised its own floor, and that is
+# the moment to raise ours rather than the moment a customer finds out.
 
 name: Tests
 
@@ -26,7 +33,7 @@ concurrency:
 
 jobs:
   tests:
-    name: PHP 8.4, ${{ matrix.name }}
+    name: PHP ${{ matrix.php }}, ${{ matrix.name }}
     runs-on: ubuntu-latest
 
     strategy:
@@ -37,19 +44,27 @@ jobs:
       matrix:
         include:
           - name: with ext-intl
+            php: '8.4'
             extensions: dom, libxml, mbstring, intl
+            dependencies: highest
           # The leading colon is how setup-php removes an extension it would
           # otherwise ship by default. Without it this job would silently be a
           # duplicate of the one above.
           - name: without ext-intl
+            php: '8.4'
             extensions: dom, libxml, mbstring, :intl
+            dependencies: highest
+          - name: lowest dependencies
+            php: '8.2'
+            extensions: dom, libxml, mbstring, intl
+            dependencies: lowest
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: ${{ matrix.php }}
           extensions: ${{ matrix.extensions }}
           coverage: none
 
@@ -66,7 +81,15 @@ jobs:
       # commit that changed nothing, a dependency moved, and that is a finding
       # rather than a nuisance.
       - name: Install dependencies
+        if: matrix.dependencies == 'highest'
         run: composer install --prefer-dist --no-interaction --no-progress
+
+      # `--prefer-lowest` alone would take the oldest *pre-release* of anything
+      # that has one; `--prefer-stable` with it takes the oldest stable, which
+      # is the oldest thing a real install can end up with.
+      - name: Install the oldest dependencies the manifest allows
+        if: matrix.dependencies == 'lowest'
+        run: composer update --prefer-lowest --prefer-stable --prefer-dist --no-interaction --no-progress
 
       # The PDF tests and the whole axe engine skip without Chrome, and a
       # skipped test is reported as a pass. Fail here instead, where the reason

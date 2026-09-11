@@ -4,7 +4,8 @@ Accessibility Gate stops a bad entry. Accessibility Report proves the site is
 clean, over time, in a document a compliance officer can file.
 
 This addon depends on [Accessibility Gate](https://github.com/bpmore/statamic-a11y-gate)
-at 0.7 or later, which stays free. The report is a paid addon.
+at 0.9.1 or later, which stays free. The report is a paid addon. Both run on
+PHP 8.2 or newer.
 
 ## Status
 
@@ -164,9 +165,7 @@ colour: the colour is checked against the white page a report is printed on,
 and no single colour reaches 4.5:1 against both of the control panel's themes,
 so a heading tinted with it would fail contrast in one of them. The mark is
 served from the control panel rather than embedded in the page, and a logo the
-report would refuse to print is one the panel does not wear either. It needs
-Accessibility Gate 0.8 or newer; an older gate ignores the mark, and the block
-is otherwise unchanged.
+report would refuse to print is one the panel does not wear either.
 
 ## Remediation targets and accepted issues
 

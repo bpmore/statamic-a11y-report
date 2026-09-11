@@ -12,6 +12,49 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-11: The floor is PHP 8.2, and December 2026 is when to raise it
+
+The same change as the gate's, made second because a floor is only real if
+every dependency honours it. The gate's entry of the same date has the
+reasoning in full; what is specific to this addon is here.
+
+**Nothing here needed 8.4 either.** Every file lints under 8.2, and the two
+things that might have been suspected, the WebSocket client and the DevTools
+session, use nothing newer than string XOR and `pack('J')`, both years old.
+The `^8.4` was inherited from the gate's manifest when this one was written
+from it.
+
+**The gate constraint narrows to `^0.9.1`.** It was `^0.7 || ^0.8 || ^0.9`,
+which was hospitable and is now impossible: a lowest-dependencies job on 8.2
+would resolve gate 0.7.0, whose manifest refuses 8.2, and fail before a test
+ran. 0.9.1 is the gate release carrying its own floor. Turned down: keeping the
+wide constraint and running the lowest job on 8.4, which tests nothing the
+existing jobs do not; and ignoring platform requirements for the resolve, which
+would let Pest 4 and Testbench 11 install on 8.2 and fall over at runtime, a
+green that means nothing. An install on an older gate has to update it, and
+the changelog says so under Upgrading.
+
+**8.2, and 31 December 2026.** That is when 8.2 leaves security support, and
+it is the date to raise this to 8.3. Not before, or a supported Laravel 12
+site is refused for no reason; not after, or a product whose whole claim is
+that it can be trusted about what it claims runs on a PHP that no longer
+receives security fixes.
+
+**Checked.** The suite, 322 tests, under real PHP 8.2 with the oldest
+dependencies Composer would resolve: Laravel 12.61, Statamic 6.31, Pest 3.8,
+Testbench 10.11, and the gate at the commit carrying its floor, standing in
+for 0.9.1 through a path repository in a scratch copy. Headless Chrome, axe,
+the WebSocket client and veraPDF all ran there rather than skipping. The same
+suite under 8.4 as before. Every file in `src/` and `database/` lints under
+8.2.
+
+**Not checked.** PHP 8.3 itself. Laravel 12.40 exactly, since Testbench 10's
+own floor is 12.55. A real site on 8.2. And the CI job itself against a
+published 0.9.1, which cannot go green until that tag exists: the pull request
+is a draft until it does.
+
+---
+
 ## 2026-09-08: A manual scan refuses to start on top of a running one
 
 This reverses the decision of 2026-09-02, which put the guard on `--scheduled`

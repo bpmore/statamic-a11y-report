@@ -8,6 +8,26 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## Unreleased
+
+### Changed
+
+**Runs on PHP 8.2 and newer, and needs Accessibility Gate 0.9.1 or newer.**
+The manifest said 8.4 and nothing in the code needed it: the floor was the
+version the project started on. The real floor is Laravel's, 8.2 on Laravel
+12, and that is now what both addons declare. A job in CI installs the oldest
+version of everything the manifest allows, on 8.2, and runs the whole suite
+there, headless Chrome included, so the floor is a tested fact rather than a
+number in a file.
+
+The gate constraint narrows from `^0.7 || ^0.8 || ^0.9` to `^0.9.1`, because a
+floor is only real if every dependency honours it and 0.9.1 is the gate release
+that does. **Upgrading:** `composer update bpmore/statamic-a11y-gate` first if
+you are on an older gate.
+
+PHP 8.2 leaves security support at the end of December 2026. That is the date
+to raise this to 8.3, and it is in the decision log so nobody has to remember.
+
 ## 1.0.6 - 2026-09-10
 
 ### Changed, with no difference to what is reported

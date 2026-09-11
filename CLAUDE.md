@@ -55,8 +55,9 @@ rules here exist to protect that.
 
 ## STACK
 
-- PHP 8.4. Composer. PSR-4. A Statamic addon is an ordinary Laravel package.
-- Statamic 6, `bpmore/statamic-a11y-gate` ^0.6. The engine classes stay
+- PHP 8.2 or newer, tested on 8.2 and 8.4. Composer. PSR-4. A Statamic addon is an
+  ordinary Laravel package.
+- Statamic 6, `bpmore/statamic-a11y-gate` ^0.9.1. The engine classes stay
   framework-free like the checker they wrap.
 - Storage is Eloquent on the connection `ReportDatabase` names, a SQLite file
   the addon owns by default. Migrations run only through `a11y:report:install`,

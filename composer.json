@@ -18,8 +18,22 @@
             "homepage": "https://hada.farm"
         }
     ],
+    "repositories": [
+        {
+            "name": "bpmore-readability-core",
+            "type": "path",
+            "url": "../statamic-plain/packages/readability-core",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "bpmore/readability-core": "0.1.0"
+                }
+            }
+        }
+    ],
     "require": {
         "php": "^8.2",
+        "bpmore/readability-core": "^0.1",
         "bpmore/statamic-a11y-gate": "^0.10",
         "statamic/cms": "^6.27"
     },

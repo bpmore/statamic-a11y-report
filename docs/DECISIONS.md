@@ -12,6 +12,56 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-12: Readability comes from an engine this addon depends on, not one it carries
+
+The first step of readability in the report: `bpmore/readability-core` is a
+dependency. Nothing reads it yet. The scan dimension, the SC 3.1.5 row and the
+notice for a site with Plain installed beside this addon each follow on their
+own, so that a dependency that turns out to be wrong is one commit to take
+back.
+
+**Why an engine, and why that one.** Readability is the same shape of claim as
+accessibility: a formula over a page, calibrated on English, that an audit can
+be asked to justify. Plain, the standalone readability addon, is built on the
+engine it split out for exactly this purpose, so the number a compliance
+officer reads in this report and the number an author sees on the publish form
+come from one code path. The gate's decision of 2026-09-02 is the same rule,
+and its cost: an engine that changes is a constraint to bump here.
+
+**Turned down.** Depending on `bpmore/statamic-plain` itself, which would pull
+a publish-form panel, a gate and a settings screen into a product that wants a
+scan dimension and a criterion row, and would make a paid addon a dependency of
+a paid addon, which the marketplace has no way to entitle. Copying the engine
+in, which is the forked-rules problem the gate's log spends several entries
+on, and would give Plain and this report two opinions of the same page. Making
+the engine a `suggest`, which would leave the customers this was meant for,
+the ones with the report and no Plain, without readability.
+
+**A path repository, for now, and what it costs.** The engine lives in Plain's
+repository under `packages/readability-core`, which is not on GitHub, and is
+not on Packagist. The manifest reaches it by path with a version pin
+(`versions: {bpmore/readability-core: 0.1.0}`), because a path package has no
+version of its own and `^0.1` must resolve against something. Locally and on
+the dev site this is what Plain and the site already do. **In CI it does not
+resolve**, and every job on this branch is red at `composer install` until the
+engine is published: a repository of its own from `git subtree split`, then
+Packagist, then this manifest drops the `repositories` block and nothing else
+changes. Turned down: making CI green by removing the dependency before
+install, which is what Plain does for Site Weather, because there Site Weather
+is a `require-dev` and the tests skip without it; here the engine is what the
+next three tasks are made of, and a green run that never loads it is a green
+that means nothing. Turned down: publishing the engine from this task, which is
+a repository and a listing under the owner's name and is the owner's to do.
+
+**What was checked.** The whole suite on the branch (325 passed, the usual
+Chrome-dependent skip), and three tests that grade with the engine and nothing
+booted: an easy page bands below a hard one, the hard one is `Grade 17+` and
+`above` a target of 8, proper names and a quotation are left out before
+counting, and `fr_FR` is refused with a sentence. Not checked: CI, for the
+reason above.
+
+---
+
 ## 2026-09-11: The floor is PHP 8.2, and December 2026 is when to raise it
 
 The same change as the gate's, made second because a floor is only real if

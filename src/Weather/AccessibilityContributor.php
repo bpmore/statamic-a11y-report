@@ -43,7 +43,7 @@ final class AccessibilityContributor implements WeatherContributor
         $url = Utility::find('a11y-report')?->url();
 
         if (! $this->database->isInstalled()) {
-            return Reading::unknown('Not set up yet: run php please statamic:a11y:report:install', $url);
+            return Reading::unknown('Not set up yet: run php please a11y:report:install', $url);
         }
 
         $overview = new Overview($this->database);

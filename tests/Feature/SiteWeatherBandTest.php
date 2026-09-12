@@ -39,7 +39,7 @@ it('reads unknown with the next step before the database is installed', function
     $reading = app(AccessibilityContributor::class)->reading();
 
     expect($reading->state)->toBe(State::Unknown)
-        ->and($reading->headline)->toBe('Not set up yet: run php please statamic:a11y:report:install')
+        ->and($reading->headline)->toBe('Not set up yet: run php please a11y:report:install')
         ->and($reading->url)->toBe(Utility::find('a11y-report')?->url());
 })->skip(! $siteWeatherInstalled, 'Site Weather is not installed');
 

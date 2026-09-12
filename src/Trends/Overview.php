@@ -41,6 +41,12 @@ final class Overview
         return $this->scans()->orderByDesc('id')->first();
     }
 
+    /** The newest scan that finished - the one whose numbers "open now" rests on. */
+    public function latestComplete(): ?Scan
+    {
+        return $this->scans()->where('status', Scan::COMPLETE)->orderByDesc('id')->first();
+    }
+
     /**
      * The oldest scan that has not finished, when nothing has happened to it
      * for longer than the configured wait.

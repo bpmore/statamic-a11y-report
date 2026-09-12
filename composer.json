@@ -58,5 +58,8 @@
         "sort-packages": true
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "suggest": {
+        "bpmore/statamic-site-weather": "Shows an Accessibility band on the Site Weather dashboard tile."
+    }
 }

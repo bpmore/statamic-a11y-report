@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Bpmore\A11yReport\Weather\AccessibilityContributor;
 use Bpmore\SiteWeather\Contracts\WeatherContributor;
@@ -20,6 +21,8 @@ use Statamic\Facades\Utility;
 $siteWeatherInstalled = interface_exists(WeatherContributor::class);
 
 beforeEach(function () {
+    $this->withStandardFakeViews();
+    test()->viewShouldReturnRaw('default', PLAIN);
     Collection::make('pages')->routes('/{slug}')->save();
 });
 
@@ -48,6 +51,25 @@ it('reads unknown, not clear, after installing but before any scan', function ()
     expect($reading->state)->toBe(State::Unknown)
         ->and($reading->headline)->toBe('No scan has run yet')
         ->and($reading->computedAt)->toBeNull();
+})->skip(! $siteWeatherInstalled, 'Site Weather is not installed');
+
+it('reads unknown when scans have run but none has completed', function () {
+    app(ReportDatabase::class)->install();
+    Scan::create([
+        'uuid' => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        'trigger' => Scan::TRIGGER_MANUAL,
+        'status' => Scan::FAILED,
+        'engine' => 'php',
+        'engine_version' => 'test',
+        'ruleset' => 'wcag21aa',
+        'scope' => [],
+        'finished_at' => now(),
+    ]);
+
+    $reading = app(AccessibilityContributor::class)->reading();
+
+    expect($reading->state)->toBe(State::Unknown)
+        ->and($reading->headline)->toBe('No scan has completed yet');
 })->skip(! $siteWeatherInstalled, 'Site Weather is not installed');
 
 it('reaches the tile end to end from a real scan', function () {

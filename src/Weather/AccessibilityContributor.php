@@ -50,7 +50,10 @@ final class AccessibilityContributor implements WeatherContributor
         $latest = $overview->latestComplete();
 
         if ($latest === null) {
-            return Reading::unknown('No scan has run yet', $url);
+            return Reading::unknown(
+                $overview->latest() === null ? 'No scan has run yet' : 'No scan has completed yet',
+                $url,
+            );
         }
 
         $decision = AccessibilityWeather::decide(

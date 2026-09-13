@@ -12,6 +12,67 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-12: SC 3.1.5 is a Level AAA row apart from the claim, with evidence and no verdict
+
+The one AAA criterion the scan can say anything about, and exactly how much
+it is allowed to say.
+
+**Why a row at all, when the catalogue refuses AAA.** The rule since the first
+document has been that a table listing AAA criteria invites a claim about
+them, and nothing here can support one. That rule stands: the table is Level
+A and AA and `Wcag::criteria()` never returns 3.1.5. But every scan now
+grades the reading level of every page, which is the first half of what
+3.1.5 asks ("text requires reading ability more advanced than the lower
+secondary education level after removal of proper names and titles"), and a
+reader who has that evidence should meet it under the criterion it speaks to
+rather than find it only on the overview. So the catalogue gained a second,
+separate list, `BEYOND_CLAIM`, and the document a section of its own after
+the table, under a heading that says what it is.
+
+**What the row can and cannot say.** The scan can count the pages whose band
+starts above Grade 9, which is where lower secondary education ends, with
+names already set aside because the engine drops them before it counts. It
+cannot see whether a simpler version or supplement is offered, which is the
+second half of the criterion and the only half that decides it. So the
+evidence sentence gives the count, names up to twenty of the pages, gives the
+median, and ends by saying what the criterion asks and that this is evidence
+and not a determination. The row is "Not evaluated" until a person assesses
+it on the worksheet, through the same merge as the table's rows with the
+engine's two rules (failures, coverage) unable to fire. Nothing here is a
+failure of anything: `issues_total` does not move, the limits statement says
+so in a sentence, and a test asserts the document never says "fails 3.1.5".
+
+**A band that straddles the line is not above it.** Grade 9 to 10 is not
+counted as above lower secondary; Grade 10 to 11 is. The formulas are not
+precise enough to split a band, and the honest direction of error for
+evidence toward a criterion the site has not claimed is under, not over.
+
+**Kept out of every count.** `criteria` still has 55 rows; `methods` lists
+no AAA number under automated, not evaluated or assessed by people; the
+coverage note's arithmetic is the table's alone. The JSON keeps the row under
+`beyond_claim` with its own `level` and `note`. Turned down: appending the
+row to `criteria` with a flag, which every reader adding up the table would
+have to know to subtract; and putting the evidence only in the remarks of a
+criterion in the table, which would attach a AAA measurement to an AA claim.
+
+**Turned down: a verdict from the numbers.** A row that said "Supports" when
+no page reads above the level was the obvious next step and would have been
+the first automated "Supports" in the product. It is not one: a site with
+every page at Grade 6 has met nothing, it has merely not triggered the
+condition, and the day it publishes one dense page the row would flip to
+"Does not support" on a measurement two grades wide. The evidence sentence
+for that case says what it can, that nothing on the site needs a simpler
+version on this evidence, and stops.
+
+**What was checked.** The whole suite (343 passed, the Chrome skip), six
+tests for the row (its place and its absence from the counts, the boundary
+by hand-written rows, the nothing-above and not-measured sentences, a person
+assessing it from the worksheet and the claim unmoved, the catalogue), the
+worksheet's counts raised by one and the PDF link description present. Not
+checked: the document in a browser or a PDF reader, and CI.
+
+---
+
 ## 2026-09-12: The reading level is a dimension of the scan, kept the way the engine is
 
 Every scan now grades each page it read and rolls the site up as a median

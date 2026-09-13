@@ -12,6 +12,7 @@ use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Report;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Models\ScanPage;
+use Bpmore\A11yReport\Readability\CriterionEvidence;
 use Bpmore\A11yReport\Remediation\Policy;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -120,6 +121,7 @@ final class ReportBuilder
                 )),
             ],
             'criteria' => $rows,
+            'beyond_claim' => $this->beyondClaim($scan, $standard, $assessments),
             'summary' => [
                 'issues_total' => (int) $scan->issues_total,
                 'by_impact' => $this->byImpact($scan),
@@ -164,6 +166,37 @@ final class ReportBuilder
         }
 
         return $brand;
+    }
+
+    /**
+     * Level AAA, apart from the claim: the criteria the scan gathers evidence
+     * toward without ever deciding. Its own key, its own section, its own
+     * table, and never in `criteria` or in the counts under `methods`, so
+     * that a reader who adds up the conformance table adds up the claim and
+     * nothing else.
+     *
+     * @param  array<string, CriterionAssessment>  $assessments
+     * @return array{level: string, note: string, criteria: array<int, array<string, mixed>>}
+     */
+    private function beyondClaim(Scan $scan, string $standard, array $assessments): array
+    {
+        $rows = [];
+
+        foreach (Wcag::beyondClaim() as $criterion) {
+            $evidence = $criterion->number === CriterionEvidence::CRITERION ? CriterionEvidence::forScan($scan) : null;
+
+            $rows[] = array_merge(
+                ['number' => $criterion->number, 'name' => $criterion->name, 'level' => $criterion->level, 'url' => $criterion->understandingUrl(Wcag::version($standard))],
+                AssessmentMerger::mergeBeyondClaim($criterion, $assessments[$criterion->number] ?? null, $evidence['sentence'] ?? 'Not covered by automated checks.'),
+                ['reading' => $evidence],
+            );
+        }
+
+        return [
+            'level' => 'AAA',
+            'note' => 'The conformance claim in this report is Level AA. Level AAA is not claimed, and the criteria here are not part of the conformance table: they are reported because the scan gathers evidence toward them, and a reader who has that evidence should see it under the criterion it speaks to. No result here changes a row above, and a page that reads above the level named is not a failure of anything in this report.',
+            'criteria' => $rows,
+        ];
     }
 
     private function standardFor(Scan $scan): string

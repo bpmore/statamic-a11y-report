@@ -123,6 +123,91 @@
                     </ui-table-rows>
                 </ui-table>
 
+                @if ($sheet['beyond_claim'] !== [])
+                    <h3 class="font-medium">Level AAA, reported apart from the claim</h3>
+                    <ui-description text="The report's claim is Level AA and the table above is the whole of it. The criterion here is outside the claim: the scan grades every page's reading level, which is evidence toward it, and no scan result can make it anything but not evaluated. It is met by offering a simpler version or supplement where a page reads above lower secondary level, which only a person can see. A page above the level is not a failure of anything." />
+                    <ui-table>
+                        <ui-table-columns>
+                            <ui-table-column>Criterion</ui-table-column>
+                            <ui-table-column>Evidence from the scan</ui-table-column>
+                            <ui-table-column>Effective result</ui-table-column>
+                            <ui-table-column>Your assessment</ui-table-column>
+                        </ui-table-columns>
+                        <ui-table-rows>
+                            @foreach ($sheet['beyond_claim'] as $row)
+                                @php
+                                    $own = $row['own'];
+                                    $inh = $row['inherited'];
+                                    $n = $row['number'];
+                                    $id = 'a11y-c-'.str_replace('.', '-', $n);
+                                    $reading = $row['reading'];
+                                @endphp
+                                <ui-table-row>
+                                    <ui-table-cell>
+                                        <div class="font-medium"><a href="@plain($row['url'])" target="_blank" rel="noopener" class="{{ $link }}">{{ $n }} @plain($row['name'])<span class="sr-only"> (the W3C's explanation, opens in a new tab)</span></a></div>
+                                        <ui-description text="Level {{ $row['level'] }}, outside the claim" />
+                                    </ui-table-cell>
+                                    <ui-table-cell>
+                                        <div class="text-sm">@plain($row['evidence'])</div>
+                                        @if (! empty($reading['pages_above']))
+                                            <ul class="text-sm mt-2 space-y-1">
+                                                @foreach ($reading['pages_above'] as $p)
+                                                    <li><a href="@plain($p['url'])" target="_blank" rel="noopener" class="{{ $link }}">@plain($p['path'])<span class="sr-only"> (opens in a new tab)</span></a> @plain($p['label'])</li>
+                                                @endforeach
+                                            </ul>
+                                            @if (count($reading['pages_above']) < $reading['above'])
+                                                <ui-description text="The first {{ count($reading['pages_above']) }} of {{ $reading['above'] }}, by path." />
+                                            @endif
+                                        @endif
+                                    </ui-table-cell>
+                                    <ui-table-cell>
+                                        <ui-badge text="@plain($label($row['effective_status']))" @if ($row['effective_status'] === 'does_not_support') color="red" @elseif ($row['effective_status'] === 'supports') color="emerald" @elseif ($row['effective_status'] === 'partially_supports') color="amber" @endif />
+                                        @if ($inh)<ui-description text="@plain('Inherited from the global default'.($inh->assessed_by ? ', assessed by '.$inh->assessed_by : ''))" />@endif
+                                        @if ($own && $own->assessed_by)<ui-description text="@plain('Assessed by '.$own->assessed_by.($own->assessed_at ? ' on '.$own->assessed_at->format('j M Y') : ''))" />@endif
+                                    </ui-table-cell>
+                                    <ui-table-cell>
+                                        @if ($canAssess)
+                                            <div class="space-y-2">
+                                                <div class="flex flex-wrap gap-2">
+                                                    <div>
+                                                        <label for="{{ $id }}-status" class="block text-xs font-medium mb-1">Status</label>
+                                                        <select id="{{ $id }}-status" name="criteria[{{ $n }}][status]" class="{{ $control }}">
+                                                            <option value="">No assessment of your own</option>
+                                                            @foreach ($statuses as $status)
+                                                                <option value="{{ $status }}" @if ($own && $own->status === $status) selected @endif>{{ $label($status) }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label for="{{ $id }}-method" class="block text-xs font-medium mb-1">Method</label>
+                                                        <select id="{{ $id }}-method" name="criteria[{{ $n }}][method]" class="{{ $control }}">
+                                                            @foreach ($methods as $method)
+                                                                <option value="{{ $method }}" @if (($own->method ?? 'manual') === $method) selected @endif>{{ ucfirst($method) }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label for="{{ $id }}-remarks" class="block text-xs font-medium mb-1">Remarks</label>
+                                                    <textarea id="{{ $id }}-remarks" name="criteria[{{ $n }}][remarks]" rows="2" class="{{ $control }} w-full">@plain($own->remarks ?? '')</textarea>
+                                                </div>
+                                                <label class="text-sm"><input type="checkbox" name="criteria[{{ $n }}][locked]" value="1" @if ($own && $own->locked) checked @endif> Locked: a scan never changes this</label>
+                                            </div>
+                                        @else
+                                            @if ($own)
+                                                <div class="text-sm">@plain($label($own->status).', '.$own->method.($own->locked ? ', locked' : ''))</div>
+                                                @if ($own->remarks)<ui-description text="@plain($own->remarks)" />@endif
+                                            @else
+                                                <ui-description text="None" />
+                                            @endif
+                                        @endif
+                                    </ui-table-cell>
+                                </ui-table-row>
+                            @endforeach
+                        </ui-table-rows>
+                    </ui-table>
+                @endif
+
                 @if ($canAssess)
                     <div class="flex items-center gap-3">
                         <ui-button type="submit" variant="primary" text="Save the worksheet" />

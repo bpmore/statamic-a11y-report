@@ -25,7 +25,7 @@ class CriteriaController extends CpController
         $site = $request->query('site');
         $site = is_string($site) && $site !== '' && Site::get($site) ? $site : null;
 
-        $sheet = $installed ? $worksheet->build($site) : ['site' => $site, 'scan' => null, 'standard' => 'wcag22aa', 'rows' => []];
+        $sheet = $installed ? $worksheet->build($site) : ['site' => $site, 'scan' => null, 'standard' => 'wcag22aa', 'rows' => [], 'beyond_claim' => []];
 
         return Inertia::render('utilities/Show', [
             'title' => 'A11y Report: Criteria',

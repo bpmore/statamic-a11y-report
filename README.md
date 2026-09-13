@@ -244,6 +244,17 @@ remove it.
 Every criterion in the document, and the standard on its cover, links to the
 W3C's own text for it, and the PDF describes each link for a screen reader.
 
+**Level AAA, apart from the claim.** The claim is Level AA and the table is
+the whole of it. One Level AAA criterion, 3.1.5 Reading Level, has a section
+of its own after the table, because every scan grades each page's reading
+level and that is evidence toward it: how many pages read above lower
+secondary level once names and titles are set aside, and which. The
+criterion is met by offering a simpler version or supplement for such pages,
+which no scan can see, so the row is "Not evaluated" until a person assesses
+it on the worksheet, and nothing in it changes a row in the table. A page
+above the level is not a failure of anything. The section is never in the
+table's counts, and the JSON keeps it under `beyond_claim`.
+
 Reports can also be generated, listed and opened from the control panel, by
 anybody with the `generate accessibility reports` permission.
 

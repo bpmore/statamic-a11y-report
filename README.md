@@ -133,6 +133,11 @@ recorded as not graded rather than given a number that means nothing. Set
 it was left out. **Upgrading:** `php please a11y:report:install` adds the two
 columns the reading level is kept in.
 
+With Plain installed as well, the overview says in a sentence who owns which
+surface: Plain grades what an author writes, on the publish form, and owns
+the gate and the dictionary; this addon grades pages as served. They are two
+readings of the same site, not two scans of the same thing.
+
 ## On a schedule
 
 `scan.schedule` in the config file takes `daily`, `weekly` (Sunday), `monthly`

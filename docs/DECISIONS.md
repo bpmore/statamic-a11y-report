@@ -12,6 +12,23 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-12: One sentence for a site with Plain installed too, on the overview, and nowhere else
+
+Plain and this addon share an engine and grade the same site from two sides
+of the publish button. Somebody meeting both readings for the first time can
+reasonably take one for a mistake, or think the site is being scanned twice.
+The overview's "What these numbers are" card gains one sentence when Plain is
+in the addon manifest, saying who owns which surface; Plain says the same on
+its Readability page. Turned down: a banner, which would be read every day by
+somebody who understood it on the first; and hiding either addon's numbers
+when the other is present, which would decide for the customer which reading
+they wanted. Detection is by the manifest and not by class, so a test can
+install the neighbour with one array. Checked: the sentence on and off, the
+page compiling with it, and both detections true on the dev site, where both
+are installed.
+
+---
+
 ## 2026-09-12: SC 3.1.5 is a Level AAA row apart from the claim, with evidence and no verdict
 
 The one AAA criterion the scan can say anything about, and exactly how much

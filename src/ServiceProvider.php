@@ -227,6 +227,7 @@ class ServiceProvider extends AddonServiceProvider
             'stale' => $installed ? $overview->stale((int) config('statamic-a11y-report.scan.stale_after_minutes', 10)) : null,
             'schedule' => $installed ? $overview->schedule() : null,
             'engine' => (string) config('statamic-a11y-report.engine', PhpDomEngine::KEY),
+            'companion' => Support\Companion::notice(),
         ];
     }
 

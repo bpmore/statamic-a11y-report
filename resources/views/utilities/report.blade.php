@@ -308,6 +308,9 @@
                 here fails a page for its grade. English only, because the formulas were calibrated on English; a page in
                 another language is recorded as not graded rather than given a number.
             </p>
+            @if ($companion !== null)
+                <p>@plain($companion)</p>
+            @endif
         </div>
     </ui-card-panel>
 

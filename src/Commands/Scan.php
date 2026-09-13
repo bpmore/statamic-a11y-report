@@ -199,6 +199,10 @@ class Scan extends Command
             $this->line("  Against the last scan: {$scan->diff['new']} new, {$scan->diff['fixed']} fixed, {$scan->diff['unchanged']} unchanged.");
         }
 
+        if (is_array($scan->readability)) {
+            $this->line('  Reading level: '.\Bpmore\A11yReport\Readability\Sentence::forScan($scan->readability));
+        }
+
         $this->line('');
 
         if ($scan->engine === PhpDomEngine::KEY) {

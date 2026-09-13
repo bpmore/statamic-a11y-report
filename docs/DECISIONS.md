@@ -12,6 +12,73 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-12: The reading level is a dimension of the scan, kept the way the engine is
+
+Every scan now grades each page it read and rolls the site up as a median
+band. Two things had to be decided: what of a rendered page is the page, and
+where the numbers live.
+
+**The main content, not the page.** A scan reads a page as served, and a
+served page carries its navigation, banner, footer and sidebar. Graded with
+the prose, a two-paragraph notice on a site with a forty-link footer scores as
+the footer. The engine gained a `PageExtractor` that reads `<main>` (or
+`role="main"`) and, where a theme has neither, the body with the landmarks a
+browser would announce as navigation, banner, contentinfo and complementary
+taken out; a `<header>` or `<footer>` inside an article stays, which is the
+same rule the browser applies before calling one a landmark. Turned down:
+grading the whole page, for the reason above; and grading the entry's fields
+the way Plain does, because this addon reads served pages and has no field
+list, and a page assembled from three fields and a partial is graded as the
+reader meets it. The extractor lives in the engine rather than here so that
+Plain, or anything else that grades a served page, applies the same rule.
+
+**The record carries what it was measured with.** The scan row keeps, at
+creation, whether the dimension ran, the engine and its version, the locales
+and the target; every page is graded against that row and never against the
+config a worker holds when it picks the page up; and the finalise step writes
+the roll-up onto the same record. This is the rule the engine on a scan and
+the mark on a cover already follow, and the alternative, reading the target
+at report time, would have put a target nobody had chosen yet under numbers
+measured against another. A disabled dimension records `enabled: false`, and
+a scan from before the dimension has no record at all, so "not measured" and
+"older than the feature" never read the same.
+
+**A median, and the engine's own median.** The site's number is the median
+page's consensus grade, computed the way Plain's snapshot computes it, so the
+dashboard widget over there and the overview here agree to the band. On an
+even count that is the mean of the two middle pages, and with two pages, one
+easy and one that reads at 37, the mean lands at "Grade 17+". Considered and
+left: clamping grades to the open band's floor before the median, which
+would have been more honest for that pair and would have disagreed with
+Plain; the two products reading the same site differently is the worse
+fault. The band caps what a person sees either way.
+
+**On the screen: the target. Off it: the switch and the languages.** The
+settings-screen rule is that a wrong value which stops scans is the
+developer's and one that changes a sentence is the editor's. The grade a
+site writes for changes a sentence; the locale list, wrong, grades nothing.
+The pinned list of unreachable settings in the settings test names both.
+
+**Never a WCAG result, anywhere it is printed.** The overview, the config
+comment, the settings screen and the README each say it in a sentence: no
+Level A or AA criterion is about reading level, 3.1.5 is AAA and is met by a
+simpler version, and nothing fails a page for its grade. `ci.fail_above` has
+no key for it and a test asserts the keys. The 3.1.5 row in the document is
+the next step and is not here.
+
+**What was checked.** The whole suite (336 passed, the Chrome skip), eight
+feature tests for the dimension (the furniture left out, the target carried
+on the row and rebuilt from it, a French site refused, the switch off, an
+errored page kept out of the counts, the settings screen's target reaching
+the row, and the overview, history and command all saying the same sentence),
+and four for the sentence itself. Found on the way: two
+`expectsOutputToContain` on one line of command output cannot both pass,
+because Laravel's mock lets the first matching expectation consume the write;
+one expectation per line. Not checked: a real site, and CI, which cannot
+resolve the engine yet.
+
+---
+
 ## 2026-09-12: Readability comes from an engine this addon depends on, not one it carries
 
 The first step of readability in the report: `bpmore/readability-core` is a

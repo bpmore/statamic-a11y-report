@@ -17,6 +17,8 @@ use Bpmore\A11yReport\Models\Issue;
 use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Models\ScanPage;
+use Bpmore\A11yReport\Readability\PageReading;
+use Bpmore\A11yReport\Readability\Readability;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Illuminate\Bus\Batch;
 use Illuminate\Support\Collection;
@@ -25,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Statamic\Contracts\Entries\Entry;
 use Statamic\Facades\Entry as Entries;
+use Statamic\Facades\Site;
 use Throwable;
 
 /**
@@ -70,6 +73,10 @@ final class Scans
             // generated later must not have to ask an engine that was not the
             // one that ran.
             'criteria' => $engine->criteria(),
+            // The reading-level dimension, settled here for the same reason
+            // the engine is: every page of this scan is graded against the
+            // target in force now, not the one a worker's config names later.
+            'readability' => Readability::fromConfig((array) ($this->config['readability'] ?? []))->toRecord(),
             'scope' => $scope->toArray(),
             'initiated_by' => $initiatedBy,
         ]);
@@ -251,8 +258,9 @@ final class Scans
         }
 
         $issues = $this->groupByFingerprint($result->findings, Fingerprint::page($page->site, $page->path));
+        $reading = $this->readingOf($page, $html);
 
-        DB::connection(ReportDatabase::connectionName())->transaction(function () use ($page, $result, $issues, $renderMs) {
+        DB::connection(ReportDatabase::connectionName())->transaction(function () use ($page, $result, $issues, $renderMs, $reading) {
             foreach ($issues as $fingerprint => ['finding' => $finding, 'occurrences' => $occurrences]) {
                 Issue::create([
                     'scan_id' => $page->scan_id,
@@ -279,9 +287,26 @@ final class Scans
                 'issues_count' => count($issues),
                 'coverage' => $result->coverage,
                 'coverage_summary' => $result->coverageSummary,
+                'readability' => $reading?->toArray(),
                 'scanned_at' => now(),
             ]);
         });
+    }
+
+    /**
+     * The page's reading level, the way its scan said it would be measured,
+     * or null when the scan chose not to measure. Never a reason the page
+     * fails: the grader answers with a reading that says what went wrong.
+     */
+    private function readingOf(ScanPage $page, string $html): ?PageReading
+    {
+        $readability = Readability::fromRecord($page->scan?->readability);
+
+        if (! $readability->enabled) {
+            return null;
+        }
+
+        return $readability->grade($html, (string) (Site::get($page->site)?->locale() ?? ''));
     }
 
     /**
@@ -345,6 +370,7 @@ final class Scans
         }
 
         $scan->update([
+            'readability' => $this->readabilityRollup($scan),
             'status' => $status,
             'finished_at' => now(),
             'pages_scanned' => $scanned,
@@ -355,6 +381,32 @@ final class Scans
             'diff' => $diff,
             'error' => $status === Scan::FAILED ? 'no page could be read' : null,
         ]);
+    }
+
+    /**
+     * The scan's readability record with the pages rolled up onto it, or
+     * as it was when the dimension did not run. Rolled up whatever the
+     * scan's status, because a cancelled scan's graded pages were graded
+     * and the record must not claim otherwise.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function readabilityRollup(Scan $scan): ?array
+    {
+        $record = $scan->readability;
+
+        if (! is_array($record) || ! ($record['enabled'] ?? false)) {
+            return $record;
+        }
+
+        $readings = ScanPage::where('scan_id', $scan->id)
+            ->where('status', ScanPage::SCANNED)
+            ->whereNotNull('readability')
+            ->orderBy('id')
+            ->lazy(500)
+            ->map(fn (ScanPage $page) => PageReading::fromArray((array) $page->readability));
+
+        return array_merge($record, Readability::fromRecord($record)->summary($readings));
     }
 
     /**

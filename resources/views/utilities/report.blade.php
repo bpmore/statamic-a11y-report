@@ -128,6 +128,9 @@
                         <dt class="opacity-70">Could not be read</dt><dd>{{ $latest->pages_errored }}</dd>
                         <dt class="opacity-70">Issues found</dt><dd>{{ $latest->issues_total }}</dd>
                         <dt class="opacity-70">Engine</dt><dd>@plain($latest->engine) @plain($latest->engine_version)</dd>
+                        @if (is_array($latest->readability))
+                            <dt class="opacity-70">Reading level</dt><dd>@plain(\Bpmore\A11yReport\Readability\Sentence::forScan($latest->readability))</dd>
+                        @endif
                         @if (is_array($latest->diff) && ($latest->diff['previous_scan_id'] ?? null) !== null)
                             <dt class="opacity-70">Against the scan before</dt><dd>{{ $latest->diff['new'] }} new, {{ $latest->diff['fixed'] }} fixed, {{ $latest->diff['unchanged'] }} unchanged</dd>
                         @endif
@@ -197,6 +200,7 @@
                     <ui-table-column class="text-right">Issues</ui-table-column>
                     <ui-table-column>By impact</ui-table-column>
                     <ui-table-column>Change</ui-table-column>
+                    <ui-table-column>Reading level</ui-table-column>
                     <ui-table-column>Engine</ui-table-column>
                 </ui-table-columns>
                 <ui-table-rows>
@@ -223,6 +227,7 @@
                                     first scan
                                 @endif
                             </ui-table-cell>
+                            <ui-table-cell>@plain(\Bpmore\A11yReport\Readability\Sentence::forHistory($scan->readability))</ui-table-cell>
                             <ui-table-cell>@plain($scan->engine) @plain($scan->engine_version)</ui-table-cell>
                         </ui-table-row>
                     @endforeach
@@ -295,6 +300,13 @@
             <p>
                 A page the scan could not read is counted on its own and never as clean. Every page keeps a record of how much of
                 it the checks could see.
+            </p>
+            <p>
+                The reading level is a band, from four readability formulas over each page's main content, with names,
+                quotations, code, references and the site's own navigation and footer set aside first. It is evidence about
+                the writing and not a WCAG result: no Level A or AA success criterion is about reading level, and nothing
+                here fails a page for its grade. English only, because the formulas were calibrated on English; a page in
+                another language is recorded as not graded rather than given a number.
             </p>
         </div>
     </ui-card-panel>

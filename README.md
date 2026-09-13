@@ -112,6 +112,27 @@ The queue needs Laravel's `job_batches` table. The install creates it through
 your site's own jobs migration when you have one, so `php artisan migrate`
 keeps working afterwards.
 
+### The reading level
+
+Every scan also grades what each page reads at, with the engine Plain grades a
+page with on the publish form (`bpmore/readability-core`), so the two never
+disagree about a page. It reads the page's main content as served, with names,
+quotations, code, references and the site's own navigation and footer set
+aside, and records a band ("Grade 9 to 10", never a decimal) against the grade
+the site writes for: 8 by default, with a tolerance of 1, on the settings
+screen. The overview, the history and the end of `a11y:scan --sync` say what
+the median page reads at and how many pages sit above the target.
+
+It is evidence about the writing and never a WCAG result. No Level A or AA
+success criterion is about reading level; the one that is, 3.1.5, is Level AAA
+and is met by offering a simpler version, not by a score. Nothing here fails a
+page, a scan or a deploy for its grade, and `ci.fail_above` has no key for it.
+English only: a page on a site whose locale is not in `readability.locales` is
+recorded as not graded rather than given a number that means nothing. Set
+`readability.enabled` to `false` to leave the dimension out; the scan row says
+it was left out. **Upgrading:** `php please a11y:report:install` adds the two
+columns the reading level is kept in.
+
 ## On a schedule
 
 `scan.schedule` in the config file takes `daily`, `weekly` (Sunday), `monthly`

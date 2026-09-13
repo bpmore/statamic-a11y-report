@@ -190,7 +190,12 @@ it('says out loud which settings the screen cannot reach', function () {
         'connection', 'engine', 'chrome.binary', 'chrome.timeout',
         'axe.settle_ms',
         'scan.concurrency', 'scan.schedule', 'scan.schedule_at', 'scan.stale_after_minutes',
-        'retention.scans', 'report.appendix_limit', 'report.brand.container',
+        'retention.scans',
+        // Whether the dimension runs, and on which languages, are the
+        // developer's: the wrong locale list grades nothing. The target it
+        // measures against is on the screen, because it changes a sentence.
+        'readability.enabled', 'readability.locales',
+        'report.appendix_limit', 'report.brand.container',
         'statement.route', 'statement.view', 'statement.layout', 'statement.sites',
         'ci.fail_above.critical', 'ci.fail_above.serious',
     ], 'a setting gained or lost a field on the screen: '.implode(', ', $unreachable));

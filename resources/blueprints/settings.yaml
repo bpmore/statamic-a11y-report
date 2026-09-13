@@ -228,3 +228,27 @@ tabs:
               display: 'Report findings outside WCAG'
               instructions: 'The axe engine has rules of its own that no success criterion requires, such as every page having landmarks. They are worth fixing and they are not conformance: they keep their own plain names, are listed apart from WCAG, and are never counted under a criterion. On a theme that was not built with landmarks in mind they can outnumber everything else, which is the reason this switch exists. The PHP checker is unaffected either way.'
               default: true
+      -
+        display: 'Reading level'
+        instructions: 'Every scan also grades what each page reads at, as a band such as Grade 9 to 10, and reports the site against the grade you write for. It is evidence about the writing and never a WCAG result: no Level A or AA success criterion is about reading level, and nothing here fails a page for its grade. English only; a page in another language is recorded as not graded. Your developer can switch the dimension off in the config file.'
+        fields:
+          -
+            handle: readability_target_grade
+            field:
+              type: integer
+              display: 'The grade you write for'
+              instructions: 'A US school grade. Most plain-language guidance for the public lands on 8; health and legal material for the public is often asked to reach 6.'
+              default: 8
+              min: 1
+              max: 17
+              width: 50
+          -
+            handle: readability_target_tolerance
+            field:
+              type: integer
+              display: 'How far either side is fine'
+              instructions: 'Grades. With a target of 8 and a tolerance of 1, a page reading at Grade 7 to 9 is on target.'
+              default: 1
+              min: 0
+              max: 5
+              width: 50

@@ -120,6 +120,29 @@ it('records a page that cannot be read and carries on with the rest', function (
     expect($broken->coverage)->toBeNull();
 });
 
+it('skips a page that sends visitors elsewhere, and does not count it as an error', function () {
+    // A page for signed-in visitors opens with {{ redirect }} when nobody is,
+    // and the scan is nobody. Gate 0.10 reports that as a page with nothing
+    // for this visitor rather than a page that failed, under the same type
+    // this addon already treats as "nothing to read here". Pinned so that a
+    // gate release cannot quietly move the account page from skipped to
+    // errored, which would fail the build over a page doing its job.
+    test()->viewShouldReturnRaw('default', '{{ if slug == "account" }}{{ redirect to="/login" }}{{ else }}'.PLAIN.'{{ /if }}');
+
+    page('one', '<p>Fine.</p>');
+    page('account', '<p>Fine.</p>');
+
+    $scan = runScan();
+
+    expect($scan->status)->toBe(Scan::COMPLETE);
+    expect($scan->pages_scanned)->toBe(1);
+    expect($scan->pages_errored)->toBe(0);
+
+    $account = ScanPage::where('url', 'like', '%account%')->first();
+    expect($account->status)->toBe(ScanPage::SKIPPED);
+    expect($account->error)->toContain('/login');
+});
+
 it('fails the scan rather than completing it when no page at all could be read', function () {
     test()->viewShouldReturnRaw('default', '');
 

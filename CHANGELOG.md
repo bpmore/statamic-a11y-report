@@ -8,6 +8,23 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## Unreleased
+
+### Changed, with no difference to what is reported
+
+**Allows Accessibility Gate 0.10.** On a 0.x package a caret pins the minor,
+so `^0.9.1` excluded 0.10, and a site running both addons could not take the
+gate release that stops refusing a page for signed-in visitors: composer
+refused the whole update and named this package as the reason.
+
+Nothing in 0.10 is breaking here. The gate now answers a page that redirects
+with a type under `EntryHasNoPage`, which this addon already records as
+skipped with the reason rather than as an error. So a site's account page,
+which sends a scan that is not signed in to the login page, lands as "skipped:
+the page sends visitors to /login" instead of failing the build. That is
+pinned by a test, so a later gate release cannot move it back without this
+suite noticing. Suite run against 0.10.0 rather than assumed: 320 passed.
+
 ## 1.1.0 - 2026-09-11
 
 ### Changed

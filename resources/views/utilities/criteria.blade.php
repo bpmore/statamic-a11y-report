@@ -128,7 +128,10 @@
                     <ui-description text="The report's claim is Level AA and the table above is the whole of it. The criterion here is outside the claim: the scan grades every page's reading level, which is evidence toward it, and no scan result can make it anything but not evaluated. It is met by offering a simpler version or supplement where a page reads above lower secondary level, which only a person can see. A page above the level is not a failure of anything." />
                     <ui-table>
                         <ui-table-columns>
-                            <ui-table-column>Criterion</ui-table-column>
+                            {{-- A floor on the width: the evidence beside it is a
+                                 paragraph and a list of pages, and without one the
+                                 table gave the criterion three lines for its name. --}}
+                            <ui-table-column style="min-width: 12rem">Criterion</ui-table-column>
                             <ui-table-column>Evidence from the scan</ui-table-column>
                             <ui-table-column>Effective result</ui-table-column>
                             <ui-table-column>Your assessment</ui-table-column>

@@ -113,7 +113,7 @@ it('tells the reader which engine the numbers came from, in its own name', funct
         app(\Bpmore\A11yReport\Document\ReportBuilder::class)->build($scan, 'tester'),
     );
 
-    expect($html)->toContain('Accessibility Gate checker');
+    expect($html)->toContain('A11y Gate checker');
     expect($html)->toContain('cannot see anything a stylesheet decides');
 });
 

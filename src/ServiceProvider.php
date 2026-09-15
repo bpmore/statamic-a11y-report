@@ -31,7 +31,7 @@ use Statamic\Providers\AddonServiceProvider;
 /**
  * The addon: a config file, a database, an engine, and two commands.
  *
- * It depends on Accessibility Gate and does not repeat it. The renderer that
+ * It depends on A11y Gate and does not repeat it. The renderer that
  * turns an entry into a page, the checker that reads the page, and the
  * settings that say which standard and which opt-in checks apply are all the
  * gate's, resolved from its bindings, so a page the gate refuses and a page
@@ -131,7 +131,7 @@ class ServiceProvider extends AddonServiceProvider
         // Seeing the report is Statamic's own "access utility" permission.
         // Running a scan is separate: it makes the site render every page.
         Permission::extend(function () {
-            Permission::group('a11y-report', 'Accessibility Report', function () {
+            Permission::group('a11y-report', 'A11y Report', function () {
                 Permission::register('run accessibility scans')
                     ->label('Run accessibility scans')
                     ->description('Start a scan of every page from the control panel. Scans render the whole site on the queue.');
@@ -157,8 +157,8 @@ class ServiceProvider extends AddonServiceProvider
 
         Utility::extend(fn () => Utility::register(
             Utility::make('a11y-report')
-                ->title('Accessibility Report')
-                ->navTitle('Accessibility Report')
+                ->title('A11y Report')
+                ->navTitle('A11y Report')
                 ->icon('pulse')
                 ->description('Every scan, what it found, and how that is changing.')
                 ->view('a11y-report::utilities.report', fn (Request $request) => $this->utilityData($request))

@@ -9,7 +9,7 @@
     are.
 --}}
 
-<ui-header title="Accessibility Report" icon="pulse" />
+<ui-header title="A11y Report" icon="pulse" />
 
 <div class="space-y-6">
 
@@ -289,7 +289,7 @@
         <div class="space-y-2">
             <p>
                 Every scan renders each published page the way a visitor would see it and reads the finished markup with the
-                same checks Accessibility Gate runs before a publish. It cannot see anything a stylesheet decides, colour
+                same checks A11y Gate runs before a publish. It cannot see anything a stylesheet decides, colour
                 contrast included, and it cannot judge meaning. A scan that finds nothing has not proven the site accessible.
             </p>
             <p>

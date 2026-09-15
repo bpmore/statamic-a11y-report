@@ -12,7 +12,7 @@
     $link = 'underline underline-offset-2 text-blue-700 dark:text-blue-300 focus:focus-outline rounded-sm';
 @endphp
 
-<ui-header title="Accessibility Report" icon="pulse" />
+<ui-header title="A11y Report" icon="pulse" />
 
 <div class="space-y-6">
 

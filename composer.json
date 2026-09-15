@@ -42,7 +42,7 @@
     },
     "extra": {
         "statamic": {
-            "name": "Accessibility Report",
+            "name": "A11y Report",
             "slug": "statamic-a11y-report"
         },
         "laravel": {

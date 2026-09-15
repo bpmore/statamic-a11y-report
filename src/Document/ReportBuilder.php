@@ -76,7 +76,7 @@ final class ReportBuilder
             'kind' => 'self-assessment',
             'generated_at' => now()->toIso8601String(),
             'generated_by' => $generatedBy,
-            'generator' => 'Accessibility Report for Statamic',
+            'generator' => 'A11y Report for Statamic',
             'standard' => $standard,
             'standard_label' => Wcag::label($standard),
             'standard_url' => Wcag::specUrl($standard),

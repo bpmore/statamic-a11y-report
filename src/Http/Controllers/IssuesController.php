@@ -57,7 +57,7 @@ class IssuesController extends CpController
         ];
 
         return Inertia::render('utilities/Show', [
-            'title' => 'Accessibility Report: Issues',
+            'title' => 'A11y Report: Issues',
             'html' => view('a11y-report::utilities.issues', $data)->render(),
         ]);
     }

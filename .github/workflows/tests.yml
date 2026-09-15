@@ -1,4 +1,4 @@
-# The suite, on every pull request. Copied from Accessibility Gate, whose suite
+# The suite, on every pull request. Copied from A11y Gate, whose suite
 # this one boots alongside: the gate is a dependency, resolved from Packagist
 # like any other.
 #

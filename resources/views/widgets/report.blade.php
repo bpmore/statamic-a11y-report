@@ -1,5 +1,5 @@
 {{-- Compiled as a Vue template, like the utility view. Braces go through @plain. --}}
-<ui-card-panel heading="Accessibility Report">
+<ui-card-panel heading="A11y Report">
     @if (! $overview->installed())
         <p>No scan has run yet.</p>
         @if ($url)<ui-button size="sm" href="@plain($url)" text="Open the report" />@endif

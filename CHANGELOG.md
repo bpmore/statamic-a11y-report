@@ -8,6 +8,21 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.1.2 - 2026-09-15
+
+### Changed, with no difference to what is reported
+
+**The addon is "A11y Report" everywhere it names itself, and its dependency
+is "A11y Gate".** The Addons page, the Tools nav, the permission group, the
+three utility page headers, the dashboard widget, the scheduled scan's
+description and the PDF's producer and generator fields said "Accessibility
+Report", while the Marketplace listing and A11y Docs beside it in the same
+list already said "A11y". One name now, and the same for the gate where this
+addon mentions it. Handles, permissions, config keys and the package name are
+unchanged, so nothing has to be edited and nobody loses access. A report
+exported from now on carries the new producer string; earlier exports are
+what they were.
+
 ## 1.1.1 - 2026-09-14
 
 ### Changed, with no difference to what is reported

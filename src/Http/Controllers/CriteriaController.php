@@ -28,7 +28,7 @@ class CriteriaController extends CpController
         $sheet = $installed ? $worksheet->build($site) : ['site' => $site, 'scan' => null, 'standard' => 'wcag22aa', 'rows' => []];
 
         return Inertia::render('utilities/Show', [
-            'title' => 'Accessibility Report: Criteria',
+            'title' => 'A11y Report: Criteria',
             'html' => view('a11y-report::utilities.criteria', [
                 'installed' => $installed,
                 'site' => $site,

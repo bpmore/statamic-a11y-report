@@ -1,9 +1,9 @@
-# Accessibility Report for Statamic
+# A11y Report: Accessibility Reporting for Statamic
 
-Accessibility Gate stops a bad entry. Accessibility Report proves the site is
+A11y Gate stops a bad entry. A11y Report proves the site is
 clean, over time, in a document a compliance officer can file.
 
-This addon depends on [Accessibility Gate](https://github.com/bpmore/statamic-a11y-gate)
+This addon depends on [A11y Gate](https://github.com/bpmore/statamic-a11y-gate)
 at 0.9.1 or later, which stays free. The report is a paid addon. Both run on
 PHP 8.2 or newer.
 
@@ -31,7 +31,7 @@ composer require bpmore/statamic-a11y-report
 php please a11y:report:install
 ```
 
-Accessibility Gate comes with it. It is on Packagist and needs nothing said
+A11y Gate comes with it. It is on Packagist and needs nothing said
 about it here.
 
 The second command creates the tables. By default they go in a SQLite file the
@@ -46,7 +46,7 @@ runs the install itself. On any other connection it asks you to.
 
 Two, and a scan records which one ran, at what version, and with which rules.
 
-**`php`** is the default: the same checker Accessibility Gate runs before a
+**`php`** is the default: the same checker A11y Gate runs before a
 publish, run across the whole site. It reads markup, needs nothing installed,
 and can speak to six success criteria.
 
@@ -154,7 +154,7 @@ week is one whose mail stops being read.
 
 ## In the entry sidebar
 
-Accessibility Gate's panel on an entry screen shows this page's open issues
+A11y Gate's panel on an entry screen shows this page's open issues
 from the last scan beneath its own result, with a link into the queue
 filtered to the page, so the gate and the queue agree in the one place an
 author looks.
@@ -191,7 +191,7 @@ change them.
 
 ## Settings
 
-Addons, then Accessibility Report, then Settings. Not the same place as the
+Addons, then A11y Report, then Settings. Not the same place as the
 utility, which is under Tools, then Utilities: the settings screen is where
 the addon is configured, and the utility is where its numbers are read.
 
@@ -281,7 +281,7 @@ cache.
 
 ## In the control panel
 
-Tools, then Utilities, then Accessibility Report: what is open now by impact,
+Tools, then Utilities, then A11y Report: what is open now by impact,
 the last scan, a line of issues per scan over 90 days, and every scan so far.
 A button runs a scan on the queue; it needs the `run accessibility scans`
 permission, which is separate from seeing the page because it makes the site
@@ -327,7 +327,7 @@ A dashboard widget shows the open count by impact and a 30-day line. Add it to
 
 ## What it reads with
 
-The `php` engine is the same checker Accessibility Gate runs before a publish,
+The `php` engine is the same checker A11y Gate runs before a publish,
 with the same standard and the same opt-in checks, so a page the gate refuses
 and a page the scan flags are the same page for the same reason. It reads
 rendered HTML and cannot see anything a stylesheet decides, colour contrast

@@ -8,7 +8,7 @@ rules here exist to protect that.
 
 ## THE PRODUCT
 
-- Accessibility Gate stops a bad entry. Accessibility Report proves the site is
+- A11y Gate stops a bad entry. A11y Report proves the site is
   clean, over time, in a document a compliance officer can file. This is the
   report, and it is a separate, paid package that depends on the free gate.
   The gate is free forever and nothing here changes that.

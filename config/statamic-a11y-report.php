@@ -25,7 +25,7 @@ return [
     | Engine
     |---------------------------------------------------------------------------
     |
-    | What reads each page. 'php' is the same checker Accessibility Gate runs
+    | What reads each page. 'php' is the same checker A11y Gate runs
     | before a publish, run out of band across the whole site: it reads markup,
     | needs nothing installed, and can speak to six success criteria. 'axe'
     | runs axe-core in headless Chrome against the page as the site serves it,

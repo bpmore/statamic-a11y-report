@@ -18,13 +18,6 @@
             "homepage": "https://hada.farm"
         }
     ],
-    "repositories": [
-        {
-            "name": "bpmore-readability-core",
-            "type": "vcs",
-            "url": "https://github.com/bpmore/readability-core"
-        }
-    ],
     "require": {
         "php": "^8.2",
         "bpmore/readability-core": "^0.1",

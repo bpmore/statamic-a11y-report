@@ -21,14 +21,8 @@
     "repositories": [
         {
             "name": "bpmore-readability-core",
-            "type": "path",
-            "url": "../statamic-plain/packages/readability-core",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "bpmore/readability-core": "0.1.0"
-                }
-            }
+            "type": "vcs",
+            "url": "https://github.com/bpmore/readability-core"
         }
     ],
     "require": {

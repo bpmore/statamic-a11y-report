@@ -12,6 +12,22 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-15: The engine is reached on GitHub by tag, until Packagist lists it
+
+`bpmore/readability-core` now has a repository of its own,
+github.com/bpmore/readability-core, split from Plain's monorepo with its
+history, tagged `v0.1.0`. The manifest reaches it with a `vcs` repository
+rather than the path repository the entry of 2026-09-12 apologised for, so
+`composer install` resolves the engine on any machine, CI's runners included,
+without a sibling checkout. Turned down: waiting for the Packagist listing,
+which is a form only the owner can submit, and leaving the branch red until
+then. When Packagist lists the package the `repositories` block can come out
+of this manifest and nothing else changes; a `vcs` entry that stays does no
+harm beyond a slower resolve. Local development against an edited engine is
+the dev site's business, through its own path repository, not this package's.
+
+---
+
 ## 2026-09-12: One sentence for a site with Plain installed too, on the overview, and nowhere else
 
 Plain and this addon share an engine and grade the same site from two sides

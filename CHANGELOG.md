@@ -8,6 +8,21 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.1.3 - 2026-09-15
+
+### Changed, with no difference to what is reported
+
+**Needs A11y Gate 0.10 or newer.** 1.1.1 allowed 0.10 but kept 0.9.1 as the
+floor, and pinned with a test that a page which sends visitors to /login is
+recorded as skipped rather than as an error. That is 0.10 behaviour: on 0.9.x
+the gate reports the redirect as a page that could not be read, and this
+addon faithfully records the error. So the lowest-dependencies job, which
+installs 0.9.1, has failed on every run since, and a site on 0.9.x running
+1.1.1 or 1.1.2 counts its account page as an error. The constraint is now
+`^0.10`, which is what the test and the changelog entry always meant.
+**Upgrading:** `composer update bpmore/statamic-a11y-gate` first if you are on
+0.9.
+
 ## 1.1.2 - 2026-09-15
 
 ### Changed, with no difference to what is reported

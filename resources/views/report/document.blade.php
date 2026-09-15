@@ -182,6 +182,42 @@
         </table>
     </section>
 
+    <section id="beyond-claim" aria-labelledby="beyond-claim-heading">
+        <h2 id="beyond-claim-heading">Level AAA, reported apart from the claim</h2>
+        <p>{{ $r['beyond_claim']['note'] }}</p>
+        <table>
+            <caption>Level AAA success criteria with evidence, outside the conformance claim</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Criterion</th>
+                    <th scope="col">Level</th>
+                    <th scope="col">Result</th>
+                    <th scope="col">Method</th>
+                    <th scope="col">Remarks and evidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($r['beyond_claim']['criteria'] as $c)
+                    <tr>
+                        <th scope="row">@if (! empty($c['url']))<a href="{{ $c['url'] }}">{{ $c['number'] }} {{ $c['name'] }}</a>@else{{ $c['number'] }} {{ $c['name'] }}@endif</th>
+                        <td>{{ $c['level'] }}</td>
+                        <td class="status status-{{ $c['status'] }}">{{ \Bpmore\A11yReport\Document\AssessmentMerger::label($c['status']) }}</td>
+                        <td>{{ $c['locked'] ? ucfirst($c['method']).', locked' : ucfirst($c['method']) }}</td>
+                        <td>
+                            @if ($c['remarks'] !== '')<p>{{ $c['remarks'] }}</p>@endif
+                            <p class="evidence">{{ $c['evidence'] }}</p>
+                            @if (! empty($c['reading']['pages_above']))
+                                <p class="evidence">{{ count($c['reading']['pages_above']) < $c['reading']['above'] ? 'The first '.count($c['reading']['pages_above']).' of the '.$c['reading']['above'].' pages above the level' : ($c['reading']['above'] === 1 ? 'The page above the level' : 'The pages above the level') }}:
+                                    @foreach ($c['reading']['pages_above'] as $p){{ $p['path'] }} ({{ $p['label'] }}){{ $loop->last ? '.' : ', ' }}@endforeach</p>
+                            @endif
+                            @if ($c['assessed_by'])<p class="evidence">Assessed by {{ $c['assessed_by'] }}{{ $c['assessed_at'] ? ' on '.\Illuminate\Support\Carbon::parse($c['assessed_at'])->format('j F Y') : '' }}.</p>@endif
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </section>
+
     <section id="findings" aria-labelledby="findings-heading">
         <h2 id="findings-heading">Findings summary</h2>
         <p>{{ $r['summary']['issues_total'] }} {{ $r['summary']['issues_total'] === 1 ? 'issue was' : 'issues were' }} found by the automated checks across {{ $r['scan']['pages_scanned'] }} {{ $r['scan']['pages_scanned'] === 1 ? 'page' : 'pages' }}. An issue is one problem on one page, however many times it occurs there.</p>

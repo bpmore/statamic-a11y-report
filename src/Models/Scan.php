@@ -40,6 +40,7 @@ final class Scan extends ReportModel
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
         'criteria' => 'array',
+        'readability' => 'array',
     ];
 
     public function pages(): HasMany

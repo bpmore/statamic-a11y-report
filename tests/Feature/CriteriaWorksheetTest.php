@@ -40,7 +40,9 @@ it('lists every criterion with the automated evidence and the effective result f
 
     $text = worksheet();
 
-    expect(substr_count($text, '<ui-table-row>'))->toBe(55);
+    // 55 in the conformance table, and one more beneath it: 3.1.5, Level
+    // AAA, reported apart from the claim.
+    expect(substr_count($text, '<ui-table-row>'))->toBe(56);
     expect($text)->toContain('1.1.1 Non-text Content');
     expect($text)->toContain('Automated checks found 1 issue on 1 page (image-missing-alt).');
     expect($text)->toContain('Does not support');
@@ -187,7 +189,8 @@ it('renders markup Vue can compile with a label on every control, before and aft
     libxml_clear_errors();
     $xpath = new DOMXPath($dom);
 
-    expect($xpath->query('//select|//textarea')->length)->toBe(165);
+    // Three controls per row: 55 rows in the table, one beyond the claim.
+    expect($xpath->query('//select|//textarea')->length)->toBe(168);
 
     foreach ($xpath->query('//select|//textarea') as $control) {
         $id = $control->getAttribute('id');
@@ -205,11 +208,13 @@ it('links every row and the standard to the W3C text', function () {
     expect($text)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html" target="_blank" rel="noopener" class="underline underline-offset-2 text-blue-700 dark:text-blue-300 focus:focus-outline rounded-sm">1.1.1 Non-text Content<span class="sr-only"> (the W3C\'s explanation, opens in a new tab)</span></a>');
     // Every link on the page is underlined and warns about the tab: a link
     // the stylesheet has reset to look like text is the failure this fixes.
+    // The standard, 55 criteria in the table, and 3.1.5 beyond the claim.
     preg_match_all('/<a href="https:\/\/www\.w3\.org[^>]*>/', $text, $anchors);
-    expect(count($anchors[0]))->toBe(56);
+    expect(count($anchors[0]))->toBe(57);
     foreach ($anchors[0] as $anchor) {
         expect(str_contains($anchor, 'underline'))->toBeTrue($anchor.' is underlined');
     }
-    expect(substr_count($text, 'opens in a new tab'))->toBe(56);
-    expect(substr_count($text, 'https://www.w3.org/WAI/WCAG22/Understanding/'))->toBe(55);
+    expect(substr_count($text, 'opens in a new tab'))->toBe(57);
+    expect(substr_count($text, 'https://www.w3.org/WAI/WCAG22/Understanding/'))->toBe(56);
+    expect($text)->toContain('<a href="https://www.w3.org/WAI/WCAG22/Understanding/reading-level.html" target="_blank" rel="noopener" class="underline underline-offset-2 text-blue-700 dark:text-blue-300 focus:focus-outline rounded-sm">3.1.5 Reading Level<span class="sr-only"> (the W3C\'s explanation, opens in a new tab)</span></a>');
 });

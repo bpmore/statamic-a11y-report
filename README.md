@@ -112,6 +112,32 @@ The queue needs Laravel's `job_batches` table. The install creates it through
 your site's own jobs migration when you have one, so `php artisan migrate`
 keeps working afterwards.
 
+### The reading level
+
+Every scan also grades what each page reads at, with the engine Plain grades a
+page with on the publish form (`bpmore/readability-core`), so the two never
+disagree about a page. It reads the page's main content as served, with names,
+quotations, code, references and the site's own navigation and footer set
+aside, and records a band ("Grade 9 to 10", never a decimal) against the grade
+the site writes for: 8 by default, with a tolerance of 1, on the settings
+screen. The overview, the history and the end of `a11y:scan --sync` say what
+the median page reads at and how many pages sit above the target.
+
+It is evidence about the writing and never a WCAG result. No Level A or AA
+success criterion is about reading level; the one that is, 3.1.5, is Level AAA
+and is met by offering a simpler version, not by a score. Nothing here fails a
+page, a scan or a deploy for its grade, and `ci.fail_above` has no key for it.
+English only: a page on a site whose locale is not in `readability.locales` is
+recorded as not graded rather than given a number that means nothing. Set
+`readability.enabled` to `false` to leave the dimension out; the scan row says
+it was left out. **Upgrading:** `php please a11y:report:install` adds the two
+columns the reading level is kept in.
+
+With Plain installed as well, the overview says in a sentence who owns which
+surface: Plain grades what an author writes, on the publish form, and owns
+the gate and the dictionary; this addon grades pages as served. They are two
+readings of the same site, not two scans of the same thing.
+
 ## On a schedule
 
 `scan.schedule` in the config file takes `daily`, `weekly` (Sunday), `monthly`
@@ -222,6 +248,17 @@ add remarks, an evaluator and a remediation plan in config, and you cannot
 remove it.
 Every criterion in the document, and the standard on its cover, links to the
 W3C's own text for it, and the PDF describes each link for a screen reader.
+
+**Level AAA, apart from the claim.** The claim is Level AA and the table is
+the whole of it. One Level AAA criterion, 3.1.5 Reading Level, has a section
+of its own after the table, because every scan grades each page's reading
+level and that is evidence toward it: how many pages read above lower
+secondary level once names and titles are set aside, and which. The
+criterion is met by offering a simpler version or supplement for such pages,
+which no scan can see, so the row is "Not evaluated" until a person assesses
+it on the worksheet, and nothing in it changes a row in the table. A page
+above the level is not a failure of anything. The section is never in the
+table's counts, and the JSON keeps it under `beyond_claim`.
 
 Reports can also be generated, listed and opened from the control panel, by
 anybody with the `generate accessibility reports` permission.

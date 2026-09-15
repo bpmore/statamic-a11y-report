@@ -12,6 +12,217 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-15: The engine is reached on GitHub by tag, until Packagist lists it
+
+`bpmore/readability-core` now has a repository of its own,
+github.com/bpmore/readability-core, split from Plain's monorepo with its
+history, tagged `v0.1.0`. The manifest reaches it with a `vcs` repository
+rather than the path repository the entry of 2026-09-12 apologised for, so
+`composer install` resolves the engine on any machine, CI's runners included,
+without a sibling checkout. Turned down: waiting for the Packagist listing,
+which is a form only the owner can submit, and leaving the branch red until
+then. When Packagist lists the package the `repositories` block can come out
+of this manifest and nothing else changes; a `vcs` entry that stays does no
+harm beyond a slower resolve. Local development against an edited engine is
+the dev site's business, through its own path repository, not this package's.
+
+---
+
+## 2026-09-12: One sentence for a site with Plain installed too, on the overview, and nowhere else
+
+Plain and this addon share an engine and grade the same site from two sides
+of the publish button. Somebody meeting both readings for the first time can
+reasonably take one for a mistake, or think the site is being scanned twice.
+The overview's "What these numbers are" card gains one sentence when Plain is
+in the addon manifest, saying who owns which surface; Plain says the same on
+its Readability page. Turned down: a banner, which would be read every day by
+somebody who understood it on the first; and hiding either addon's numbers
+when the other is present, which would decide for the customer which reading
+they wanted. Detection is by the manifest and not by class, so a test can
+install the neighbour with one array. Checked: the sentence on and off, the
+page compiling with it, and both detections true on the dev site, where both
+are installed.
+
+---
+
+## 2026-09-12: SC 3.1.5 is a Level AAA row apart from the claim, with evidence and no verdict
+
+The one AAA criterion the scan can say anything about, and exactly how much
+it is allowed to say.
+
+**Why a row at all, when the catalogue refuses AAA.** The rule since the first
+document has been that a table listing AAA criteria invites a claim about
+them, and nothing here can support one. That rule stands: the table is Level
+A and AA and `Wcag::criteria()` never returns 3.1.5. But every scan now
+grades the reading level of every page, which is the first half of what
+3.1.5 asks ("text requires reading ability more advanced than the lower
+secondary education level after removal of proper names and titles"), and a
+reader who has that evidence should meet it under the criterion it speaks to
+rather than find it only on the overview. So the catalogue gained a second,
+separate list, `BEYOND_CLAIM`, and the document a section of its own after
+the table, under a heading that says what it is.
+
+**What the row can and cannot say.** The scan can count the pages whose band
+starts above Grade 9, which is where lower secondary education ends, with
+names already set aside because the engine drops them before it counts. It
+cannot see whether a simpler version or supplement is offered, which is the
+second half of the criterion and the only half that decides it. So the
+evidence sentence gives the count, names up to twenty of the pages, gives the
+median, and ends by saying what the criterion asks and that this is evidence
+and not a determination. The row is "Not evaluated" until a person assesses
+it on the worksheet, through the same merge as the table's rows with the
+engine's two rules (failures, coverage) unable to fire. Nothing here is a
+failure of anything: `issues_total` does not move, the limits statement says
+so in a sentence, and a test asserts the document never says "fails 3.1.5".
+
+**A band that straddles the line is not above it.** Grade 9 to 10 is not
+counted as above lower secondary; Grade 10 to 11 is. The formulas are not
+precise enough to split a band, and the honest direction of error for
+evidence toward a criterion the site has not claimed is under, not over.
+
+**Kept out of every count.** `criteria` still has 55 rows; `methods` lists
+no AAA number under automated, not evaluated or assessed by people; the
+coverage note's arithmetic is the table's alone. The JSON keeps the row under
+`beyond_claim` with its own `level` and `note`. Turned down: appending the
+row to `criteria` with a flag, which every reader adding up the table would
+have to know to subtract; and putting the evidence only in the remarks of a
+criterion in the table, which would attach a AAA measurement to an AA claim.
+
+**Turned down: a verdict from the numbers.** A row that said "Supports" when
+no page reads above the level was the obvious next step and would have been
+the first automated "Supports" in the product. It is not one: a site with
+every page at Grade 6 has met nothing, it has merely not triggered the
+condition, and the day it publishes one dense page the row would flip to
+"Does not support" on a measurement two grades wide. The evidence sentence
+for that case says what it can, that nothing on the site needs a simpler
+version on this evidence, and stops.
+
+**What was checked.** The whole suite (343 passed, the Chrome skip), six
+tests for the row (its place and its absence from the counts, the boundary
+by hand-written rows, the nothing-above and not-measured sentences, a person
+assessing it from the worksheet and the claim unmoved, the catalogue), the
+worksheet's counts raised by one and the PDF link description present. Not
+checked: the document in a browser or a PDF reader, and CI.
+
+---
+
+## 2026-09-12: The reading level is a dimension of the scan, kept the way the engine is
+
+Every scan now grades each page it read and rolls the site up as a median
+band. Two things had to be decided: what of a rendered page is the page, and
+where the numbers live.
+
+**The main content, not the page.** A scan reads a page as served, and a
+served page carries its navigation, banner, footer and sidebar. Graded with
+the prose, a two-paragraph notice on a site with a forty-link footer scores as
+the footer. The engine gained a `PageExtractor` that reads `<main>` (or
+`role="main"`) and, where a theme has neither, the body with the landmarks a
+browser would announce as navigation, banner, contentinfo and complementary
+taken out; a `<header>` or `<footer>` inside an article stays, which is the
+same rule the browser applies before calling one a landmark. Turned down:
+grading the whole page, for the reason above; and grading the entry's fields
+the way Plain does, because this addon reads served pages and has no field
+list, and a page assembled from three fields and a partial is graded as the
+reader meets it. The extractor lives in the engine rather than here so that
+Plain, or anything else that grades a served page, applies the same rule.
+
+**The record carries what it was measured with.** The scan row keeps, at
+creation, whether the dimension ran, the engine and its version, the locales
+and the target; every page is graded against that row and never against the
+config a worker holds when it picks the page up; and the finalise step writes
+the roll-up onto the same record. This is the rule the engine on a scan and
+the mark on a cover already follow, and the alternative, reading the target
+at report time, would have put a target nobody had chosen yet under numbers
+measured against another. A disabled dimension records `enabled: false`, and
+a scan from before the dimension has no record at all, so "not measured" and
+"older than the feature" never read the same.
+
+**A median, and the engine's own median.** The site's number is the median
+page's consensus grade, computed the way Plain's snapshot computes it, so the
+dashboard widget over there and the overview here agree to the band. On an
+even count that is the mean of the two middle pages, and with two pages, one
+easy and one that reads at 37, the mean lands at "Grade 17+". Considered and
+left: clamping grades to the open band's floor before the median, which
+would have been more honest for that pair and would have disagreed with
+Plain; the two products reading the same site differently is the worse
+fault. The band caps what a person sees either way.
+
+**On the screen: the target. Off it: the switch and the languages.** The
+settings-screen rule is that a wrong value which stops scans is the
+developer's and one that changes a sentence is the editor's. The grade a
+site writes for changes a sentence; the locale list, wrong, grades nothing.
+The pinned list of unreachable settings in the settings test names both.
+
+**Never a WCAG result, anywhere it is printed.** The overview, the config
+comment, the settings screen and the README each say it in a sentence: no
+Level A or AA criterion is about reading level, 3.1.5 is AAA and is met by a
+simpler version, and nothing fails a page for its grade. `ci.fail_above` has
+no key for it and a test asserts the keys. The 3.1.5 row in the document is
+the next step and is not here.
+
+**What was checked.** The whole suite (336 passed, the Chrome skip), eight
+feature tests for the dimension (the furniture left out, the target carried
+on the row and rebuilt from it, a French site refused, the switch off, an
+errored page kept out of the counts, the settings screen's target reaching
+the row, and the overview, history and command all saying the same sentence),
+and four for the sentence itself. Found on the way: two
+`expectsOutputToContain` on one line of command output cannot both pass,
+because Laravel's mock lets the first matching expectation consume the write;
+one expectation per line. Not checked: a real site, and CI, which cannot
+resolve the engine yet.
+
+---
+
+## 2026-09-12: Readability comes from an engine this addon depends on, not one it carries
+
+The first step of readability in the report: `bpmore/readability-core` is a
+dependency. Nothing reads it yet. The scan dimension, the SC 3.1.5 row and the
+notice for a site with Plain installed beside this addon each follow on their
+own, so that a dependency that turns out to be wrong is one commit to take
+back.
+
+**Why an engine, and why that one.** Readability is the same shape of claim as
+accessibility: a formula over a page, calibrated on English, that an audit can
+be asked to justify. Plain, the standalone readability addon, is built on the
+engine it split out for exactly this purpose, so the number a compliance
+officer reads in this report and the number an author sees on the publish form
+come from one code path. The gate's decision of 2026-09-02 is the same rule,
+and its cost: an engine that changes is a constraint to bump here.
+
+**Turned down.** Depending on `bpmore/statamic-plain` itself, which would pull
+a publish-form panel, a gate and a settings screen into a product that wants a
+scan dimension and a criterion row, and would make a paid addon a dependency of
+a paid addon, which the marketplace has no way to entitle. Copying the engine
+in, which is the forked-rules problem the gate's log spends several entries
+on, and would give Plain and this report two opinions of the same page. Making
+the engine a `suggest`, which would leave the customers this was meant for,
+the ones with the report and no Plain, without readability.
+
+**A path repository, for now, and what it costs.** The engine lives in Plain's
+repository under `packages/readability-core`, which is not on GitHub, and is
+not on Packagist. The manifest reaches it by path with a version pin
+(`versions: {bpmore/readability-core: 0.1.0}`), because a path package has no
+version of its own and `^0.1` must resolve against something. Locally and on
+the dev site this is what Plain and the site already do. **In CI it does not
+resolve**, and every job on this branch is red at `composer install` until the
+engine is published: a repository of its own from `git subtree split`, then
+Packagist, then this manifest drops the `repositories` block and nothing else
+changes. Turned down: making CI green by removing the dependency before
+install, which is what Plain does for Site Weather, because there Site Weather
+is a `require-dev` and the tests skip without it; here the engine is what the
+next three tasks are made of, and a green run that never loads it is a green
+that means nothing. Turned down: publishing the engine from this task, which is
+a repository and a listing under the owner's name and is the owner's to do.
+
+**What was checked.** The whole suite on the branch (325 passed, the usual
+Chrome-dependent skip), and three tests that grade with the engine and nothing
+booted: an easy page bands below a hard one, the hard one is `Grade 17+` and
+`above` a target of 8, proper names and a quotation are left out before
+counting, and `fr_FR` is refused with a sentence. Not checked: CI, for the
+reason above.
+
+---
+
 ## 2026-09-11: The floor is PHP 8.2, and December 2026 is when to raise it
 
 The same change as the gate's, made second because a floor is only real if

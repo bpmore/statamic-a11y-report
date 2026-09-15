@@ -20,6 +20,7 @@
     ],
     "require": {
         "php": "^8.2",
+        "bpmore/readability-core": "^0.1",
         "bpmore/statamic-a11y-gate": "^0.10",
         "statamic/cms": "^6.27"
     },

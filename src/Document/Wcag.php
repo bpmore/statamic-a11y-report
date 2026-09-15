@@ -10,8 +10,17 @@ namespace Bpmore\A11yReport\Document;
  * A hard-coded list, not a lookup, so the answer to "which criteria does the
  * report table contain" is something you can read in a minute and a test can
  * count. WCAG 2.1 Level A and AA is 50 criteria; 2.2 removes 4.1.1 Parsing
- * and adds six, for 55. AAA is deliberately absent: a report that lists AAA
- * criteria invites a claim about them, and nothing here can support one.
+ * and adds six, for 55. AAA is deliberately absent from the table: a report
+ * that lists AAA criteria invites a claim about them, and nothing here can
+ * support one.
+ *
+ * One AAA criterion is kept apart, in `BEYOND_CLAIM`: 3.1.5 Reading Level,
+ * because the scan gathers evidence toward it (every page's reading level)
+ * and a reader who has that evidence should see it under the criterion it
+ * speaks to. It is never in the table, never in the claim, never counted
+ * with the table's rows, and no scan result can make it anything but "not
+ * evaluated": the criterion is met by offering a simpler version, which no
+ * automated check can see.
  */
 final class Wcag
 {
@@ -81,6 +90,16 @@ final class Wcag
     ];
 
     /**
+     * Level AAA criteria reported apart from the claim, with evidence and
+     * never a determination of the scan's own. See the class comment.
+     *
+     * @var array<int, array{0: string, 1: string, 2: string, 3: string}>
+     */
+    private const BEYOND_CLAIM = [
+        ['3.1.5', 'Reading Level', 'AAA', '2.0'],
+    ];
+
+    /**
      * The criteria the given standard's conformance table lists, in order.
      *
      * @return array<int, Criterion>
@@ -107,6 +126,34 @@ final class Wcag
         }
 
         return null;
+    }
+
+    /**
+     * The Level AAA criteria a report speaks to apart from its claim.
+     *
+     * @return array<int, Criterion>
+     */
+    public static function beyondClaim(): array
+    {
+        return array_map(fn (array $row) => new Criterion($row[0], $row[1], $row[2], $row[3]), self::BEYOND_CLAIM);
+    }
+
+    /** One of the criteria beyond the claim, by number; null for anything else, the table's own included. */
+    public static function findBeyondClaim(string $number): ?Criterion
+    {
+        foreach (self::beyondClaim() as $criterion) {
+            if ($criterion->number === $number) {
+                return $criterion;
+            }
+        }
+
+        return null;
+    }
+
+    /** A criterion a person may assess on the worksheet: the table's, or one reported beyond the claim. */
+    public static function assessable(string $number): ?Criterion
+    {
+        return self::find($number) ?? self::findBeyondClaim($number);
     }
 
     public static function version(string $standard): string
@@ -145,7 +192,7 @@ final class Wcag
         $version = self::version($standard);
         $out = [self::specUrl($standard) => 'The WCAG '.$version.' Recommendation at w3.org'];
 
-        foreach (self::all() as $criterion) {
+        foreach ([...self::all(), ...self::beyondClaim()] as $criterion) {
             $out[$criterion->understandingUrl($version)] = "Understanding success criterion {$criterion->number} {$criterion->name}, at w3.org";
         }
 

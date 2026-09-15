@@ -159,6 +159,9 @@ it('lets a person assess it from the worksheet, and prints what they wrote in it
     expect($text)->toContain('Level AAA, outside the claim');
     expect($text)->toContain('1 reads above lower secondary level');
     expect($text)->toContain('/dense');
+    // The criterion column keeps a width of its own beside the evidence, so
+    // the name is not wrapped onto three lines.
+    expect($text)->toContain('<ui-table-column style="min-width: 12rem">Criterion</ui-table-column>');
 
     $this->actingAs($this->user)->post(cp_route('utilities.a11y-report.criteria.save'), [
         'criteria' => ['3.1.5' => ['status' => 'supports', 'method' => 'manual', 'remarks' => 'A plain-language summary tops every clinical page.', 'locked' => '1']],

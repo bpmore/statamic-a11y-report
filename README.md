@@ -4,7 +4,7 @@ A11y Gate stops a bad entry. A11y Report proves the site is
 clean, over time, in a document a compliance officer can file.
 
 This addon depends on [A11y Gate](https://github.com/bpmore/statamic-a11y-gate)
-at 0.9.1 or later, which stays free. The report is a paid addon. Both run on
+at 0.10 or later, which stays free. The report is a paid addon. Both run on
 PHP 8.2 or newer.
 
 ## Status

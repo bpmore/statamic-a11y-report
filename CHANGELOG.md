@@ -8,6 +8,45 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.2.0 - 2026-09-15
+
+### Added
+
+**Every scan grades each page's reading level.** With `bpmore/readability-core`,
+the engine Plain grades a page with on the publish form, so the two never
+disagree about a page. It reads the page's main content as served, with names,
+quotations, code, references and the site's own navigation and footer set
+aside, and records a band ("Grade 9 to 10", never a decimal) against the grade
+the site writes for: 8 with a tolerance of 1 by default, on the settings screen
+under Scanning. The overview, the scan history and the end of `a11y:scan
+--sync` say what the median page reads at and how many pages sit above the
+target. English only; a page on a site whose locale is not in
+`readability.locales` is recorded as not graded. `readability.enabled` in the
+config file leaves the dimension out, and the scan row says it was left out.
+
+**SC 3.1.5 Reading Level, as a Level AAA row apart from the claim.** The
+conformance table is still Level A and AA and the claim is unchanged. A
+section of its own after the table reports 3.1.5 with the scan's evidence
+toward it: how many pages read above lower secondary level once names and
+titles are set aside, which ones, and the median. The criterion is met by
+offering a simpler version or supplement, which no scan can see, so the row is
+"Not evaluated" until a person assesses it on the worksheet, where it has a
+table of its own under the 55. It is never in the table's counts, never a
+failure, and the limits statement says so. The JSON keeps it under
+`beyond_claim`.
+
+**One sentence when Plain is installed too**, on the overview, saying who owns
+which surface. Plain says the same on its own page.
+
+Nothing here is a WCAG result. Everywhere the reading level is printed it says
+it is evidence about the writing; `ci.fail_above` has no key for it and cannot
+be given one.
+
+**Upgrading:** `composer update`, then `php please a11y:report:install`, which
+adds the two columns the reading level is kept in. A site on its own database
+connection runs that on purpose, as ever. Scans from before this version show
+no reading level, which is a different answer from "not measured".
+
 ## 1.1.3 - 2026-09-15
 
 ### Changed, with no difference to what is reported

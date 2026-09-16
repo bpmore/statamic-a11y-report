@@ -4,25 +4,24 @@ A11y Gate stops a bad entry. A11y Report proves the site is
 clean, over time, in a document a compliance officer can file.
 
 This addon depends on [A11y Gate](https://github.com/bpmore/statamic-a11y-gate)
-at 0.10 or later, which stays free. The report is a paid addon. Both run on
-PHP 8.2 or newer.
+at 0.10 or later, which stays free. The report is a paid addon. Both need
+Statamic 6.27 or newer and PHP 8.2 or newer.
 
-## Status
+## What it does
 
-Every pillar in the brief is built: the scan layer and both engines, the
-overview, the HTML and PDF conformance report, the accessibility statement,
-the remediation queue and its policy, the criteria worksheet, the recurring
-scan, and this page's open issues in the gate's own entry sidebar.
+A scan reads every published page on the queue, keeps every finding, records
+which engine read it and how much of it that engine could see, and follows
+each problem from one scan to the next by a fingerprint of rule, target, site
+and path. On top of that sit the overview, the HTML and PDF conformance
+report, the accessibility statement, the remediation queue and its policy,
+the criteria worksheet, the recurring scan, and this page's open issues in
+the gate's own entry sidebar.
 
-`php please a11y:scan` reads every published page on the queue, keeps every
-finding, records which engine read it and how much of it that engine could
-see, and follows each problem from one scan to the next by a fingerprint of
-rule, target, site and path.
-
-This is 0.4.1. What is in it is in the
-[changelog](CHANGELOG.md), and the reasoning behind the choices that are not
-obvious from the code is in the [decision log](docs/DECISIONS.md). Before 1.0,
-a breaking change raises the minor version.
+What changed in each release, and what to do about it, is in the
+[changelog](CHANGELOG.md). The reasoning behind the choices that are not
+obvious from the code is in the [decision log](docs/DECISIONS.md). A change
+that breaks an install, a stored scan, or the shape of a generated report
+raises the major version.
 
 ## Install
 
@@ -31,8 +30,8 @@ composer require bpmore/statamic-a11y-report
 php please a11y:report:install
 ```
 
-A11y Gate comes with it. It is on Packagist and needs nothing said
-about it here.
+A11y Gate comes with it: both are on Packagist, so there is nothing else
+to require.
 
 The second command creates the tables. By default they go in a SQLite file the
 addon creates for itself under `storage/a11y-report/`, so a flat-file site needs

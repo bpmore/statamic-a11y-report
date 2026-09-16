@@ -28,9 +28,13 @@ final class ChromePrinter
     /** @deprecated Kept as the address it was published at; `Browser` owns the list. */
     public const CANDIDATES = Browser::CANDIDATES;
 
+    /**
+     * @param  \Closure(string): void|null  $warn  told when a print had to give up Chrome's sandbox
+     */
     public function __construct(
         private readonly ?string $binary = null,
         private readonly int $timeoutSeconds = 30,
+        private readonly ?\Closure $warn = null,
     ) {}
 
     /** The first Chrome that exists, configured or found, or null. */
@@ -59,12 +63,55 @@ final class ChromePrinter
             throw new ChromeUnavailable("There is no HTML file at {$htmlPath} to print.");
         }
 
+        $first = $this->run($binary, true, $htmlPath, $pdfPath);
+
+        if ($first === null) {
+            return;
+        }
+
+        // Chrome exited without a file rather than running out of time.
+        // With the sandbox on that is what it does as root, and in a
+        // container that will not let it make namespaces, so it is asked
+        // once more without. See `Browser::flags()` for why it is on at all.
+        // A print that failed for some other reason fails again the same way
+        // and the first attempt's words are the ones reported.
+        if ($first['exited']) {
+            $second = $this->run($binary, false, $htmlPath, $pdfPath);
+
+            if ($second === null) {
+                if ($this->warn !== null) {
+                    ($this->warn)('Chrome exited without printing with its sandbox on, which is what it does as root or in a container that cannot make namespaces. Printed again without the sandbox. Running as an ordinary user keeps it on.'.($first['stderr'] !== '' ? ' Chrome said: '.trim(substr($first['stderr'], -300)) : ''));
+                }
+
+                return;
+            }
+        }
+
+        throw new ChromeUnavailable('Chrome did not produce a PDF within '.$this->timeoutSeconds.' seconds.'.($first['stderr'] !== '' ? ' '.trim(substr($first['stderr'], -300)) : ''));
+    }
+
+    /**
+     * One attempt: null when the PDF is on disk and complete, otherwise
+     * whether Chrome exited on its own and what it wrote to stderr.
+     *
+     * @return array{exited: bool, stderr: string}|null
+     *
+     * @throws ChromeUnavailable
+     */
+    private function run(string $binary, bool $sandbox, string $htmlPath, string $pdfPath): ?array
+    {
         $profile = sys_get_temp_dir().'/a11y-report-chrome-'.bin2hex(random_bytes(4));
-        @unlink($pdfPath);
+
+        // Checked first rather than silenced: the `@` operator no longer
+        // stops a test runner's error handler turning the warning into a
+        // failure, and a second attempt starts from a file the first left.
+        if (is_file($pdfPath)) {
+            unlink($pdfPath);
+        }
 
         $command = implode(' ', array_map('escapeshellarg', [
             $binary,
-            ...Browser::FLAGS,
+            ...Browser::flags($sandbox),
             '--user-data-dir='.$profile,
             '--export-tagged-pdf',
             '--generate-pdf-document-outline',
@@ -84,6 +131,7 @@ final class ChromePrinter
         $stderr = '';
         $lastSize = -1;
         $stableFor = 0;
+        $exited = false;
 
         try {
             while (microtime(true) < $deadline) {
@@ -96,11 +144,12 @@ final class ChromePrinter
                     $lastSize = $size;
 
                     if (! $status['running'] || $stableFor >= 4) {
-                        return;
+                        return null;
                     }
                 }
 
                 if (! $status['running']) {
+                    $exited = true;
                     break;
                 }
 
@@ -113,18 +162,21 @@ final class ChromePrinter
                 proc_terminate($process, 9);
             }
 
+            $stderr .= (string) stream_get_contents($pipes[2]);
             fclose($pipes[2]);
             proc_close($process);
             Browser::removeDirectory($profile);
         }
 
         if (self::complete($pdfPath)) {
-            return;
+            return null;
         }
 
-        @unlink($pdfPath);
+        if (is_file($pdfPath)) {
+            unlink($pdfPath);
+        }
 
-        throw new ChromeUnavailable('Chrome did not produce a PDF within '.$this->timeoutSeconds.' seconds.'.($stderr !== '' ? ' '.trim(substr($stderr, -300)) : ''));
+        return ['exited' => $exited, 'stderr' => $stderr];
     }
 
     private static function complete(string $path): bool

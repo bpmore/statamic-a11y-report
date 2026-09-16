@@ -8,6 +8,36 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.2.1 - unreleased
+
+### Changed, with no difference to what is reported
+
+**Chrome runs with its sandbox on.** Every browser this addon starts, for an
+axe scan or for a PDF, was started with `--no-sandbox`, the way every Docker
+recipe does it, with no reason recorded. The pages it renders are your site,
+with every third-party script your site embeds, and the sandbox is what
+stands between a bug in that page and the user your queue worker runs as.
+It is now on. Where Chrome refuses it, which is as root or in a container
+that cannot make namespaces, Chrome exits at once and says so; the addon
+catches that, starts once more without the sandbox, and logs a warning
+saying which host you have and that an ordinary user keeps the sandbox on.
+Once a session, not once a page. On a host where the sandbox works, and
+that is most of them, nothing changes but the flag. On a host where it does
+not, the scan and the PDF come out as they always did, one refused start
+later, with a line in the log. Raised by Statamic's marketplace review under
+its Rule 07.
+
+**`retention.scans` is gone from the config file.** It shipped in the first
+release, was read by nothing, and promised something this product should
+not do: a scan is the record a report cites, and a key that deleted old
+scans would orphan the reports and cut the history the product exists to
+keep. A published config file that still has the key is harmless, as it
+always was. Nothing is pruned, and nothing was.
+
+**Upgrading:** nothing to run. No tables changed and no setting has to be
+touched. If your queue worker runs as root, expect one warning per scan in
+the log from now on; the cure it names is a worker that is not root.
+
 ## 1.2.0 - 2026-09-15
 
 ### Added

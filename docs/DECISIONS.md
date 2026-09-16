@@ -12,6 +12,102 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-16: Chrome keeps its sandbox where it can, and says when it cannot
+
+`--no-sandbox` was in the flag list from the first browser this addon
+started, for the PDF and then for axe, copied from the recipe every Docker
+image and CI runner uses, with nothing written down about why. Statamic's
+marketplace review asked, under Rule 07, and there was no answer to give.
+
+The reason it matters is what the browser renders: the customer's own site,
+which means every third-party script the site embeds, every ad and embed and
+analytics tag, and whatever an author pasted into an entry. Chrome's sandbox
+is what stands between a renderer exploit in that page and the user the
+queue worker runs as, on the customer's server, with the site's `.env` in
+reach. On most hosts, a Forge box working the queue as `forge`, Herd, a
+VPS, the sandbox works and there was never a reason to turn it off.
+
+**On by default, given up only when Chrome refuses, and said.** Chrome will
+not run its sandbox as root, and cannot in a container that will not let it
+make namespaces; in both cases it says so on stderr and exits before it has
+written the port file. `DevTools` already watched for exactly that exit, in
+under fifty milliseconds, to tell a browser that died from one that is slow.
+So the exit at start is its own exception type, and the one thing done
+differently on catching it is to start once more without the sandbox, log a
+warning naming what was given up and the two hosts it happens on, and keep
+the flag off for the rest of the session so a browser replaced after a
+mid-scan crash starts the way the last one worked. The PDF printer, which
+already reads Chrome's stderr, does the same and puts what Chrome said in
+its warning. On a host where the sandbox works nothing changes but the
+flag; on a host where it does not, one refused start a session is the whole
+cost, and the scan and the PDF come out as they always did.
+
+**Turned down.** Keeping `--no-sandbox`, which is the state this reversed
+and the state every recipe would have it stay in. A config key, because a
+key whose wrong value stops every scan on one host and does nothing on
+another is exactly the kind of setting this addon refuses to add, and its
+default would have had to be one or the other. A root check, `posix_geteuid()
+=== 0`, which is cheap and precise for the commonest case and misses the
+container that is not root and still has no namespaces; Chrome already tells
+us the answer, in less time than the check saves. Retrying on any start
+failure rather than the exit at start, which would have turned a missing
+binary or a socket that never opened into two waits for the same answer.
+
+**Checked.** Seven tests drive both users through a shell script standing in
+for Chrome that records how it was called and either hands over to the real
+one or does what Chrome does as root. Each of seven mutations went red:
+the flag back in the list, the fallback removed, the retry with the sandbox
+still on, the flag reset on close, the browser counted before it was driven,
+the printer never retrying, the printer retrying without saying so. The
+whole suite, with Chrome and veraPDF, on the machine the sandbox works on.
+And the fallback as an actual root, in a Debian container with Chromium
+installed: `DevTools` driven to a page and back, and a PDF printed, each
+with one refused start, the warning, and the result. Chromium's own stderr
+there reads "Running as root without --no-sandbox is not supported", which
+the printer's warning now carries.
+
+**Not checked.** A container that is not root and has no user namespaces,
+which is the second host the warning names; the same exit is caught by the
+same code and the fake exercises it, but no such container was built. A
+long axe scan with the sandbox on, for memory: each renderer now lives in
+its own sandboxed process as Chrome intends, which is how every desktop
+Chrome runs and not a shape this addon had run before.
+
+---
+
+## 2026-09-16: `retention.scans` is gone, and a scan is never pruned
+
+`'retention' => ['scans' => 90]` shipped in the first release and was read
+by nothing, which is the same story as `scan.schedule` was on 2026-09-04.
+That one was implemented, because a scan that was promised weekly had to
+happen weekly. This one is removed, because the promise it made is one this
+product should not keep.
+
+A scan is the record. A report cites one by id and says who generated it
+and against which scan; the trend on the overview is the scans; an issue's
+first-seen date is the scan that first saw it; and the claim on the box is
+that the site is clean over time. A key that quietly deleted ninety-day-old
+scans would orphan every report older than that, cut the history the
+product exists to keep, and do it on a schedule nobody would connect to the
+report that stopped opening. A customer who set it was told something that
+was not true, and a customer who never set it was told it anyway, in a
+config file that is the addon's own documentation.
+
+**Turned down.** Implementing it with a guard for scans a report cites,
+which keeps the reports and still cuts the history under the trend and the
+first-seen dates. Pruning a scan's pages and findings while keeping its
+summary row, which is the right shape if disk ever forces the question,
+because the counts and the engine survive and the per-page evidence is what
+takes the space; it is noted here so the next person does not start from
+`retention.scans`. Neither is wanted until a real site's database says so,
+and none has.
+
+A published copy of the config file with the key still in it is harmless:
+nothing read it before and nothing reads it now. The settings-screen test
+that pins which keys are the developer's no longer lists it.
+
+---
+
 ## 2026-09-15: The engine is reached on GitHub by tag, until Packagist lists it
 
 `bpmore/readability-core` now has a repository of its own,

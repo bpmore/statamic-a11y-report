@@ -53,10 +53,24 @@ final class DevTools
      */
     private int $starts = 0;
 
+    /**
+     * Whether the browser runs inside Chrome's sandbox.
+     *
+     * On until a start with it fails, then off for the rest of the session:
+     * a browser replaced mid-scan is started the way the last one worked, so
+     * a root host pays for the refused start once a session and not once a
+     * crash. See `Browser::flags()` for why the sandbox is wanted at all.
+     */
+    private bool $sandbox = true;
+
+    /**
+     * @param  \Closure(string): void|null  $warn  told, once, when the sandbox had to be given up
+     */
     public function __construct(
         private readonly Browser $browser,
         private readonly int $timeoutSeconds = 30,
         private readonly int $settleMs = 250,
+        private readonly ?\Closure $warn = null,
     ) {}
 
     public function isOpen(): bool
@@ -68,6 +82,12 @@ final class DevTools
     public function starts(): int
     {
         return $this->starts;
+    }
+
+    /** Whether the browser this session drives has Chrome's sandbox on. */
+    public function sandboxed(): bool
+    {
+        return $this->sandbox;
     }
 
     /**
@@ -93,6 +113,36 @@ final class DevTools
         // running for ever, and they accumulate until the machine falls over.
         Browser::sweepAbandoned();
 
+        try {
+            $this->start($binary);
+        } catch (ChromeExitedAtStart $e) {
+            if (! $this->sandbox) {
+                throw $e;
+            }
+
+            // Chrome refuses to run its sandbox as root and cannot in a
+            // container that will not let it make namespaces. Both say so on
+            // stderr, which goes nowhere here, and exit before writing the
+            // port file, which is the signal. Once a session: the flag stays
+            // off for every browser this session starts after this one.
+            $this->sandbox = false;
+
+            if ($this->warn !== null) {
+                ($this->warn)('Chrome exited at once with its sandbox on, which is what it does as root or in a container that cannot make namespaces. Started again without the sandbox. A queue worker that runs as an ordinary user keeps it on.');
+            }
+
+            $this->start($binary);
+        }
+    }
+
+    /**
+     * Start one browser with the session's current flags and attach to a
+     * page in it, or throw with nothing left running.
+     *
+     * @throws ChromeProtocolError
+     */
+    private function start(string $binary): void
+    {
         $this->profile = sys_get_temp_dir().'/a11y-report-axe-'.bin2hex(random_bytes(4));
 
         // The pid of the process that owns this browser, written where a later
@@ -104,7 +154,7 @@ final class DevTools
 
         $command = implode(' ', array_map('escapeshellarg', [
             $binary,
-            ...Browser::FLAGS,
+            ...Browser::flags($this->sandbox),
             '--user-data-dir='.$this->profile,
             // Port zero, then read the one Chrome chose out of its profile.
             // A fixed port is a collision between two workers on one machine,
@@ -125,8 +175,6 @@ final class DevTools
             throw new ChromeProtocolError('Chrome could not be started.');
         }
 
-        $this->starts++;
-
         try {
             $this->socket = WebSocket::connect($this->browserEndpoint(), $this->timeoutSeconds);
             $target = $this->send('Target.createTarget', ['url' => 'about:blank']);
@@ -140,6 +188,11 @@ final class DevTools
 
             throw $e instanceof ChromeProtocolError ? $e : new ChromeProtocolError('Chrome could not be attached to: '.$e->getMessage(), 0, $e);
         }
+
+        // Counted once it is driven, not once it is spawned. A start the
+        // sandbox refused never became a browser, and "one is the healthy
+        // number for a whole scan" has to stay true on a root host.
+        $this->starts++;
     }
 
     /**
@@ -357,7 +410,7 @@ final class DevTools
             }
 
             if (is_resource($this->process) && ! proc_get_status($this->process)['running']) {
-                throw new ChromeProtocolError('Chrome exited before it was ready to be driven.');
+                throw new ChromeExitedAtStart('Chrome exited before it was ready to be driven.');
             }
 
             usleep(50_000);

@@ -31,17 +31,46 @@ final class Browser
      * Flags shared by both users: no GPU, no profile of its own to inherit,
      * and nothing that phones home. A scan of a whole site starts this often,
      * and an update check per page is somebody's network bill.
+     *
+     * Not in the list: `--no-sandbox`. See `flags()`.
      */
     public const FLAGS = [
         '--headless=new',
         '--disable-gpu',
-        '--no-sandbox',
         '--no-first-run',
         '--disable-extensions',
         '--disable-sync',
         '--disable-background-networking',
         '--disable-component-update',
     ];
+
+    /**
+     * The flag that turns Chrome's sandbox off. One name, so a test can look
+     * for it in a command line and a caller cannot misspell it.
+     */
+    public const NO_SANDBOX = '--no-sandbox';
+
+    /**
+     * The flags to start a browser with.
+     *
+     * The sandbox stays on unless the caller has found it cannot be. Every
+     * Docker and CI recipe passes `--no-sandbox`, and so did this addon from
+     * the day it first started a browser, with nothing written down about
+     * why. The pages that browser renders are the customer's own site, with
+     * every third-party script the site embeds and whatever an author pasted
+     * into an entry, and the sandbox is what stands between a renderer
+     * exploit in that page and the queue worker's user on the customer's
+     * server. Chrome refuses to run the sandbox as root, and cannot in a
+     * container that will not let it make namespaces; in both it says so and
+     * exits before it has a port to speak on, which is what the callers
+     * watch for before asking again without it.
+     *
+     * @return array<int, string>
+     */
+    public static function flags(bool $sandbox = true): array
+    {
+        return $sandbox ? self::FLAGS : [...self::FLAGS, self::NO_SANDBOX];
+    }
 
     /**
      * The name of the file a browser's owner writes its pid into, inside the

@@ -127,7 +127,7 @@ return [
     | grades a page with on the publish form, so the two never disagree. It
     | reads the page's main content as served, with names, quotations, code,
     | references and the site's own navigation and footer set aside, and
-    | records a band ("Grade 9-10") against 'target': the grade the site
+    | records a band ("Grade 9–10") against 'target': the grade the site
     | writes for, and how far either side of it is fine. Grade 8 with a
     | tolerance of 1 is where most plain-language guidance for the public
     | lands.

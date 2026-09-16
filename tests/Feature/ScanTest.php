@@ -10,6 +10,7 @@ use Bpmore\A11yReport\Scan\Scans;
 use Bpmore\A11yReport\Scan\ScanScope;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Statamic\Facades\Collection;
+use Statamic\Facades\Site;
 
 /**
  * The scan, end to end, on the sync queue: enumerate, batch, read, roll up,
@@ -318,7 +319,31 @@ it('narrows to a site, a collection, and a change date, and records the scope it
     $sited = runScan(sites: ['default']);
     expect($sited->site)->toBe('default');
     expect($sited->scope['sites'])->toBe(['default']);
+
+    // Unnarrowed, on an install with one site: still that site's scan, and
+    // the row says so. The scope stays as written, because "every site"
+    // is what decides which issues the scan may close.
+    $all = runScan();
+    expect($all->site)->toBe('default');
+    expect($all->scope['sites'])->toBe([]);
+});
+
+it('names the site on a scan of every site only when the install has one', function () {
+    page('one', '<p>Fine.</p>');
+
+    expect(runScan()->site)->toBe('default');
+
+    Site::setSites([
+        'default' => ['name' => 'English', 'url' => 'http://localhost/', 'locale' => 'en_US'],
+        'fr' => ['name' => 'French', 'url' => 'http://localhost/fr/', 'locale' => 'fr_FR'],
+    ]);
+    Collection::make('pages')->routes('/{slug}')->sites(['default', 'fr'])->save();
+
+    // Two sites, no site named: a scan of both, and a row that says neither.
+    // A row named for one site when it read two would make a report claim
+    // less than it covered.
     expect(runScan()->site)->toBeNull();
+    expect(runScan(sites: ['fr'])->site)->toBe('fr');
 });
 
 it('leaves out the URLs the config excludes', function () {

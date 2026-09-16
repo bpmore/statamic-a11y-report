@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Bpmore\A11yReport\Document\ReportWriter;
+use Bpmore\A11yReport\Document\ScanEvidence;
 use Bpmore\A11yReport\Models\CriterionAssessment;
 use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Report;
@@ -10,6 +11,7 @@ use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Statamic\Facades\Collection;
 use Statamic\Facades\Role;
+use Statamic\Facades\Site;
 use Statamic\Facades\User;
 
 /**
@@ -360,6 +362,15 @@ it('reports on the newest scan when the scope names a site', function () {
     $user = User::make()->email('super@example.test')->makeSuper();
     $user->save();
 
+    // Two sites, so that a scan of every site is genuinely of more than one
+    // and its row carries no site. On an install with one site it would be
+    // named for that site, which is the other test.
+    Site::setSites([
+        'default' => ['name' => 'English', 'url' => 'http://localhost/', 'locale' => 'en_US'],
+        'fr' => ['name' => 'French', 'url' => 'http://localhost/fr/', 'locale' => 'fr_FR'],
+    ]);
+    Collection::make('pages')->routes('/{slug}')->sites(['default', 'fr'])->save();
+
     page('one', '<img src="/a.jpg">');
 
     // An early scan of every site, as an install has before anybody narrows
@@ -554,4 +565,49 @@ it('leaves a house rule its plain name when nothing shares it', function () {
         expect($row['name'])->toBe($row['label']);
         expect($row['name'])->not->toContain('(');
     }
+});
+
+it('reports on the scan a fresh install makes when asked for the site by name, as the README shows', function () {
+    page('one', '<img src="/a.jpg">');
+
+    // The README's own sequence: `a11y:scan`, then `a11y:report --site=default`.
+    // The command had a lookup of its own that no scan of every site could
+    // match, so this said "no complete scan" on a fresh install while the
+    // control panel's button, one lookup over, found the scan.
+    $scan = runScan();
+    $out = sys_get_temp_dir().'/a11y-readme-'.uniqid();
+
+    $this->artisan('statamic:a11y:report', ['--site' => 'default', '--format' => 'html', '--out' => $out])->assertExitCode(0);
+
+    expect(Report::latest('id')->first()->scan_id)->toBe($scan->id);
+    expect(glob($out.'/*.html'))->not->toBe([]);
+});
+
+it('never reports on another site\'s scan when asked for one by name', function () {
+    Site::setSites([
+        'default' => ['name' => 'English', 'url' => 'http://localhost/', 'locale' => 'en_US'],
+        'fr' => ['name' => 'French', 'url' => 'http://localhost/fr/', 'locale' => 'fr_FR'],
+    ]);
+    Collection::make('pages')->routes('/{slug}')->sites(['default', 'fr'])->save();
+    page('one', '<img src="/a.jpg">');
+
+    // Only the English site has been scanned. Asked for French, the old
+    // fallback handed back the newest scan of anything, and a document
+    // wearing the English site's name went out as the French site's.
+    $english = runScan(sites: ['default']);
+    expect(ScanEvidence::latestScan('fr'))->toBeNull();
+    expect(ScanEvidence::latestScan('default')?->id)->toBe($english->id);
+
+    // A scan of every site covers French, and being newer it wins.
+    $both = runScan();
+    expect(ScanEvidence::latestScan('fr')?->id)->toBe($both->id);
+    expect(ScanEvidence::latestScan('default')?->id)->toBe($both->id);
+
+    // And a newer English-only scan does not stand in for French.
+    $englishAgain = runScan(sites: ['default']);
+    expect(ScanEvidence::latestScan('fr')?->id)->toBe($both->id);
+    expect(ScanEvidence::latestScan('default')?->id)->toBe($englishAgain->id);
+
+    $this->artisan('statamic:a11y:report', ['--site' => 'fr', '--format' => 'json'])->assertExitCode(0);
+    expect(Report::latest('id')->first()->scan_id)->toBe($both->id);
 });

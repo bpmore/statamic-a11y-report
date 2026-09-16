@@ -8,6 +8,46 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.2.2 - unreleased
+
+### Fixed
+
+**A scan of an install with one site is that site's scan, and the row says
+so.** The scope is `['*']` until somebody narrows it, and a scan of every site
+carried no site name even when every site was one. So on a fresh install
+following this README, `php please a11y:report --site=default` said there was
+no complete scan, and the dashboard widget given `'site' => 'default'` said
+"No completed scan in the last 30 days" beside an open-issue count from that
+very scan: the issues carried the site and the scan did not. The control
+panel's button found the scan because it looked differently. Found by
+installing 1.2.1 into a fresh site and following the README word for word,
+which is the check Statamic's marketplace guidelines ask for under Rule 06.
+
+Two things changed. A scan whose scope names no site, on an install with one
+site, is named for it; on an install with more it is still a scan of every
+site and says so, because a row must never claim less than it covered. And
+the command, the button and the worksheet now share one lookup: a scan named
+for the site, or one of every site, whichever is newer, and never another
+site's alone. That last part used to be possible from the button on a
+multisite install, and the document that came out wore the wrong site's name.
+
+**Upgrading:** `composer update`, then `php please a11y:report:install`. It
+names the site on the scans and reports already on disk, on an install with
+one site, where the pages the scan read prove it was that site's, so the
+"against the last scan" line and the site-scoped widget stay continuous across
+the upgrade. A scan that read a page of a site the install no longer has is
+left as it was.
+
+### Changed, with no difference to what is reported
+
+**The README says how to publish the config file** it refers to
+(`php artisan vendor:publish --tag=statamic-a11y-report-config`); a fresh
+install has no such file until then. **The support section's `composer show`
+line works**: it named two packages in one command, which Composer reads as a
+package and a version constraint. **The reading level's band is spelled the
+way the engine prints it**, "Grade 9–10", in the README and the config file,
+which had "Grade 9 to 10" and "Grade 9-10" for the same thing.
+
 ## 1.2.1 - 2026-09-16
 
 ### Changed, with no difference to what is reported

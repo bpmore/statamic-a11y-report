@@ -12,6 +12,77 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-09-16: A scan of every site on a one-site install is that site's, and old rows are named where the pages prove it
+
+Statamic's marketplace guidelines ask, under Rule 06, that the release a
+customer receives be installed into a fresh site by its own instructions.
+Done for 1.2.1 the way the gate's was: a fresh `statamic/statamic` 6.33 in a
+scratch directory, `composer require` from Packagist, then every line of the
+README, on the command line and in the control panel. Nearly all of it held.
+The README's own `a11y:report --site=default` example did not: "There is no
+complete scan to report on", directly after the README's own `a11y:scan`. And
+the README's second widget form, `'site' => 'default'`, showed "10 open
+issues" and "No completed scan in the last 30 days" in one card.
+
+**Why.** `ScanScope::site()` named a site only when the scope listed exactly
+one, and the scope is `['*']` until somebody narrows it, so every scan on a
+single-site install had `site = null`. `Overview` filters scans by that column
+and issue states by theirs, which carry the entry's site; the widget's two
+numbers came from two columns that disagreed. The report command had a strict
+`where('site', ...)` of its own, while the button used `ScanEvidence` and
+fell back. The 0.3.0 entry had said saving the settings screen names the site
+on every later scan; it does not, because the screen saves `['*']`.
+
+**What changed.** A scope that names no site, on an install with exactly one
+site, is that site's; `ScanScope::site()` says so and the scope stays as
+written, because whether a scan was narrowed is what decides which issues it
+may close and "every site" on a one-site install is not narrowed. The command
+now uses `ScanEvidence::latestScan()`, and that lookup, asked for a site,
+takes the newest scan that covers it: named for it, or of every site. Never
+another site's alone, which the old fallback allowed and which on a multisite
+install put out a document wearing the wrong site's name from the button.
+
+**The backfill.** Without one, the first scan after upgrading finds no
+previous scan for the site and prints "first scan" into a history that is
+anything but, and a site-scoped widget sees nothing before today. A migration
+names `site` on the scans and reports already on disk, only on an install
+with one site, and only where no page the scan read belongs to another site.
+The pages are the proof: an install that once had two sites and now has one
+keeps its old scans anonymous, because a row must never claim less than it
+covered. It runs through `a11y:report:install` like every migration, and its
+`down()` does nothing, because a name it wrote is true and cannot be told
+from one a narrowed scan wrote.
+
+**Turned down.** Resolving `['*']` to the one handle inside the scope, which
+would have turned every full scan into a narrowed one and changed what it may
+close. Making `Overview` accept unnamed scans under a site's name, which the
+2026-09-02 entry refused for the right reason: a scan of every site under one
+site's name is a number with the wrong denominator on a multisite install. No
+backfill, for the "first scan" blip in a compliance history. A blind backfill
+of every null row on a one-site install, for the install that used to have
+two. And a config key naming the site, which is the setting the scope already
+is.
+
+**Also from the same pass.** `composer show a b` names a version constraint,
+not two packages, so the support section's line errored; the README referred
+to "the config file" five times without saying how it gets into a site; the
+reading band was spelled three ways for one string the engine prints as
+"Grade 9–10". All three corrected in the README and the config comment.
+
+**Checked.** Tests for the scope on one site and on two, the lookup's three
+cases on two sites, the README's exact command sequence through the artisan
+runner, the README's widget form, and the backfill as an upgrade meets it
+(tables filled by 1.2.1, then the migration), including the row it must
+leave alone and running twice. The whole suite. And the fresh site again,
+with this branch installed by path over the Packagist copy: the README's
+`--site=default` example writes the document, and the second widget form
+shows the scan.
+
+**Not checked.** An install that genuinely went from two sites to one, beyond
+the fixture that stands in for it. A multisite install in a browser.
+
+---
+
 ## 2026-09-16: Chrome keeps its sandbox where it can, and says when it cannot
 
 `--no-sandbox` was in the flag list from the first browser this addon

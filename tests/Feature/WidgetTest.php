@@ -46,3 +46,19 @@ it('renders markup Vue can compile, before and after scans', function () {
 
     assertVueTemplateIsWellFormed(widgetHtml());
 });
+
+it('shows the scan to a widget given the one site\'s handle, as the README\'s second form has it', function () {
+    app(ReportDatabase::class)->install();
+    page('one', '<img src="/a.jpg">');
+    runScan();
+
+    // `['type' => 'accessibility_report', 'site' => 'default']`, from the
+    // README. On a fresh install this said "No completed scan in the last
+    // 30 days" beside an open-issue count from that very scan: the issue
+    // states carried the site and the scan row did not.
+    $html = (string) preg_replace('/\s+/', ' ', (string) app(Loader::class)->load('accessibility_report', ['type' => 'accessibility_report', 'site' => 'default'])->html());
+
+    expect(str_contains($html, 'No completed scan'))->toBeFalse('the site-scoped widget cannot see the scan');
+    expect($html)->toContain('Last scan');
+    expect($html)->toContain('1 serious');
+});

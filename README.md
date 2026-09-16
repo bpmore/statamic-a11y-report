@@ -41,6 +41,17 @@ nothing else. To use a database the site already runs, set
 If you skip the install and the addon is on its own SQLite file, the first scan
 runs the install itself. On any other connection it asks you to.
 
+The config file this README refers to, `config/statamic-a11y-report.php`, is
+the package's own until you publish it:
+
+```
+php artisan vendor:publish --tag=statamic-a11y-report-config
+```
+
+Most of what it holds is on the settings screen anyway. The database, the
+engine, the browser, the queue and the deploy thresholds are the parts that
+need the file.
+
 ## Engines
 
 Two, and a scan records which one ran, at what version, and with which rules.
@@ -117,7 +128,7 @@ Every scan also grades what each page reads at, with the engine Plain grades a
 page with on the publish form (`bpmore/readability-core`), so the two never
 disagree about a page. It reads the page's main content as served, with names,
 quotations, code, references and the site's own navigation and footer set
-aside, and records a band ("Grade 9 to 10", never a decimal) against the grade
+aside, and records a band ("Grade 9–10", never a decimal) against the grade
 the site writes for: 8 by default, with a tolerance of 1, on the settings
 screen. The overview, the history and the end of `a11y:scan --sync` say what
 the median page reads at and how many pages sit above the target.
@@ -391,9 +402,9 @@ being scanned: nothing here phones home, so a support problem is never an
 outage.
 
 A useful report says which version of the addon and of Statamic you are on and
-which engine ran. `composer show bpmore/statamic-a11y-report statamic/cms`
-gives the first two, and the overview in the control panel names the engine of
-the last scan.
+which engine ran. `composer show bpmore/statamic-a11y-report` and `composer
+show statamic/cms` give the first two, and the overview in the control panel
+names the engine of the last scan.
 
 ## Licence
 

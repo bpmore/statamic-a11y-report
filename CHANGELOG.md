@@ -8,7 +8,7 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
-## 1.2.1 - unreleased
+## 1.2.1 - 2026-09-16
 
 ### Changed, with no difference to what is reported
 

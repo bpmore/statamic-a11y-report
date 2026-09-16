@@ -259,6 +259,7 @@ class ServiceProvider extends AddonServiceProvider
         $this->app->bind(\Bpmore\A11yReport\Pdf\ChromePrinter::class, fn () => new \Bpmore\A11yReport\Pdf\ChromePrinter(
             config('statamic-a11y-report.chrome.binary'),
             (int) config('statamic-a11y-report.chrome.timeout', 30),
+            fn (string $message) => \Illuminate\Support\Facades\Log::warning('a11y-report: '.$message),
         ));
 
         $this->app->bind(ReportWriter::class, fn ($app) => new ReportWriter(

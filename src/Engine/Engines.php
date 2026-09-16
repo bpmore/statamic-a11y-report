@@ -131,6 +131,9 @@ final class Engines
                 $browser,
                 (int) config('statamic-a11y-report.chrome.timeout', 30),
                 (int) config('statamic-a11y-report.axe.settle_ms', 250),
+                // Said once a session, from the engine layer, which is
+                // framework-free and has no log of its own to say it in.
+                fn (string $message) => Log::warning('a11y-report: '.$message),
             ),
             $this->reportStandard(),
             $this->bestPractices(),

@@ -123,7 +123,7 @@ return [
     | Reading level
     |---------------------------------------------------------------------------
     |
-    | Every scan also grades each page's reading level, with the engine Plain
+    | Every scan also grades each page's reading level, with the engine Copydesk
     | grades a page with on the publish form, so the two never disagree. It
     | reads the page's main content as served, with names, quotations, code,
     | references and the site's own navigation and footer set aside, and

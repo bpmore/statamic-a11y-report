@@ -20,12 +20,12 @@ use Throwable;
 /**
  * The reading level of a page, as a dimension of a scan.
  *
- * The engine is `bpmore/readability-core`, the one Plain grades a page
+ * The engine is `bpmore/readability-core`, the one Copydesk grades a page
  * with on the publish form, so the number an author saw and the number
  * in this report come from one code path. What it reads is the page as
  * served, and of that the main content: the navigation, banner, footer
  * and sidebar are the site's furniture and a reader does not read them as
- * prose. Then the same exclusions Plain applies before grading, names
+ * prose. Then the same exclusions Copydesk applies before grading, names
  * among them, because SC 3.1.5 sets names and titles aside and so does
  * this.
  *
@@ -43,7 +43,7 @@ final class Readability
 {
     public const PACKAGE = 'bpmore/readability-core';
 
-    /** The class a site puts on markup it does not want graded, the same one Plain reads. */
+    /** The class a site puts on markup it does not want graded, the same one Copydesk reads. */
     private const IGNORED_CLASS = 'no-readability';
 
     public readonly Target $target;

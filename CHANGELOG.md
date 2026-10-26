@@ -8,6 +8,15 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## Unreleased
+
+### Changed
+
+**Plain is now called Copydesk.** The overview sentence that appears when
+both are installed now looks for `bpmore/statamic-copydesk` and says
+"Copydesk". Plain was never released under its old name, so no site loses
+the sentence.
+
 ## 1.2.2 - 2026-09-16
 
 ### Fixed

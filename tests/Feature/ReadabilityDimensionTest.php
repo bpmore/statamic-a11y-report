@@ -11,7 +11,7 @@ use Statamic\Facades\Site;
 
 /**
  * The reading level as a dimension of every scan: graded with the engine
- * Plain grades with, against the target the scan began with, and rolled up
+ * Copydesk grades with, against the target the scan began with, and rolled up
  * onto the scan as a median band. Evidence about the writing, never a
  * WCAG result.
  */

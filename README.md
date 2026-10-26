@@ -124,7 +124,7 @@ keeps working afterwards.
 
 ### The reading level
 
-Every scan also grades what each page reads at, with the engine Plain grades a
+Every scan also grades what each page reads at, with the engine Copydesk grades a
 page with on the publish form (`bpmore/readability-core`), so the two never
 disagree about a page. It reads the page's main content as served, with names,
 quotations, code, references and the site's own navigation and footer set
@@ -143,8 +143,8 @@ recorded as not graded rather than given a number that means nothing. Set
 it was left out. **Upgrading:** `php please a11y:report:install` adds the two
 columns the reading level is kept in.
 
-With Plain installed as well, the overview says in a sentence who owns which
-surface: Plain grades what an author writes, on the publish form, and owns
+With Copydesk installed as well, the overview says in a sentence who owns which
+surface: Copydesk grades what an author writes, on the publish form, and owns
 the gate and the dictionary; this addon grades pages as served. They are two
 readings of the same site, not two scans of the same thing.
 

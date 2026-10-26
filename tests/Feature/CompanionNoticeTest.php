@@ -9,7 +9,7 @@ use Statamic\Facades\Collection;
 use Statamic\Facades\User;
 
 /**
- * The one sentence for a site that has Plain installed too, so that
+ * The one sentence for a site that has Copydesk installed too, so that
  * nobody meeting both readings of the site takes one for a mistake.
  */
 beforeEach(function () {
@@ -22,37 +22,37 @@ beforeEach(function () {
     $this->user->save();
 });
 
-/** Plain, as Statamic would list it once Composer has installed it. */
-function installPlain(): void
+/** Copydesk, as Statamic would list it once Composer has installed it. */
+function installCopydesk(): void
 {
-    app(Manifest::class)->manifest[Companion::PLAIN] = [
-        'id' => Companion::PLAIN,
-        'slug' => 'statamic-plain',
+    app(Manifest::class)->manifest[Companion::COPYDESK] = [
+        'id' => Companion::COPYDESK,
+        'slug' => 'copydesk',
         'version' => '1.0.0',
-        'namespace' => 'Bpmore\\Plain',
+        'namespace' => 'Bpmore\\Copydesk',
         'autoload' => 'src/',
-        'provider' => 'Bpmore\\Plain\\ServiceProvider',
+        'provider' => 'Bpmore\\Copydesk\\ServiceProvider',
     ];
 
     // The facade memoises the list it built from the manifest at boot.
     \Statamic\Facades\Addon::clearResolvedInstance();
 }
 
-it('says nothing about Plain when it is not installed', function () {
-    expect(Companion::plainInstalled())->toBeFalse();
+it('says nothing about Copydesk when it is not installed', function () {
+    expect(Companion::copydeskInstalled())->toBeFalse();
     expect(Companion::notice())->toBeNull();
 
-    expect(utilityHtml())->not->toContain('Plain is installed');
+    expect(utilityHtml())->not->toContain('Copydesk is installed');
 });
 
-it('says once, in one sentence, who owns which surface when Plain is installed', function () {
-    installPlain();
+it('says once, in one sentence, who owns which surface when Copydesk is installed', function () {
+    installCopydesk();
     page('one', '<p>Fine.</p>');
     runScan();
 
     $html = utilityHtml();
 
-    expect(substr_count($html, 'Plain is installed as well.'))->toBe(1);
+    expect(substr_count($html, 'Copydesk is installed as well.'))->toBe(1);
     expect($html)->toContain('grade what an author writes, field by field, before it is published');
     expect($html)->toContain('This scan grades each page as served');
     expect($html)->toContain('two readings of the same site, not two scans of the same thing');

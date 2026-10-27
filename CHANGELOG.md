@@ -12,6 +12,11 @@ Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
 ### Changed
 
+**Works beside Copydesk.** A11y Report now takes `bpmore/readability-core`
+0.1 or 0.2. Copydesk needs 0.2, which adds positions in the text as written
+and changes nothing A11y Report reads, so a site can run both. Nothing to
+do on upgrade.
+
 **Plain is now called Copydesk.** The overview sentence that appears when
 both are installed now looks for `bpmore/statamic-copydesk` and says
 "Copydesk". Plain was never released under its old name, so no site loses

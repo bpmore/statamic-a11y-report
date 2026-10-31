@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace Bpmore\A11yReport\Pdf;
 
 use Bpmore\A11yReport\Chrome\Browser;
+use Bpmore\A11yReport\Chrome\CloudflareBrowser;
+use Bpmore\A11yReport\Chrome\DevTools;
 
 /**
  * Headless Chrome, printing a local HTML file to a tagged PDF.
  *
- * Chrome's own command line rather than the DevTools protocol. Current
+ * Local mode uses Chrome's own command line. An optional Cloud connection
+ * sends the same self-contained HTML through Page.printToPDF, requests tags
+ * and an outline, and leaves the report writer's metadata pass unchanged. Current
  * Chrome tags its printed PDFs by default (structure tree, headings, tables
  * with header cells, captions, language), verified by reading the output of
  * Chrome 151 on a real report, and the outline flag adds a document outline.
@@ -31,6 +35,7 @@ final class ChromePrinter
     public function __construct(
         private readonly ?string $binary = null,
         private readonly int $timeoutSeconds = 30,
+        private readonly ?CloudflareBrowser $remote = null,
     ) {}
 
     /** The first Chrome that exists, configured or found, or null. */
@@ -41,7 +46,7 @@ final class ChromePrinter
 
     public function available(): bool
     {
-        return $this->binary() !== null;
+        return $this->remote !== null || $this->binary() !== null;
     }
 
     /**
@@ -49,6 +54,32 @@ final class ChromePrinter
      */
     public function print(string $htmlPath, string $pdfPath): void
     {
+        if ($this->remote !== null) {
+            $session = new DevTools(new Browser, $this->timeoutSeconds, remote: $this->remote);
+            @unlink($pdfPath);
+            try {
+                if (! is_file($htmlPath)) {
+                    throw new ChromeUnavailable('Report HTML is missing.');
+                }
+                $html = file_get_contents($htmlPath);
+                if ($html === false) {
+                    throw new ChromeUnavailable('Report HTML could not be read.');
+                }
+                $bytes = $session->printHtml($html);
+                if (file_put_contents($pdfPath, $bytes) !== strlen($bytes)) {
+                    throw new ChromeUnavailable('Report PDF could not be saved.');
+                }
+                chmod($pdfPath, 0600);
+            } catch (\Throwable) {
+                @unlink($pdfPath);
+                throw new ChromeUnavailable('Cloud browser could not produce the report PDF.');
+            } finally {
+                $session->close();
+            }
+
+            return;
+        }
+
         $binary = $this->binary();
 
         if ($binary === null) {

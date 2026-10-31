@@ -49,6 +49,9 @@ return [
 
     'chrome' => [
         'binary' => env('A11Y_CHROME_PATH'),
+        'driver' => env('A11Y_BROWSER_DRIVER', 'local'),
+        'account_id' => env('SCAN_CLOUDFLARE_ACCOUNT_ID'),
+        'api_token' => env('SCAN_CLOUDFLARE_API_TOKEN'),
         'timeout' => 30,
     ],
 

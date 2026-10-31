@@ -84,6 +84,9 @@ final class Settings
     public function effective(): array
     {
         $config = (array) config('statamic-a11y-report', []);
+        // The browser factory reads the private key directly from cached config.
+        // It must not travel with editable settings or scan orchestration data.
+        unset($config['chrome']['api_token']);
 
         $saved = app(SettingsRepository::class)->find(self::PACKAGE)?->raw();
 

@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace Bpmore\A11yReport;
 
 use Bpmore\A11yGate\Gate\EntryRenderer;
+use Bpmore\A11yGate\Panel\PanelExtensions;
+use Bpmore\A11yReport\Chrome\CloudflareBrowser;
 use Bpmore\A11yReport\Document\Brand;
 use Bpmore\A11yReport\Document\ReportBuilder;
 use Bpmore\A11yReport\Document\ReportWriter;
+use Bpmore\A11yReport\Document\ScanEvidence;
 use Bpmore\A11yReport\Engine\Engines;
 use Bpmore\A11yReport\Engine\PhpDomEngine;
 use Bpmore\A11yReport\Engine\ScanEngine;
+use Bpmore\A11yReport\Models\Report;
+use Bpmore\A11yReport\Models\Scan;
+use Bpmore\A11yReport\Pdf\ChromePrinter;
 use Bpmore\A11yReport\Scan\Scans;
 use Bpmore\A11yReport\Scan\ScanSchedule;
 use Bpmore\A11yReport\Statement\StatementBuilder;
@@ -18,6 +24,8 @@ use Bpmore\A11yReport\Storage\ReportDatabase;
 use Bpmore\A11yReport\Support\VueSafe;
 use Bpmore\A11yReport\Trends\Overview;
 use Bpmore\A11yReport\Trends\TrendChart;
+use Bpmore\A11yReport\Worksheet\Worksheet;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Statamic\Facades\Addon;
@@ -80,7 +88,7 @@ class ServiceProvider extends AddonServiceProvider
      * schedules nothing, which is the exact bug this method exists to fix,
      * reintroduced one line lower down.
      */
-    protected function schedule(\Illuminate\Console\Scheduling\Schedule $schedule)
+    protected function schedule(Schedule $schedule)
     {
         $this->app->booted(fn () => ScanSchedule::register(
             $schedule,
@@ -150,7 +158,7 @@ class ServiceProvider extends AddonServiceProvider
         // The gate's sidebar panel, with this page's open issues from the last
         // scan beneath the gate's own result, so the two agree in the one
         // place an author looks.
-        \Bpmore\A11yGate\Panel\PanelExtensions::register(new Panel\OpenIssuesForEntry(
+        PanelExtensions::register(new Panel\OpenIssuesForEntry(
             $this->app->make(ReportDatabase::class),
             $this->app->make(Settings::class),
         ));
@@ -220,8 +228,8 @@ class ServiceProvider extends AddonServiceProvider
             'settingsUrl' => Addon::get(Settings::PACKAGE)?->settingsUrl(),
             'canGenerate' => (bool) User::current()?->can('generate accessibility reports'),
             'generateUrl' => cp_route('utilities.a11y-report.reports.generate'),
-            'hasCompleteScan' => $installed && $overview->history(1)->first()?->status === \Bpmore\A11yReport\Models\Scan::COMPLETE,
-            'reports' => $installed ? \Bpmore\A11yReport\Models\Report::query()->when($site !== null, fn ($q) => $q->where('site', $site))->with('scan')->orderByDesc('id')->limit(20)->get() : collect(),
+            'hasCompleteScan' => $installed && $overview->history(1)->first()?->status === Scan::COMPLETE,
+            'reports' => $installed ? Report::query()->when($site !== null, fn ($q) => $q->where('site', $site))->with('scan')->orderByDesc('id')->limit(20)->get() : collect(),
             'queueIsSync' => config('queue.default') === 'sync',
             'queueConnection' => (string) config('queue.default'),
             'stale' => $installed ? $overview->stale((int) config('statamic-a11y-report.scan.stale_after_minutes', 10)) : null,
@@ -255,19 +263,24 @@ class ServiceProvider extends AddonServiceProvider
             $app->make(Settings::class)->block('report'),
         ));
 
-        $this->app->bind(\Bpmore\A11yReport\Pdf\ChromePrinter::class, fn () => new \Bpmore\A11yReport\Pdf\ChromePrinter(
+        $this->app->bind(ChromePrinter::class, fn () => new ChromePrinter(
             config('statamic-a11y-report.chrome.binary'),
             (int) config('statamic-a11y-report.chrome.timeout', 30),
+            CloudflareBrowser::configured(
+                (string) config('statamic-a11y-report.chrome.driver', 'local'),
+                (string) config('statamic-a11y-report.chrome.account_id', ''),
+                (string) config('statamic-a11y-report.chrome.api_token', ''),
+            ),
         ));
 
         $this->app->bind(ReportWriter::class, fn ($app) => new ReportWriter(
             $app,
             $app->make(ReportBuilder::class),
-            $app->make(\Bpmore\A11yReport\Pdf\ChromePrinter::class),
+            $app->make(ChromePrinter::class),
         ));
 
-        $this->app->bind(\Bpmore\A11yReport\Worksheet\Worksheet::class, fn ($app) => new \Bpmore\A11yReport\Worksheet\Worksheet(
-            new \Bpmore\A11yReport\Document\ScanEvidence($app->make(ScanEngine::class)),
+        $this->app->bind(Worksheet::class, fn ($app) => new Worksheet(
+            new ScanEvidence($app->make(ScanEngine::class)),
         ));
 
         $this->app->bind(StatementBuilder::class, fn ($app) => new StatementBuilder(

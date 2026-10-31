@@ -57,6 +57,7 @@ final class DevTools
         private readonly Browser $browser,
         private readonly int $timeoutSeconds = 30,
         private readonly int $settleMs = 250,
+        private readonly ?CloudflareBrowser $remote = null,
     ) {}
 
     public function isOpen(): bool
@@ -79,6 +80,12 @@ final class DevTools
     public function open(): void
     {
         if ($this->socket !== null) {
+            return;
+        }
+
+        if ($this->remote !== null) {
+            $this->openRemote();
+
             return;
         }
 
@@ -140,6 +147,45 @@ final class DevTools
 
             throw $e instanceof ChromeProtocolError ? $e : new ChromeProtocolError('Chrome could not be attached to: '.$e->getMessage(), 0, $e);
         }
+    }
+
+    private function openRemote(): void
+    {
+        try {
+            $this->socket = $this->remote->connect($this->timeoutSeconds);
+            $this->starts++;
+            $target = $this->send('Target.createTarget', ['url' => 'about:blank']);
+            $attached = $this->send('Target.attachToTarget', ['targetId' => $target['targetId'], 'flatten' => true]);
+            $this->sessionId = $attached['sessionId'];
+            $this->send('Page.enable');
+            $this->send('Network.enable');
+            $this->send('Runtime.enable');
+        } catch (\Throwable) {
+            $this->shutdown();
+            throw new ChromeProtocolError('Cloud browser could not be attached.');
+        }
+    }
+
+    /** Print the same self-contained report HTML without exposing a local file. */
+    public function printHtml(string $html): string
+    {
+        $this->open();
+        $frame = $this->send('Page.getFrameTree');
+        $this->send('Page.setDocumentContent', [
+            'frameId' => $frame['frameTree']['frame']['id'], 'html' => $html,
+        ]);
+        $this->evaluate('document.fonts.ready.then(() => true)');
+        $result = $this->send('Page.printToPDF', [
+            'generateTaggedPDF' => true, 'generateDocumentOutline' => true,
+            'displayHeaderFooter' => false, 'printBackground' => true,
+            'preferCSSPageSize' => true, 'transferMode' => 'ReturnAsBase64',
+        ]);
+        $bytes = base64_decode($result['data'] ?? '', true);
+        if ($bytes === false || ! str_starts_with($bytes, '%PDF-') || ! str_contains(substr($bytes, -32), '%%EOF')) {
+            throw new ChromeProtocolError('Cloud browser did not return a complete PDF.');
+        }
+
+        return $bytes;
     }
 
     /**
@@ -256,7 +302,7 @@ final class DevTools
      *
      * @throws ChromeProtocolError
      */
-    private function send(string $method, array $params = []): array
+    private function send(string $method, array $params = [], ?float $seconds = null): array
     {
         if ($this->socket === null) {
             throw new ChromeProtocolError('There is no open Chrome session to send '.$method.' to.');
@@ -265,13 +311,12 @@ final class DevTools
         $id = ++$this->nextId;
         $message = ['id' => $id, 'method' => $method, 'params' => (object) $params];
 
-        if ($this->sessionId !== null && ! str_starts_with($method, 'Target.')) {
+        if ($this->sessionId !== null && ! str_starts_with($method, 'Target.') && ! str_starts_with($method, 'Browser.')) {
             $message['sessionId'] = $this->sessionId;
         }
 
-        $this->socket->send((string) json_encode($message));
-
-        $deadline = microtime(true) + $this->timeoutSeconds;
+        $deadline = microtime(true) + ($seconds ?? $this->timeoutSeconds);
+        $this->socket->send((string) json_encode($message), $deadline);
 
         while (true) {
             $frame = json_decode($this->socket->receive($deadline), true);
@@ -379,7 +424,7 @@ final class DevTools
         // stopped answering must not hold the shutdown up.
         if ($this->socket !== null) {
             try {
-                $this->send('Browser.close');
+                $this->send('Browser.close', [], 5);
             } catch (\Throwable) {
                 // It was going to be killed anyway.
             }

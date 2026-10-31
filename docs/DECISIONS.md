@@ -13,6 +13,34 @@ more than a file that only ever describes the present.
 ---
 
 
+## 2026-10-31: Cloud uses the native browser protocol through a fixed external service
+
+Cloud cannot run the VPS's local browser setup. Add an opt-in Cloudflare Browser
+Run connection to the existing PHP WebSocket/DevTools engine, rather than replace
+axe with a static checker or add a second Node implementation of the engine.
+Local browser flags, bundled axe version, report evidence and metadata stay intact.
+The owner approved the browser-only key and the service's scan/report data use.
+
+Only the fixed Cloudflare WSS endpoint accepts a header token, with certificate
+and peer-name checks. Cached configuration supplies the key; effective settings
+strip it. Invalid settings and failed remote connections fail rather than silently
+substitute another engine. The Free plan stays unchanged, with a single bounded
+21-second retry on provider HTTP429. Shared production capacity is still open.
+
+Review caught a blocked-write gap: the protocol's old timeout began after send,
+so a browser that stopped reading could outlive cleanup. Writes now use a
+nonblocking deadline that is shared with reply reads. An unread socket test
+forces that case. Browser-level close has five seconds before bounded socket
+release. Tagged PDF and outline commands use the same self-contained report HTML,
+and the existing metadata pass is preserved. An actual fictional ReportWriter
+output passed the PDF/UA-1 profile in veraPDF 1.30.3.
+
+Checked and unchecked details are in `docs/CLOUD-BROWSER.md`. Tests caught
+intentional broken delay, short-key acceptance, and wrong-host acceptance. Local
+provider protocol and real-report output passed; Cloud deployment is still pending.
+
+---
+
 ## 2026-10-31: Report files may live on a private disk and local copies are only a cache
 
 Had A Farm's Cloud containers lose local files between deployments. The scan

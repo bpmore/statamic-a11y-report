@@ -187,7 +187,7 @@ it('says out loud which settings the screen cannot reach', function () {
     $unreachable = array_values(array_diff($flatten((array) config('statamic-a11y-report')), $reachable));
 
     expect($unreachable)->toBe([
-        'connection', 'engine', 'chrome.binary', 'chrome.timeout',
+        'connection', 'files.disk', 'engine', 'chrome.binary', 'chrome.timeout',
         'axe.settle_ms',
         'scan.concurrency', 'scan.schedule', 'scan.schedule_at', 'scan.stale_after_minutes',
         'retention.scans', 'report.appendix_limit', 'report.brand.container',

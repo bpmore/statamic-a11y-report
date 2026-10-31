@@ -12,6 +12,32 @@ more than a file that only ever describes the present.
 
 ---
 
+
+## 2026-10-31: Report files may live on a private disk and local copies are only a cache
+
+Had A Farm's Cloud containers lose local files between deployments. The scan
+records can already use MySQL, but their report HTML and JSON were local-only.
+An optional `files.disk` setting now writes each report before its database row
+can claim it exists. A failed durable write throws. Existing installs keep local
+storage when the setting is absent.
+
+R2 removes HTML objects. Each private file is therefore a JSON envelope with
+base64 bytes, byte count and SHA-256 digest, never a public HTML object. Reads
+verify the remote envelope before creating a private atomic local cache file.
+A missing or corrupt object cannot fall back to an old cached report. The
+controller and statement still receive ordinary local paths, preserving their
+existing access checks and rendering. Generated PDF bytes use the same store.
+
+Turned down: a public bucket, copying whole SQLite files between containers,
+and flushing files only after the HTTP response. The last can lose a report
+when the container dies after its database row was saved. No scan rules,
+conformance claims, templates, browser flags or permissions change.
+
+Checked: see the PR validation for local tests and the Had A Farm runtime
+checks. Browser PDF rendering and concurrent remote writes are separate checks.
+
+---
+
 ## 2026-09-08: A manual scan refuses to start on top of a running one
 
 This reverses the decision of 2026-09-02, which put the guard on `--scheduled`

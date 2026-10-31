@@ -38,6 +38,12 @@ addon creates for itself under `storage/a11y-report/`, so a flat-file site needs
 nothing else. To use a database the site already runs, set
 `A11Y_DB_CONNECTION` to one of its connection names and run the command there.
 
+On hosts that replace local files during deployment, also attach a **private**
+Laravel filesystem disk and set `A11Y_REPORT_DISK` to its name. Reports are
+stored as JSON envelopes on that disk and checked before a local copy is
+used. Keep the database on a durable connection too. With no disk setting,
+report files stay local as before.
+
 If you skip the install and the addon is on its own SQLite file, the first scan
 runs the install itself. On any other connection it asks you to.
 

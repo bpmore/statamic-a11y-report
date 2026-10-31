@@ -20,6 +20,10 @@ return [
 
     'connection' => env('A11Y_DB_CONNECTION', 'a11y_sqlite'),
 
+    // Attach a private disk on hosts whose local files disappear on deploy.
+    // Null preserves the original local-only file storage.
+    'files' => ['disk' => env('A11Y_REPORT_DISK')],
+
     /*
     |---------------------------------------------------------------------------
     | Engine

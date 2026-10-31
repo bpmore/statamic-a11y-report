@@ -8,6 +8,7 @@ use Bpmore\A11yReport\Models\IssueState;
 use Bpmore\A11yReport\Models\Report;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Storage\ReportDatabase;
+use Illuminate\Support\Facades\Storage;
 use Statamic\Facades\Collection;
 use Statamic\Facades\Role;
 use Statamic\Facades\User;
@@ -554,4 +555,33 @@ it('leaves a house rule its plain name when nothing shares it', function () {
         expect($row['name'])->toBe($row['label']);
         expect($row['name'])->not->toContain('(');
     }
+});
+
+it('serves the exact report after a new container loses both local documents', function () {
+    Storage::fake('report_private');
+    config()->set('statamic-a11y-report.files.disk', 'report_private');
+    [$report, $html] = document();
+    $writer = app(ReportWriter::class);
+    $json = file_get_contents($writer->absolutePath($report->json_path));
+    unlink(app()->storagePath($report->html_path));
+    unlink(app()->storagePath($report->json_path));
+
+    expect(file_get_contents($writer->absolutePath($report->html_path)))->toBe($html);
+    expect(file_get_contents($writer->absolutePath($report->json_path)))->toBe($json);
+    expect(json_decode($json, true)['uuid'])->toBe($report->uuid);
+    $url = cp_route('utilities.index').'/a11y-report/reports/'.$report->uuid.'/html';
+    $this->get($url)->assertRedirect();
+    $this->actingAs($this->user)->get($url)->assertOk();
+});
+
+it('never records a generated report when its private document cannot be saved', function () {
+    $disk = Mockery::mock();
+    $disk->shouldReceive('put')->once()->andReturn(false);
+    Storage::shouldReceive('disk')->with('report_private')->andReturn($disk);
+    config()->set('statamic-a11y-report.files.disk', 'report_private');
+    $scan = scannedSite();
+
+    expect(fn () => app(ReportWriter::class)->write($scan, 'tester@example.test'))
+        ->toThrow(RuntimeException::class);
+    expect(Report::count())->toBe(0);
 });

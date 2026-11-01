@@ -113,6 +113,7 @@ return [
     */
 
     'scan' => [
+        'cloud_durable_work' => env('A11Y_REPORT_CLOUD_DURABLE_WORK', false),
         'concurrency' => 3,
         'schedule' => 'weekly',
         'schedule_at' => '02:00',

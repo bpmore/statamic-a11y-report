@@ -189,7 +189,7 @@ it('says out loud which settings the screen cannot reach', function () {
     expect($unreachable)->toBe([
         'connection', 'files.disk', 'engine', 'chrome.binary', 'chrome.driver', 'chrome.account_id', 'chrome.api_token', 'chrome.timeout',
         'axe.settle_ms',
-        'scan.concurrency', 'scan.schedule', 'scan.schedule_at', 'scan.stale_after_minutes',
+        'scan.cloud_durable_work', 'scan.concurrency', 'scan.schedule', 'scan.schedule_at', 'scan.stale_after_minutes',
         'retention.scans', 'report.appendix_limit', 'report.brand.container',
         'statement.route', 'statement.view', 'statement.layout', 'statement.sites',
         'ci.fail_above.critical', 'ci.fail_above.serious',

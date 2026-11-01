@@ -23,10 +23,16 @@ final class FinalizeScan implements ShouldQueue
 
     public int $tries = 3;
 
+    public ?int $timeout = null;
+
     public function __construct(
         public readonly int $scanId,
         public readonly bool $cancelled = false,
-    ) {}
+    ) {
+        if (config('statamic-a11y-report.scan.cloud_durable_work', false)) {
+            $this->timeout = 180;
+        }
+    }
 
     public function handle(Scans $scans): void
     {

@@ -8,6 +8,21 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## Unreleased
+
+### Fixed
+
+**Two entries at one address no longer end the scan.** When two published
+entries had the same URL (a script or import that saved a slug twice, or a
+Stache still holding a deleted file), both were read, and the second one's
+issues collided with the first one's in the database. The page's job threw,
+and `a11y:scan --sync` stopped with the scan cancelled, so no page in it
+counted. Now a scan reads each address once: the entry Statamic serves there.
+The other entry still gets a row, is counted under "had no page of their
+own", and the row names the entry that was read instead. Nothing to do on
+upgrade. Found while testing 1.2.4 on a scratch site; the same code is in
+every earlier release.
+
 ## 1.2.4 - 2026-11-02
 
 ### Changed

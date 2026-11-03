@@ -93,17 +93,28 @@ final class Scans
 
         $scan->update(['status' => Scan::RUNNING, 'started_at' => now()]);
 
-        $rows = $this->entries($scope)->map(fn (Entry $entry) => [
-            'scan_id' => $scan->id,
-            'entry_id' => (string) $entry->id(),
-            'collection' => (string) $entry->collection()?->handle(),
-            'site' => (string) $entry->locale(),
-            'url' => (string) $entry->absoluteUrl(),
-            'path' => (string) $entry->url(),
-            'status' => ScanPage::PENDING,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $entries = $this->entries($scope);
+        $readInstead = $this->oneEntryPerAddress($entries);
+
+        $rows = $entries->map(function (Entry $entry) use ($scan, $readInstead) {
+            $instead = $readInstead[(string) $entry->id()] ?? null;
+
+            return [
+                'scan_id' => $scan->id,
+                'entry_id' => (string) $entry->id(),
+                'collection' => (string) $entry->collection()?->handle(),
+                'site' => (string) $entry->locale(),
+                'url' => (string) $entry->absoluteUrl(),
+                'path' => (string) $entry->url(),
+                // Settled now rather than by a job, so it is the same on a
+                // resume and is never dispatched: nothing about it is pending.
+                'status' => $instead === null ? ScanPage::PENDING : ScanPage::SKIPPED,
+                'error' => $instead === null ? null : "another published entry at this address, {$instead}, was read instead, so this one has no page of its own",
+                'scanned_at' => $instead === null ? null : now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        });
 
         foreach ($rows->chunk(500) as $chunk) {
             ScanPage::insert($chunk->values()->all());
@@ -652,6 +663,49 @@ final class Scans
                 return true;
             })
             ->values();
+    }
+
+    /**
+     * Which entries share an address with another, and which entry each of
+     * them gives way to.
+     *
+     * An issue's fingerprint is the site and path, so two entries at one
+     * address wrote the same fingerprints into one scan. The unique index on
+     * `(scan_id, fingerprint)` refused the second, the job threw, and a scan
+     * run with `--sync` died cancelled, every other page with it. Two
+     * published entries at one path come from a script or import that saved a
+     * slug twice, or a Stache still holding a deleted file. A visitor gets one
+     * page there, so the scan reads one: the entry Statamic serves at that
+     * address, or, when it serves one outside this group (a draft, another
+     * scope), the lowest id, so a rerun picks the same one.
+     *
+     * @param  Collection<int, Entry>  $entries
+     * @return array<string, string> the id of each entry not read, to the id of the one read instead
+     */
+    private function oneEntryPerAddress(Collection $entries): array
+    {
+        $readInstead = [];
+
+        $groups = $entries->groupBy(fn (Entry $entry) => Fingerprint::page((string) $entry->locale(), (string) $entry->url()));
+
+        foreach ($groups as $group) {
+            if ($group->count() < 2) {
+                continue;
+            }
+
+            $ids = $group->map(fn (Entry $entry) => (string) $entry->id())->sort()->values();
+            $first = $group->first();
+            $served = (string) Entries::findByUri((string) $first->uri(), (string) $first->locale())?->id();
+            $kept = $ids->contains($served) ? $served : $ids->first();
+
+            foreach ($ids as $id) {
+                if ($id !== $kept) {
+                    $readInstead[$id] = $kept;
+                }
+            }
+        }
+
+        return $readInstead;
     }
 
     private function scopeOf(Scan $scan): ScanScope

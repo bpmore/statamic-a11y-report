@@ -12,6 +12,57 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-11-02: An address two entries share is read once, as the entry Statamic serves there
+
+Testing 1.2.4 on a scratch site, a script saved a page's slug twice and the
+Stache kept the second file after it was deleted. `a11y:scan --sync` died on
+`UNIQUE constraint failed: a11y_issues.scan_id, a11y_issues.fingerprint`
+and the scan was cancelled. Every published entry gets a row, and an issue's
+fingerprint is its site and path, so two entries at one path wrote the same
+fingerprints into one scan. The unique index refused the second, the job
+threw, and on the sync connection the exception left the command. Queued, by
+the code, the job would be retried and then marked an error, with the address
+read under the other entry; that path was not run.
+
+**What changed.** `start()` groups the listed entries by site and path. Where
+a group has more than one, one is read and every other row is written
+`skipped` before anything is dispatched, with an error naming the entry that
+was read. The one read is the one `Entry::findByUri()` returns, because that
+is the page a visitor gets at the address. When that entry is not in the
+group (a draft, or out of this scan's scope), the lowest id is read, so a
+rerun picks the same one. `skipped` already means "this entry has no page of
+its own", which is true of an entry another entry's page shadows, and the
+document already says how many there were. Issue states only follow
+`scanned` rows, so the skipped row neither opens nor closes anything, and it
+still counts as met, so the address is not called removed.
+
+**Turned down.** Putting the entry id in the fingerprint, which would end the
+collision and break the one thing the fingerprint is for: an issue follows
+an address from scan to scan, and an entry id can change when a page is
+rebuilt under the same URL. Catching the constraint violation and marking the second
+row an error, which keeps a scan alive but calls one page unreadable when it
+was read, and depends on which job got there first. Reading both, under
+different fingerprints, which would report findings from markup no visitor
+is ever served. And refusing to start a scan while two entries share an
+address, which stops a whole site being scanned over one stale file.
+
+**Checked.** A test with two entries at one path sharing a finding, which
+throws the constraint violation on the unfixed code. Statamic serves the
+first saved, which the test gives the higher id, so it tells "the served
+entry" apart from "the lowest id". Mutation-tested: always taking the lowest
+id, skipping the grouping, and naming the wrong entry in the error each fail
+it. The whole suite. And the scratch site again, gate 0.11.0, with a second
+entry saved at `/bad`: the scan completes, the served entry's row has its 4
+issues, the other is `skipped` naming it, and the report says "Pages read 3
+of 4; 1 had no page of their own".
+
+**Not checked.** Multisite, where the path carries the site's prefix and the
+same grouping applies per site; the axe engine; and a queued scan with
+workers, where the duplicate is settled before any job exists and so cannot
+race.
+
+---
+
 ## 2026-09-16: A scan of every site on a one-site install is that site's, and old rows are named where the pages prove it
 
 Statamic's marketplace guidelines ask, under Rule 06, that the release a

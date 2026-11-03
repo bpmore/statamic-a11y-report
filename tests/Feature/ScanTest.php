@@ -10,6 +10,7 @@ use Bpmore\A11yReport\Scan\Scans;
 use Bpmore\A11yReport\Scan\ScanScope;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Statamic\Facades\Collection;
+use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
 
 /**
@@ -142,6 +143,55 @@ it('skips a page that sends visitors elsewhere, and does not count it as an erro
     $account = ScanPage::where('url', 'like', '%account%')->first();
     expect($account->status)->toBe(ScanPage::SKIPPED);
     expect($account->error)->toContain('/login');
+});
+
+it('reads an address two entries share once, and says why the other was not read', function () {
+    // Two published entries at one address: an import or a script that saved
+    // a slug twice, or a Stache still holding a file that was deleted. Both
+    // were listed, both were read, and the second one's issues carried the
+    // first one's fingerprints, because a fingerprint is the address. The
+    // unique index on (scan_id, fingerprint) refused them, the job threw, and
+    // on `--sync` the command died with the scan cancelled: every other page
+    // lost to one clash. Found on a scratch site while testing gate 0.11.
+    page('one', '<p>Fine.</p>');
+
+    $first = Entry::make()->id('twin-b')->collection('pages')->slug('twin')->published(true)
+        ->data(['title' => 'Twin', 'body' => '<img src="/same.jpg">']);
+    $first->saveQuietly();
+    $second = Entry::make()->id('twin-a')->collection('pages')->slug('twin')->published(true)
+        ->data(['title' => 'Twin', 'body' => '<img src="/same.jpg"><img src="/only-second.jpg">']);
+    $second->saveQuietly();
+
+    // Statamic serves the first one saved, which is not the lowest id, so this
+    // tells "the page a visitor gets" apart from the fallback of lowest id.
+    $served = Entry::findByUri('/twin', 'default');
+    expect($served?->id())->toBe('twin-b');
+    $other = $served->id() === $first->id() ? $second : $first;
+
+    $scan = runScan();
+
+    expect($scan->status)->toBe(Scan::COMPLETE);
+    expect($scan->pages_total)->toBe(3);
+    expect($scan->pages_scanned)->toBe(2);
+    expect($scan->pages_errored)->toBe(0);
+    expect($scan->pages_skipped)->toBe(1);
+
+    // The entry a visitor is given at that address is the one read.
+    $read = ScanPage::where('path', '/twin')->where('status', ScanPage::SCANNED)->get();
+    expect($read)->toHaveCount(1);
+    expect($read->first()->entry_id)->toBe((string) $served->id());
+    // Its own findings, not the other entry's: the second carries an image the
+    // first does not.
+    expect(Issue::where('page_id', $read->first()->id)->count())->toBe($served->id() === $first->id() ? 1 : 2);
+
+    // The other is not dropped: it has a row, it is counted as not read, and
+    // the row says which entry the address belongs to.
+    $skipped = ScanPage::where('path', '/twin')->where('status', ScanPage::SKIPPED)->get();
+    expect($skipped)->toHaveCount(1);
+    expect($skipped->first()->entry_id)->toBe((string) $other->id());
+    expect(str_contains((string) $skipped->first()->error, (string) $served->id()))->toBeTrue('the skipped row names the entry that was read');
+    expect($skipped->first()->coverage)->toBeNull();
+    expect(Issue::where('page_id', $skipped->first()->id)->count())->toBe(0);
 });
 
 it('fails the scan rather than completing it when no page at all could be read', function () {

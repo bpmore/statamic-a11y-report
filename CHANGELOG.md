@@ -8,6 +8,16 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.2.4 - 2026-11-02
+
+### Changed
+
+**Works with A11y Gate 0.11.** A11y Report now takes
+`bpmore/statamic-a11y-gate` 0.10 or 0.11. Gate 0.11 lets other addons, such
+as Copydesk, be asked in the same publish. It changes nothing A11y Report
+uses: the renderer, the checker and the settings are the same, and a scan
+records the gate's version as before. Nothing to do on upgrade.
+
 ## 1.2.3 - 2026-10-26
 
 ### Changed

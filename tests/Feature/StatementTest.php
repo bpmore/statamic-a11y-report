@@ -128,6 +128,34 @@ it('always has an enforcement section for EN 301 549, and only a configured one 
     expect($html)->toContain('Section 508');
 });
 
+it('links a contact or enforcement address only when it is a web address', function () {
+    // Both are printed as links on the public site, and the config file is
+    // not covered by the settings screen's rule. A `javascript:` address
+    // would run in the visitor's browser; anything that is not http(s) is
+    // left out, with the rest of the block kept.
+    config()->set('statamic-a11y-report.statement.contact', ['email' => 'us@example.test', 'url' => 'javascript:alert(1)']);
+    config()->set('statamic-a11y-report.statement.enforcement', ['name' => 'The Ombudsman', 'url' => 'JAVASCRIPT:alert(1)']);
+
+    $html = statement();
+
+    expect(str_contains(strtolower($html), 'javascript:'))->toBeFalse('a script address reached the statement');
+    expect($html)->toContain('mailto:us@example.test');
+    expect($html)->toContain('contact The Ombudsman.');
+
+    config()->set('statamic-a11y-report.statement.contact.url', 'https://example.test/feedback?via=statement');
+    config()->set('statamic-a11y-report.statement.enforcement.url', 'http://ombudsman.example.test');
+
+    $html = statement();
+
+    expect($html)->toContain('<a href="https://example.test/feedback?via=statement">');
+    expect($html)->toContain('contact The Ombudsman: <a href="http://ombudsman.example.test">');
+
+    expect(StatementBuilder::isWebAddress('/feedback'))->toBeFalse();
+    expect(StatementBuilder::isWebAddress('ftp://example.test'))->toBeFalse();
+    expect(StatementBuilder::isWebAddress('https://'))->toBeFalse();
+    expect(StatementBuilder::isWebAddress(' https://example.test '))->toBeTrue();
+});
+
 it('is embedded in a page by the tag, one heading level down', function () {
     test()->viewShouldReturnRaw('default', '<html lang="en"><body><h1>{{ title }}</h1>{{ a11y:statement }}</body></html>');
     page('contact', '<p>Reach us.</p>');

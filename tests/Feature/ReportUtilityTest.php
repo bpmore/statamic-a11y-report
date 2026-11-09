@@ -117,6 +117,10 @@ it('has no directive glued to a word in any view', function () {
     assertNoGluedBladeDirectives();
 });
 
+it('computes nothing into a prop Statamic renders with v-html, in any view', function () {
+    assertNoDynamicTextInHtmlProps();
+});
+
 it('starts a scan from the button and records who pressed it', function () {
     app(ReportDatabase::class)->install();
     page('one', '<img src="/a.jpg">');

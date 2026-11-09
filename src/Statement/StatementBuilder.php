@@ -63,12 +63,39 @@ final class StatementBuilder
             'organization' => $text['organization'] ?: $site?->name(),
             'commitment' => $text['commitment'] ?: null,
             'feedback' => $text['feedback'] ?: null,
-            'contact' => array_filter((array) ($text['contact'] ?? []), fn ($v) => is_string($v) && $v !== ''),
+            'contact' => self::withWebAddress(array_filter((array) ($text['contact'] ?? []), fn ($v) => is_string($v) && $v !== '')),
             'escalation' => $text['escalation'] ?: null,
-            'enforcement' => array_filter((array) ($text['enforcement'] ?? []), fn ($v) => is_string($v) && $v !== ''),
+            'enforcement' => self::withWebAddress(array_filter((array) ($text['enforcement'] ?? []), fn ($v) => is_string($v) && $v !== '')),
             'statement_date' => now()->toIso8601String(),
             'report' => $this->report($handle),
         ];
+    }
+
+    /**
+     * A block's `url` only when it is a web address.
+     *
+     * The statement prints it as a link on the public site, and the settings
+     * screen is only one of two places it can be typed: the config file is
+     * the other, and the blueprint's rule does not reach it. A `javascript:`
+     * address there would run in the visitor's browser. Any other scheme is
+     * dropped rather than mended, so the statement says nothing it was not
+     * given.
+     *
+     * @param  array<string, string>  $block
+     * @return array<string, string>
+     */
+    private static function withWebAddress(array $block): array
+    {
+        if (isset($block['url']) && ! self::isWebAddress($block['url'])) {
+            unset($block['url']);
+        }
+
+        return $block;
+    }
+
+    public static function isWebAddress(string $url): bool
+    {
+        return preg_match('~^https?://[^\s/?#]+~i', trim($url)) === 1;
     }
 
     /**

@@ -7,6 +7,13 @@
     components resolve here, and any value that could contain a brace goes
     through `@plain` rather than `{{ }}`. Numbers and dates are safe as they
     are.
+
+    A third: `ui-description`'s `text` prop and `ui-card-panel`'s `heading`
+    and `subheading` are rendered with v-html, and Vue decodes entities in
+    an attribute before that, so neither Blade's escaping nor `@plain` holds
+    there. A value a person typed went through `@plain` into `text="..."`
+    and came out as markup. Dynamic text goes in the component's slot, where
+    `@plain` does what it says; only a literal string goes in those props.
 --}}
 
 <ui-header title="A11y Report" icon="pulse" />
@@ -44,19 +51,25 @@
     @endif
 
     @if ($schedule && ($schedule['last'] === null || $schedule['missed']))
-        <ui-card-panel heading="{{ $schedule['last'] === null ? 'No scan has ever run on schedule' : 'Scheduled scans have stopped' }}">
-            <div class="space-y-2">
-                @if ($schedule['last'] === null)
-                    <p>The config file asks for a <strong>@plain($schedule['label'])</strong> scan, and none has run. A schedule nobody runs looks exactly like one that runs and finds nothing, so this says it out loud rather than letting a report carry a date that quietly stopped moving.</p>
-                @else
-                    <p>The config file asks for a <strong>@plain($schedule['label'])</strong> scan. The last one ran {{ $schedule['last']->created_at->diffForHumans() }} and at least two runs have been missed since.</p>
-                @endif
-                <p>Laravel's scheduler has to be running on the server for any of it to happen. One line in the crontab, which covers every scheduled task the site has and not only this one:</p>
-                <pre class="text-sm">* * * * * cd @plain(base_path()) &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</pre>
-                <p><strong>Check which <code>php</code> that line will find.</strong> Cron runs with almost no environment and does not use your shell's <code>PATH</code>. Run <code>which php</code>: if it answers with anything other than a plain <code>/usr/bin/php</code>, which is the ordinary case with Herd, Valet, Homebrew or a version manager, put that whole path in the line instead, in double quotes if it has a space in it. A crontab line naming a <code>php</code> cron cannot find fails silently for ever, and a schedule that never runs looks exactly like one nobody set up.</p>
-                <p>To check what is registered: <code>php artisan schedule:list</code>. To stop asking for a scheduled scan, set <code>scan.schedule</code> to <code>false</code> in <code>config/statamic-a11y-report.php</code>.</p>
-            </div>
-        </ui-card-panel>
+        {{-- The same structure `ui-card-panel` draws, with the heading in a slot
+             rather than its `heading` prop: that prop is rendered with v-html,
+             so nothing Blade computes may go in it. --}}
+        <ui-panel>
+            <ui-panel-header><ui-heading>{{ $schedule['last'] === null ? 'No scan has ever run on schedule' : 'Scheduled scans have stopped' }}</ui-heading></ui-panel-header>
+            <ui-card>
+                <div class="space-y-2">
+                    @if ($schedule['last'] === null)
+                        <p>The config file asks for a <strong>@plain($schedule['label'])</strong> scan, and none has run. A schedule nobody runs looks exactly like one that runs and finds nothing, so this says it out loud rather than letting a report carry a date that quietly stopped moving.</p>
+                    @else
+                        <p>The config file asks for a <strong>@plain($schedule['label'])</strong> scan. The last one ran {{ $schedule['last']->created_at->diffForHumans() }} and at least two runs have been missed since.</p>
+                    @endif
+                    <p>Laravel's scheduler has to be running on the server for any of it to happen. One line in the crontab, which covers every scheduled task the site has and not only this one:</p>
+                    <pre class="text-sm">* * * * * cd @plain(base_path()) &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</pre>
+                    <p><strong>Check which <code>php</code> that line will find.</strong> Cron runs with almost no environment and does not use your shell's <code>PATH</code>. Run <code>which php</code>: if it answers with anything other than a plain <code>/usr/bin/php</code>, which is the ordinary case with Herd, Valet, Homebrew or a version manager, put that whole path in the line instead, in double quotes if it has a space in it. A crontab line naming a <code>php</code> cron cannot find fails silently for ever, and a schedule that never runs looks exactly like one nobody set up.</p>
+                    <p>To check what is registered: <code>php artisan schedule:list</code>. To stop asking for a scheduled scan, set <code>scan.schedule</code> to <code>false</code> in <code>config/statamic-a11y-report.php</code>.</p>
+                </div>
+            </ui-card>
+        </ui-panel>
     @endif
 
     @if ($stale)
@@ -89,7 +102,7 @@
             <div class="space-y-4">
                 <div>
                     <div class="text-4xl font-semibold">{{ $openTotal }}</div>
-                    <ui-description text="open {{ $openTotal === 1 ? 'issue' : 'issues' }}{{ $oldestOpenDays === null || $openTotal === 0 ? '' : ($oldestOpenDays === 0 ? ', the oldest opened today' : ', the oldest open for '.$oldestOpenDays.' '.($oldestOpenDays === 1 ? 'day' : 'days')) }}" />
+                    <ui-description>open {{ $openTotal === 1 ? 'issue' : 'issues' }}{{ $oldestOpenDays === null || $openTotal === 0 ? '' : ($oldestOpenDays === 0 ? ', the oldest opened today' : ', the oldest open for '.$oldestOpenDays.' '.($oldestOpenDays === 1 ? 'day' : 'days')) }}</ui-description>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     @foreach ($byImpact as $impact => $count)
@@ -182,7 +195,7 @@
                 $chartNote = 'One point per completed scan, at the time it finished'.$span
                     .'. Scans from the last '.$trendDays.' days are shown; every point is in the table below.';
             @endphp
-            <ui-description text="@plain($chartNote)" />
+            <ui-description>@plain($chartNote)</ui-description>
         @endif
     </ui-card-panel>
 
@@ -268,7 +281,7 @@
                             <ui-table-row>
                                 <ui-table-cell>
                                     <span title="{{ $report->generated_at->toDayDateTimeString() }}">{{ $report->generated_at->diffForHumans() }}</span>
-                                    @if ($report->scan)<ui-description text="from the scan of {{ ($report->scan->finished_at ?? $report->scan->created_at)->diffForHumans() }}, {{ $report->scan->issues_total }} issues" />@endif
+                                    @if ($report->scan)<ui-description>from the scan of {{ ($report->scan->finished_at ?? $report->scan->created_at)->diffForHumans() }}, {{ $report->scan->issues_total }} issues</ui-description>@endif
                                 </ui-table-cell>
                                 <ui-table-cell>@plain($report->generated_by)</ui-table-cell>
                                 <ui-table-cell>@plain(\Bpmore\A11yReport\Document\Wcag::label($report->standard))</ui-table-cell>

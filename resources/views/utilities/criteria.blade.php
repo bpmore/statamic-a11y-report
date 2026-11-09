@@ -65,7 +65,7 @@
                             <ui-table-row>
                                 <ui-table-cell>
                                     <div class="font-medium"><a href="@plain($row['url'])" target="_blank" rel="noopener" class="{{ $link }}">{{ $n }} @plain($row['name'])<span class="sr-only"> (the W3C's explanation, opens in a new tab)</span></a></div>
-                                    <ui-description text="Level {{ $row['level'] }}" />
+                                    <ui-description>Level {{ $row['level'] }}</ui-description>
                                 </ui-table-cell>
                                 <ui-table-cell>
                                     <div class="text-sm">@plain($row['evidence'])</div>
@@ -78,8 +78,8 @@
                                     @if (! empty($row['contradicted']))
                                         <ui-description text="Your assessment is kept over the automated result. The checks found failures under this criterion." />
                                     @endif
-                                    @if ($inh)<ui-description text="@plain('Inherited from the global default'.($inh->assessed_by ? ', assessed by '.$inh->assessed_by : ''))" />@endif
-                                    @if ($own && $own->assessed_by)<ui-description text="@plain('Assessed by '.$own->assessed_by.($own->assessed_at ? ' on '.$own->assessed_at->format('j M Y') : ''))" />@endif
+                                    @if ($inh)<ui-description>@plain('Inherited from the global default'.($inh->assessed_by ? ', assessed by '.$inh->assessed_by : ''))</ui-description>@endif
+                                    @if ($own && $own->assessed_by)<ui-description>@plain('Assessed by '.$own->assessed_by.($own->assessed_at ? ' on '.$own->assessed_at->format('j M Y') : ''))</ui-description>@endif
                                 </ui-table-cell>
                                 <ui-table-cell>
                                     @if ($canAssess)
@@ -112,7 +112,7 @@
                                     @else
                                         @if ($own)
                                             <div class="text-sm">@plain($label($own->status).', '.$own->method.($own->locked ? ', locked' : ''))</div>
-                                            @if ($own->remarks)<ui-description text="@plain($own->remarks)" />@endif
+                                            @if ($own->remarks)<ui-description>@plain($own->remarks)</ui-description>@endif
                                         @else
                                             <ui-description text="None" />
                                         @endif
@@ -148,7 +148,7 @@
                                 <ui-table-row>
                                     <ui-table-cell>
                                         <div class="font-medium"><a href="@plain($row['url'])" target="_blank" rel="noopener" class="{{ $link }}">{{ $n }} @plain($row['name'])<span class="sr-only"> (the W3C's explanation, opens in a new tab)</span></a></div>
-                                        <ui-description text="Level {{ $row['level'] }}, outside the claim" />
+                                        <ui-description>Level {{ $row['level'] }}, outside the claim</ui-description>
                                     </ui-table-cell>
                                     <ui-table-cell>
                                         <div class="text-sm">@plain($row['evidence'])</div>
@@ -159,14 +159,14 @@
                                                 @endforeach
                                             </ul>
                                             @if (count($reading['pages_above']) < $reading['above'])
-                                                <ui-description text="The first {{ count($reading['pages_above']) }} of {{ $reading['above'] }}, by path." />
+                                                <ui-description>The first {{ count($reading['pages_above']) }} of {{ $reading['above'] }}, by path.</ui-description>
                                             @endif
                                         @endif
                                     </ui-table-cell>
                                     <ui-table-cell>
                                         <ui-badge text="@plain($label($row['effective_status']))" @if ($row['effective_status'] === 'does_not_support') color="red" @elseif ($row['effective_status'] === 'supports') color="emerald" @elseif ($row['effective_status'] === 'partially_supports') color="amber" @endif />
-                                        @if ($inh)<ui-description text="@plain('Inherited from the global default'.($inh->assessed_by ? ', assessed by '.$inh->assessed_by : ''))" />@endif
-                                        @if ($own && $own->assessed_by)<ui-description text="@plain('Assessed by '.$own->assessed_by.($own->assessed_at ? ' on '.$own->assessed_at->format('j M Y') : ''))" />@endif
+                                        @if ($inh)<ui-description>@plain('Inherited from the global default'.($inh->assessed_by ? ', assessed by '.$inh->assessed_by : ''))</ui-description>@endif
+                                        @if ($own && $own->assessed_by)<ui-description>@plain('Assessed by '.$own->assessed_by.($own->assessed_at ? ' on '.$own->assessed_at->format('j M Y') : ''))</ui-description>@endif
                                     </ui-table-cell>
                                     <ui-table-cell>
                                         @if ($canAssess)
@@ -199,7 +199,7 @@
                                         @else
                                             @if ($own)
                                                 <div class="text-sm">@plain($label($own->status).', '.$own->method.($own->locked ? ', locked' : ''))</div>
-                                                @if ($own->remarks)<ui-description text="@plain($own->remarks)" />@endif
+                                                @if ($own->remarks)<ui-description>@plain($own->remarks)</ui-description>@endif
                                             @else
                                                 <ui-description text="None" />
                                             @endif

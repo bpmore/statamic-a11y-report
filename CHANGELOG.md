@@ -8,6 +8,32 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## Unreleased
+
+### Fixed
+
+**Text typed into the worksheet or the queue is shown as text in the control
+panel, never as markup.** A remark or assessor name on the criteria
+worksheet, and a note, a reason or a name on the issue queue, were escaped
+and then handed to `ui-description` through its `text` prop. Statamic
+renders that prop as HTML after Vue has decoded the attribute, which undid
+the escaping: anybody who could save a remark could put an element, and
+with it a script, on the screen of everybody who opened the page. The same
+held for the scan status on the dashboard widget. Every value this addon
+computes now goes in the component's slot, where escaping holds, and a test
+over every view refuses a computed value in any prop Statamic renders that
+way. Nothing to do on upgrade. The settings screen and the config file are
+not affected: nothing typed there reached one of those props.
+
+**A feedback or enforcement address that is not a web address is not
+linked.** The statement printed both as links as typed, so a `javascript:`
+address in the settings or the config file would have run in a visitor's
+browser. The settings screen now refuses anything that is not `http://` or
+`https://`, and the statement leaves out one that arrives by the config
+file. A relative path such as `/feedback` is left out too: give the full
+address. Nothing to do on upgrade unless you had one of those, in which case
+the link is gone from the statement until it is a full address.
+
 ## 1.2.5 - 2026-11-02
 
 ### Fixed

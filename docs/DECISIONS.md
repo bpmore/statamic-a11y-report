@@ -12,6 +12,52 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-11-09: Text goes in a component's slot, never in a prop it renders with v-html
+
+`@plain` was the rule for every value that reaches a Vue-compiled view, and
+it was applied everywhere, including inside `<ui-description text="...">`.
+That component renders `text` with v-html (Description.vue, checked at
+v6.27.0 and v6.32.0, and `ui-card-panel` does the same with `heading` and
+`subheading`). Vue's template compiler decodes the entities in an attribute
+value before the component sees it, so `&lt;img&gt;` arrived as `<img>` and
+was written into the page as an element. Blade's escaping and the brace
+entities were both undone in the one place they could do harm: a remark on
+the criteria worksheet, an assessor's name, a note, a reason or a name on
+the issue queue, and the scan status on every dashboard. Whoever could save
+one of those could run script in the session of whoever opened the page.
+
+**What changed.** Every `ui-description` whose text has anything computed in
+it now carries that text in its default slot, where the component renders a
+slot and never touches `text`. Blade's escaping and `@plain` hold in a slot,
+because it is template text, not an attribute Vue decodes. The one
+`ui-card-panel` heading that Blade chose between two literals is drawn as
+`ui-panel` > `ui-panel-header` > `ui-heading` > `ui-card`, which is the
+structure `ui-card-panel` itself draws, with the heading in the slot. A
+literal string may stay in a prop. A test reads every view and refuses a
+Blade echo, a directive or PHP inside `text=`, `heading=` or `subheading=`
+on those components; it was mutation-tested by putting one sink back, and
+its first version missed it, because the open-tag pattern stopped at the
+`>` in `$i->note`.
+
+**Turned down.** *Encoding twice*, so the entity survives Vue's decode: it
+would depend on the component going on decoding exactly once, and would
+show `&lt;` as text the day it stopped. *Stripping markup on save*: the
+data would be changed, the config file path would not be covered, and a
+remark is allowed to mention a tag. *A plain `<div>` in place of the
+component*: the house rule is Statamic's components, and the slot is the
+component's own way of taking text. *`v-pre`*: it stops Vue compiling a
+subtree, and a component inside that subtree would not render.
+
+**And the statement's two addresses.** The feedback page and the
+enforcement body's address were printed as `href` as typed, so a
+`javascript:` address would run in a visitor's browser. The settings screen
+now validates both as `http` or `https` URLs, and `StatementBuilder` drops
+any `url` that is not one, because the config file is the second way in and
+no blueprint rule reaches it. Dropped rather than mended (no `https://`
+prefixed to a bare host): the statement says nothing it was not given.
+
+---
+
 ## 2026-11-02: An address two entries share is read once, as the entry Statamic serves there
 
 Testing 1.2.4 on a scratch site, a script saved a page's slug twice and the

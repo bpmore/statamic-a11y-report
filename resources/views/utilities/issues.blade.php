@@ -213,7 +213,7 @@
                                         @else
                                             <span>@plain($i->path)</span>
                                         @endif
-                                        <ui-description text="@plain($i->collection . (count($options['sites']) > 1 ? ', '.$i->site : ''))" />
+                                        <ui-description>@plain($i->collection . (count($options['sites']) > 1 ? ', '.$i->site : ''))</ui-description>
                                         {{-- And the page itself, said out loud rather than left as the
                                              path's own behaviour. For a contrast failure the rendered
                                              page is the only place the problem can be seen at all. --}}
@@ -226,7 +226,7 @@
                                         <div class="text-xs text-gray-600 dark:text-gray-400">
                                             @if (($c = $criterion($i)) !== null)<a href="@plain($c->understandingUrl($version))" target="_blank" rel="noopener" class="{{ $link }}">@plain($i->label) @plain($c->name)<span class="sr-only"> (the W3C's explanation, opens in a new tab)</span></a>@else @plain($i->label) @endif @plain((($where = $i->pointer ?: $i->selector) ? ': '.$where : '') . ($i->occurrences > 1 ? ', '.$i->occurrences.' times' : ''))
                                         </div>
-                                        @if ($i->note)<ui-description text="Note: @plain($i->note)" />@endif
+                                        @if ($i->note)<ui-description>Note: @plain($i->note)</ui-description>@endif
                                     </ui-table-cell>
                                     <ui-table-cell><ui-badge color="{{ $colour[$i->impact] ?? 'default' }}" text="@plain($i->impact)" pill /></ui-table-cell>
                                     <ui-table-cell>
@@ -234,25 +234,25 @@
                                         @php($over = $policy->overdueDays((string) $i->impact, $i->first_seen_at))
                                         @php($due = $policy->dueAt((string) $i->impact, $i->first_seen_at))
                                         @if ($over !== null)
-                                            <ui-description text="Past target by {{ $over }} {{ $over === 1 ? 'day' : 'days' }}" />
+                                            <ui-description>Past target by {{ $over }} {{ $over === 1 ? 'day' : 'days' }}</ui-description>
                                         @elseif ($due !== null)
-                                            <ui-description text="Due {{ $due->format('j M Y') }}" />
+                                            <ui-description>Due {{ $due->format('j M Y') }}</ui-description>
                                         @else
-                                            <ui-description text="No target for {{ $i->impact }}" />
+                                            <ui-description>No target for @plain($i->impact)</ui-description>
                                         @endif
                                     </ui-table-cell>
                                     <ui-table-cell>
                                         @plain($label($i->status))
-                                        @if ($i->updated_by)<ui-description text="by @plain($i->updated_by)" />@endif
+                                        @if ($i->updated_by)<ui-description>by @plain($i->updated_by)</ui-description>@endif
                                         @if ($i->status === \Bpmore\A11yReport\Models\IssueState::WONT_FIX)
                                             @if ($i->exception_expires_at === null)
                                                 <ui-description text="No review date recorded" />
                                             @elseif ($i->acceptanceHasExpired())
-                                                <ui-description text="Accepted until {{ $i->exception_expires_at->format('j M Y') }}, which has gone: open again until somebody looks" />
+                                                <ui-description>Accepted until {{ $i->exception_expires_at->format('j M Y') }}, which has gone: open again until somebody looks</ui-description>
                                             @else
-                                                <ui-description text="Accepted until {{ $i->exception_expires_at->format('j M Y') }}" />
+                                                <ui-description>Accepted until {{ $i->exception_expires_at->format('j M Y') }}</ui-description>
                                             @endif
-                                            @if ($i->exception_reason)<ui-description text="Because: @plain($i->exception_reason)" />@endif
+                                            @if ($i->exception_reason)<ui-description>Because: @plain($i->exception_reason)</ui-description>@endif
                                         @endif
                                     </ui-table-cell>
                                     <ui-table-cell>@plain($i->assigned_to ?: 'nobody')</ui-table-cell>

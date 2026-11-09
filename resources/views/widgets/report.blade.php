@@ -21,7 +21,7 @@
                 <ui-description text="No completed scan in the last 30 days." />
             @endif
             @if ($latest)
-                <ui-description text="Last scan {{ ($latest->finished_at ?? $latest->created_at)->diffForHumans() }}: @plain($latest->status), {{ $latest->pages_scanned }} pages read, {{ $latest->pages_errored }} not read." />
+                <ui-description>Last scan {{ ($latest->finished_at ?? $latest->created_at)->diffForHumans() }}: @plain($latest->status), {{ $latest->pages_scanned }} pages read, {{ $latest->pages_errored }} not read.</ui-description>
             @endif
             @if ($url)<ui-button size="sm" href="@plain($url)" text="Open the report" />@endif
         </div>

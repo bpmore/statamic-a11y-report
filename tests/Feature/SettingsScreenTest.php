@@ -36,6 +36,24 @@ it('offers a settings screen at all, and links to it from the utility', function
     expect($text)->toContain('text="Settings"');
 });
 
+it('refuses a feedback or enforcement address that is not a web address', function () {
+    // The statement prints both as links on the public site. The screen is
+    // where a non-developer types them, so the screen is where a
+    // `javascript:` address is refused, with the builder dropping one that
+    // arrives by the config file.
+    $user = User::make()->email('super@example.test')->makeSuper();
+    $user->save();
+    $route = cp_route('addons.settings.update', Addon::get(Settings::PACKAGE)->slug());
+
+    $this->actingAs($user)->patchJson($route, ['statement_url' => 'javascript:alert(1)'])
+        ->assertStatus(422)->assertJsonValidationErrors(['statement_url']);
+    $this->actingAs($user)->patchJson($route, ['enforcement_url' => 'ftp://example.test'])
+        ->assertStatus(422)->assertJsonValidationErrors(['enforcement_url']);
+
+    $this->actingAs($user)->patchJson($route, ['statement_url' => 'https://example.test/feedback', 'enforcement_url' => ''])->assertOk();
+    expect(effective()['statement']['contact']['url'])->toBe('https://example.test/feedback');
+});
+
 it('asks in plain words, with no handles or file paths', function () {
     $blueprint = Addon::get(Settings::PACKAGE)->settingsBlueprint();
 

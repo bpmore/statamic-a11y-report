@@ -185,6 +185,37 @@ it('paginates, keeping the filter in the links', function () {
     expect(queuePage(['impact' => 'serious', 'page' => 2]))->toContain('page 2 of 2');
 });
 
+it('shows a note, a reason and a name as the text that was typed, never as markup or an expression', function () {
+    // These went through `@plain` into `ui-description`'s `text` prop, which
+    // the component renders with v-html after Vue has decoded the
+    // attribute's entities. See the worksheet test of the same name for the
+    // rest; this is the queue's three sinks, on one accepted issue.
+    seedQueue();
+    $typed = '<img src=x onerror=1>{{ 1+1 }}';
+    IssueState::where('rule_id', 'image-missing-alt')->update([
+        'status' => IssueState::WONT_FIX,
+        'note' => 'note '.$typed,
+        'updated_by' => 'name '.$typed,
+        'exception_reason' => 'reason '.$typed,
+        'exception_expires_at' => now()->addDays(30),
+    ]);
+
+    $response = $this->actingAs($this->user)->get(cp_route('utilities.a11y-report.issues', ['status' => 'wont_fix']))->getContent();
+    preg_match('/data-page="([^"]+)"/', $response, $m);
+    $html = (string) json_decode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'), true)['props']['html'];
+
+    // Not the well-formedness check: it decodes entities before parsing, so
+    // the escaped element reads as an element to it. The glob test covers
+    // this view's shape; what matters here is what the entities stay as.
+    $safe = '&lt;img src=x onerror=1&gt;&#123;&#123; 1+1 &#125;&#125;';
+    expect($html)->toContain('<ui-description>Note: note '.$safe.'</ui-description>');
+    expect($html)->toContain('<ui-description>by name '.$safe.'</ui-description>');
+    expect($html)->toContain('<ui-description>Because: reason '.$safe.'</ui-description>');
+    expect(str_contains($html, '<img'))->toBeFalse('typed text reached Vue as an element');
+    expect(str_contains($html, '{{ 1+1'))->toBeFalse('typed text reached Vue as an expression');
+    expect(preg_match('/(?:text|heading|subheading)="[^"]*(?:img|1\+1)/', $html))->toBe(0, 'typed text is in a prop Vue renders with v-html');
+});
+
 it('renders markup Vue can compile, with a label on every control, and says so before any scan', function () {
     expect(queuePage())->toContain('Nothing matches');
 

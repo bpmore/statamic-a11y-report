@@ -165,6 +165,40 @@ it('shows the sheet but no controls to somebody who may not assess, and refuses 
     expect(CriterionAssessment::first()->status)->toBe('supports');
 });
 
+it('shows a remark as the text that was typed, never as markup or an expression', function () {
+    // The remark used to go through `@plain` into `ui-description`'s `text`
+    // prop. Vue decodes an attribute's entities before the component writes
+    // the prop with v-html, so the escaping was undone and a remark could
+    // put a live element on the screen of everybody who opened the
+    // worksheet. In the slot, the entity stays an entity.
+    page('one', '<p>Fine.</p>');
+    runScan();
+    $typed = '<img src=x onerror=1>{{ 1+1 }}';
+    saveWorksheet(['1.1.1' => ['status' => 'supports', 'method' => 'manual', 'remarks' => 'remark '.$typed]]);
+    // The name is a column too, and it is shown to everybody.
+    CriterionAssessment::where('criterion', '1.1.1')->update(['assessed_by' => 'name '.$typed]);
+
+    // A reader, because an assessor sees the remark in a textarea and a
+    // reader sees it as a description, which is the sink.
+    Role::make('reader')->permissions(['access cp', 'access a11y-report utility'])->save();
+    $reader = User::make()->email('reader@example.test')->assignRole('reader');
+    $reader->save();
+
+    $response = test()->actingAs($reader)->get(cp_route('utilities.a11y-report.criteria'))->getContent();
+    preg_match('/data-page="([^"]+)"/', $response, $m);
+    $html = (string) json_decode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'), true)['props']['html'];
+
+    // Not the well-formedness check: it decodes entities before parsing, so
+    // the escaped element reads as an element to it. The glob test covers
+    // this view's shape; what matters here is what the entities stay as.
+    $safe = '&lt;img src=x onerror=1&gt;&#123;&#123; 1+1 &#125;&#125;';
+    expect($html)->toContain('<ui-description>remark '.$safe.'</ui-description>');
+    expect($html)->toContain('<ui-description>Assessed by name '.$safe.' on ');
+    expect(str_contains($html, '<img'))->toBeFalse('typed text reached Vue as an element');
+    expect(str_contains($html, '{{ 1+1'))->toBeFalse('typed text reached Vue as an expression');
+    expect(preg_match('/(?:text|heading|subheading)="[^"]*(?:img|1\+1)/', $html))->toBe(0, 'typed text is in a prop Vue renders with v-html');
+});
+
 it('renders markup Vue can compile with a label on every control, before and after a scan', function () {
     $fetch = function () {
         $response = test()->actingAs(test()->user)->get(cp_route('utilities.a11y-report.criteria'))->getContent();

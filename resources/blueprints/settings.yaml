@@ -161,6 +161,10 @@ tabs:
             field:
               type: text
               display: 'Feedback form or page'
+              instructions: 'A full web address, starting with https://.'
+              validate:
+                - nullable
+                - 'url:http,https'
               width: 50
           -
             handle: statement_address
@@ -189,6 +193,10 @@ tabs:
             field:
               type: text
               display: 'Web address'
+              instructions: 'A full web address, starting with https://.'
+              validate:
+                - nullable
+                - 'url:http,https'
               width: 50
   scanning:
     display: Scanning

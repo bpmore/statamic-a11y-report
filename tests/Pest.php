@@ -115,6 +115,40 @@ function assertNoGluedBladeDirectives(): void
 }
 
 /**
+ * No Blade output in a prop Statamic renders with v-html. `ui-description`'s
+ * `text` and `ui-card-panel`'s `heading` and `subheading` are written into
+ * the page as markup after Vue has decoded the attribute's entities, so
+ * neither Blade's escaping nor `@plain` survives there: a remark somebody
+ * typed came out as a live element. Text with anything computed in it goes
+ * in the slot. A literal string is fine, and only a literal.
+ */
+function assertNoDynamicTextInHtmlProps(): void
+{
+    $props = ['ui-description' => ['text'], 'ui-card-panel' => ['heading', 'subheading'], 'ui-panel' => ['heading', 'subheading']];
+
+    foreach (glob(__DIR__.'/../resources/views/**/*.blade.php') ?: [] as $file) {
+        $source = (string) file_get_contents($file);
+
+        foreach ($props as $tag => $names) {
+            // A quoted value may hold a `>` (`$i->note`), so the tag ends at
+            // the first `>` outside quotes, not the first `>`. The first
+            // version of this stopped inside the expression and found nothing.
+            preg_match_all('/<'.preg_quote($tag, '/').'\b(?:"[^"]*"|[^>"])*>/', $source, $tags);
+
+            foreach ($tags[0] as $open) {
+                foreach ($names as $name) {
+                    if (preg_match('/\s'.$name.'="([^"]*)"/', $open, $m) && preg_match('/\{\{|\{!!|@[a-z]|<\?/', $m[1])) {
+                        expect(false)->toBeTrue(basename($file).' computes a v-html prop: '.$open);
+                    }
+                }
+            }
+        }
+    }
+
+    expect(true)->toBeTrue();
+}
+
+/**
  * A temporary storage path for reports, with the folders Laravel itself
  * needs there, so nothing lands in the harness's own storage directory.
  */

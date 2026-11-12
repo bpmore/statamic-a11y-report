@@ -187,9 +187,9 @@ it('says out loud which settings the screen cannot reach', function () {
     $unreachable = array_values(array_diff($flatten((array) config('statamic-a11y-report')), $reachable));
 
     expect($unreachable)->toBe([
-        'connection', 'engine', 'chrome.binary', 'chrome.timeout',
+        'connection', 'files.disk', 'engine', 'chrome.binary', 'chrome.driver', 'chrome.account_id', 'chrome.api_token', 'chrome.timeout',
         'axe.settle_ms',
-        'scan.concurrency', 'scan.schedule', 'scan.schedule_at', 'scan.stale_after_minutes',
+        'scan.cloud_durable_work', 'scan.concurrency', 'scan.schedule', 'scan.schedule_at', 'scan.stale_after_minutes',
         // Whether the dimension runs, and on which languages, are the
         // developer's: the wrong locale list grades nothing. The target it
         // measures against is on the screen, because it changes a sentence.

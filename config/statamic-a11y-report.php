@@ -20,6 +20,10 @@ return [
 
     'connection' => env('A11Y_DB_CONNECTION', 'a11y_sqlite'),
 
+    // Attach a private disk on hosts whose local files disappear on deploy.
+    // Null preserves the original local-only file storage.
+    'files' => ['disk' => env('A11Y_REPORT_DISK')],
+
     /*
     |---------------------------------------------------------------------------
     | Engine
@@ -45,6 +49,9 @@ return [
 
     'chrome' => [
         'binary' => env('A11Y_CHROME_PATH'),
+        'driver' => env('A11Y_BROWSER_DRIVER', 'local'),
+        'account_id' => env('SCAN_CLOUDFLARE_ACCOUNT_ID'),
+        'api_token' => env('SCAN_CLOUDFLARE_API_TOKEN'),
         'timeout' => 30,
     ],
 
@@ -106,6 +113,7 @@ return [
     */
 
     'scan' => [
+        'cloud_durable_work' => env('A11Y_REPORT_CLOUD_DURABLE_WORK', false),
         'concurrency' => 3,
         'schedule' => 'weekly',
         'schedule_at' => '02:00',

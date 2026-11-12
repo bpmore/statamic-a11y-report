@@ -146,3 +146,25 @@ it('tells a quiet socket apart from a closed one', function () {
         wsStop($process);
     }
 });
+
+it('bounds writes to a peer that stops reading and still closes its full socket', function () {
+    $pair = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, 0);
+    expect($pair)->toBeArray()->toHaveCount(2);
+    $socket = (new ReflectionClass(WebSocket::class))->newInstanceWithoutConstructor();
+    (new ReflectionProperty(WebSocket::class, 'socket'))->setValue($socket, $pair[0]);
+    $started = microtime(true);
+    try {
+        expect(fn () => $socket->send(str_repeat('x', 4 * 1024 * 1024), microtime(true) + 0.1))
+            ->toThrow(ChromeTimedOut::class, 'deadline');
+        expect(microtime(true) - $started < 1.5)->toBeTrue('Sending must include blocked writes in its deadline.');
+        $closing = microtime(true);
+        $socket->close();
+        expect(microtime(true) - $closing < 0.5)->toBeTrue('Close cannot wait forever on the same full socket.');
+        expect(is_resource($pair[0]))->toBeFalse();
+    } finally {
+        if (is_resource($pair[0])) {
+            fclose($pair[0]);
+        }
+        fclose($pair[1]);
+    }
+});

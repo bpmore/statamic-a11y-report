@@ -26,7 +26,15 @@ final class StartScan implements ShouldQueue
 
     public int $tries = 1;
 
-    public function __construct(public readonly int $scanId) {}
+    public ?int $timeout = null;
+
+    public function __construct(public readonly int $scanId)
+    {
+        if (config('statamic-a11y-report.scan.cloud_durable_work', false)) {
+            $this->tries = 3;
+            $this->timeout = 180;
+        }
+    }
 
     public function handle(Scans $scans): void
     {

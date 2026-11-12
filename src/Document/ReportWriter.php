@@ -8,7 +8,9 @@ use Bpmore\A11yReport\Models\Report;
 use Bpmore\A11yReport\Models\Scan;
 use Bpmore\A11yReport\Pdf\ChromePrinter;
 use Bpmore\A11yReport\Pdf\PdfMetadata;
+use Bpmore\A11yReport\Storage\ReportFiles;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\View;
 
 /**
@@ -63,7 +65,7 @@ final class ReportWriter
             // the template that breaks a rule turns that test red before it
             // ships a file that declares what it no longer has.
             PdfMetadata::stamp($pdf, self::pdfTitle($data), $data['lang'], $data['generator'], declarePdfUa: true, linkDescriptions: Wcag::linkDescriptions($data['standard']));
-            $paths['pdf_path'] = 'a11y-report/reports/'.$data['uuid'].'.pdf';
+            $paths['pdf_path'] = $this->store($data['uuid'].'.pdf', (string) file_get_contents($pdf));
         }
 
         if (in_array('json', $formats, true)) {
@@ -106,27 +108,18 @@ final class ReportWriter
      */
     public static function pdfTitle(array $data): string
     {
-        return $data['title'].': '.$data['subject']['name'].', '.\Illuminate\Support\Carbon::parse($data['generated_at'])->format('j F Y');
+        return $data['title'].': '.$data['subject']['name'].', '.Carbon::parse($data['generated_at'])->format('j F Y');
     }
 
     /** Where a report's file is on disk, from the relative path the row keeps. */
     public function absolutePath(?string $relative): ?string
     {
-        return $relative === null ? null : $this->app->storagePath($relative);
+        return (new ReportFiles($this->app))->absolutePath($relative);
     }
 
     private function store(string $filename, string $contents): string
     {
-        $relative = 'a11y-report/reports/'.$filename;
-        $absolute = $this->app->storagePath($relative);
-
-        if (! is_dir(dirname($absolute))) {
-            mkdir(dirname($absolute), 0755, true);
-        }
-
-        file_put_contents($absolute, $contents);
-
-        return $relative;
+        return (new ReportFiles($this->app))->put('a11y-report/reports/'.$filename, $contents);
     }
 
     /**

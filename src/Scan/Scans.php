@@ -21,6 +21,7 @@ use Bpmore\A11yReport\Readability\PageReading;
 use Bpmore\A11yReport\Readability\Readability;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Illuminate\Bus\Batch;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -89,6 +90,54 @@ final class Scans
      */
     public function start(Scan $scan, bool $sync = false): Scan
     {
+        if (! $this->durableWork()) {
+            return $this->startWork($scan, $sync);
+        }
+        $this->assertAtomicQueue($sync);
+
+        $result = DB::connection(ReportDatabase::connectionName())->transaction(function () use ($scan, $sync): Scan {
+            $this->lockSite($scan->site);
+            $current = Scan::lockForUpdate()->findOrFail($scan->id);
+            if ($current->status === Scan::COMPLETE || $current->batch_id !== null) {
+                return $current;
+            }
+            if ($current->started_at !== null || ScanPage::where('scan_id', $current->id)->exists()) {
+                return $this->dispatchPending($current, $sync);
+            }
+
+            return $this->startWork($current, $sync);
+        });
+
+        return $sync ? $this->runPendingSynchronously($result) : $result;
+    }
+
+    private function durableWork(): bool
+    {
+        return (bool) config('statamic-a11y-report.scan.cloud_durable_work', false);
+    }
+
+    private function assertAtomicQueue(bool $sync): void
+    {
+        if ($sync) {
+            if (DB::connection(ReportDatabase::connectionName())->transactionLevel() !== 0) {
+                throw new \RuntimeException('Durable synchronous reports must run outside an enclosing transaction.');
+            }
+
+            return;
+        }
+        $queue = (string) config('queue.default');
+        $driver = config('queue.connections.'.$queue.'.driver');
+        $connection = config('queue.connections.'.$queue.'.connection') ?: config('database.default');
+        if (! in_array($driver, ['database', 'cloud-database'], true)
+            || $connection !== ReportDatabase::connectionName()
+            || config('queue.batching.database') !== $connection
+            || (bool) config('queue.connections.'.$queue.'.after_commit', false)) {
+            throw new \RuntimeException('Durable report work needs one database connection for reports, queue jobs and batches, with after_commit disabled.');
+        }
+    }
+
+    private function startWork(Scan $scan, bool $sync = false): Scan
+    {
         $scope = $this->scopeOf($scan);
 
         $scan->update(['status' => Scan::RUNNING, 'started_at' => now()]);
@@ -132,6 +181,23 @@ final class Scans
      */
     public function resume(Scan $scan, bool $sync = false): Scan
     {
+        if (! $this->durableWork()) {
+            return $this->resumeWork($scan, $sync);
+        }
+        $this->assertAtomicQueue($sync);
+
+        $result = DB::connection(ReportDatabase::connectionName())->transaction(function () use ($scan, $sync): Scan {
+            $this->lockSite($scan->site);
+            $current = Scan::lockForUpdate()->findOrFail($scan->id);
+
+            return $this->resumeWork($current, $sync);
+        });
+
+        return $sync ? $this->runPendingSynchronously($result) : $result;
+    }
+
+    private function resumeWork(Scan $scan, bool $sync = false): Scan
+    {
         // A scan with no pages of its own was never listed, so there is
         // nothing to pick up: start it instead.
         //
@@ -148,7 +214,7 @@ final class Scans
         // listed, found nothing, and finished. It is never resumed, because
         // it is already complete.
         if (ScanPage::where('scan_id', $scan->id)->doesntExist()) {
-            return $this->start($scan, $sync);
+            return $this->durableWork() ? $this->startWork($scan, $sync) : $this->start($scan, $sync);
         }
 
         if ($scan->status === Scan::CANCELLED || $scan->status === Scan::QUEUED) {
@@ -158,8 +224,28 @@ final class Scans
         return $this->dispatchPending($scan, $sync);
     }
 
+    private function lockSite(?string $site): void
+    {
+        Scan::where('site', $site)->orderBy('id')->lockForUpdate()->get(['id']);
+    }
+
+    private function runPendingSynchronously(Scan $scan): Scan
+    {
+        foreach (ScanPage::where('scan_id', $scan->id)->where('status', ScanPage::PENDING)->orderBy('id')->pluck('id') as $pageId) {
+            $this->scanPage($scan->id, $pageId);
+        }
+        $this->finalize($scan->id);
+
+        return $scan->refresh();
+    }
+
     private function dispatchPending(Scan $scan, bool $sync): Scan
     {
+        // Commit enumeration before synchronous page turns. A sync queue batch
+        // otherwise wraps every page in its own outer batch transaction.
+        if ($sync && $this->durableWork()) {
+            return $scan->refresh();
+        }
         $pending = ScanPage::where('scan_id', $scan->id)->where('status', ScanPage::PENDING)->pluck('id');
 
         if ($pending->isEmpty()) {
@@ -209,6 +295,28 @@ final class Scans
      * alone.
      */
     public function scanPage(int $scanId, int $pageId): void
+    {
+        if (! $this->durableWork()) {
+            $this->scanPageWork($scanId, $pageId);
+
+            return;
+        }
+        // Browser reads are repeatable. Hold the page's write boundary for the
+        // bounded turn so a killed process rolls back everything and a second
+        // worker must re-read the committed status before calling the browser.
+        DB::connection(ReportDatabase::connectionName())->transaction(function () use ($scanId, $pageId): void {
+            $scan = Scan::lockForUpdate()->find($scanId);
+            if (! $scan || $scan->isFinished()) {
+                return;
+            }
+            $page = ScanPage::whereKey($pageId)->where('scan_id', $scanId)->lockForUpdate()->first();
+            if ($page?->status === ScanPage::PENDING) {
+                $this->scanPageWork($scanId, $pageId);
+            }
+        });
+    }
+
+    private function scanPageWork(int $scanId, int $pageId): void
     {
         $page = ScanPage::with('scan')->whereKey($pageId)->where('scan_id', $scanId)->first();
 
@@ -326,6 +434,22 @@ final class Scans
      */
     public function markPageFailed(int $scanId, int $pageId, ?Throwable $e): void
     {
+        if (! $this->durableWork()) {
+            $this->markPageFailedWork($scanId, $pageId, $e);
+
+            return;
+        }
+        DB::connection(ReportDatabase::connectionName())->transaction(function () use ($scanId, $pageId, $e): void {
+            Scan::whereKey($scanId)->lockForUpdate()->first();
+            ScanPage::whereKey($pageId)->where('scan_id', $scanId)->lockForUpdate()->first();
+            // Re-read after waiting for a live page's result. A stale failure
+            // callback must not replace a committed successful observation.
+            $this->markPageFailedWork($scanId, $pageId, $e);
+        });
+    }
+
+    private function markPageFailedWork(int $scanId, int $pageId, ?Throwable $e): void
+    {
         $page = ScanPage::whereKey($pageId)->where('scan_id', $scanId)->first();
 
         if ($page !== null && $page->status === ScanPage::PENDING) {
@@ -339,6 +463,25 @@ final class Scans
      * longer on a page that was read.
      */
     public function finalize(int $scanId, bool $cancelled = false): void
+    {
+        if (! $this->durableWork()) {
+            $this->finalizeWork($scanId, $cancelled);
+
+            return;
+        }
+        DB::connection(ReportDatabase::connectionName())->transaction(function () use ($scanId, $cancelled): void {
+            $scan = Scan::find($scanId);
+            if (! $scan) {
+                return;
+            }
+            // The retained rows provide a common ordered lock for this site.
+            // An older resumed scan cannot race a newer scan's final rollup.
+            $this->lockSite($scan->site);
+            $this->finalizeWork($scanId, $cancelled);
+        });
+    }
+
+    private function finalizeWork(int $scanId, bool $cancelled = false): void
     {
         $scan = Scan::find($scanId);
 
@@ -377,7 +520,11 @@ final class Scans
 
         if ($status === Scan::COMPLETE) {
             $diff = $this->diffAgainstPrevious($scan);
-            $this->updateIssueStates($scan);
+            $newerComplete = $this->durableWork() && Scan::where('site', $scan->site)
+                ->where('engine', $scan->engine)->where('status', Scan::COMPLETE)->where('id', '>', $scan->id)->exists();
+            if (! $newerComplete) {
+                $this->updateIssueStates($scan);
+            }
         }
 
         $scan->update([
@@ -558,7 +705,7 @@ final class Scans
      * site where the home page moved from /home to / and its footer issue
      * stayed open with nothing that would ever close it.
      */
-    private function closeIssuesOnRemovedPages(Scan $scan, \Illuminate\Support\Carbon $now): void
+    private function closeIssuesOnRemovedPages(Scan $scan, Carbon $now): void
     {
         $scope = $this->scopeOf($scan);
 
@@ -715,7 +862,7 @@ final class Scans
         return new ScanScope(
             sites: (array) ($scope['sites'] ?? []),
             collections: (array) ($scope['collections'] ?? []),
-            since: isset($scope['since']) ? \Illuminate\Support\Carbon::parse($scope['since']) : null,
+            since: isset($scope['since']) ? Carbon::parse($scope['since']) : null,
             excludeUrls: (array) ($scope['exclude_urls'] ?? []),
         );
     }

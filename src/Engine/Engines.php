@@ -7,6 +7,7 @@ namespace Bpmore\A11yReport\Engine;
 use Bpmore\A11yGate\Accessibility\StaticAccessibilityChecker;
 use Bpmore\A11yGate\Gate\GateSettings;
 use Bpmore\A11yReport\Chrome\Browser;
+use Bpmore\A11yReport\Chrome\CloudflareBrowser;
 use Bpmore\A11yReport\Chrome\DevTools;
 use Bpmore\A11yReport\Document\Wcag;
 use Bpmore\A11yReport\Settings;
@@ -79,7 +80,7 @@ final class Engines
     private function settle(string $wanted): string
     {
         if ($wanted === AxeEngine::KEY) {
-            if ($this->browser()->available()) {
+            if ($this->remote() !== null || $this->browser()->available()) {
                 return AxeEngine::KEY;
             }
 
@@ -121,8 +122,9 @@ final class Engines
     private function axe(): AxeEngine
     {
         $browser = $this->browser();
+        $remote = $this->remote();
 
-        if (! $browser->available()) {
+        if ($remote === null && ! $browser->available()) {
             throw new EngineUnavailable('This scan was run with axe, and no Chrome was found here to run it with. Set A11Y_CHROME_PATH to the browser binary on every machine that works the queue.');
         }
 
@@ -134,6 +136,7 @@ final class Engines
                 // Said once a session, from the engine layer, which is
                 // framework-free and has no log of its own to say it in.
                 fn (string $message) => Log::warning('a11y-report: '.$message),
+                $remote,
             ),
             $this->reportStandard(),
             $this->bestPractices(),
@@ -149,6 +152,15 @@ final class Engines
             (string) (Addon::get('bpmore/statamic-a11y-gate')?->version() ?: 'dev'),
             $settings->standard,
             $settings->optedIn,
+        );
+    }
+
+    private function remote(): ?CloudflareBrowser
+    {
+        return CloudflareBrowser::configured(
+            (string) config('statamic-a11y-report.chrome.driver', 'local'),
+            (string) config('statamic-a11y-report.chrome.account_id', ''),
+            (string) config('statamic-a11y-report.chrome.api_token', ''),
         );
     }
 

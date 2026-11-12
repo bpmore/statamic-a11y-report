@@ -8,8 +8,9 @@ namespace Bpmore\A11yReport\Chrome;
  * The smallest WebSocket client that can hold a DevTools conversation.
  *
  * Written rather than pulled in because the whole of what this needs is one
- * opcode in each direction against a socket on 127.0.0.1: no TLS, no
- * extensions, no compression, no subprotocols, and one peer that is Chrome.
+ * opcode in each direction against local Chrome. The optional Cloud transport
+ * permits only Cloudflare's fixed endpoint over verified TLS with header-only
+ * authentication. Neither mode negotiates extensions, compression or subprotocols.
  * A dependency for that is a dependency to keep up to date for the life of a
  * commercial addon.
  *
@@ -51,16 +52,34 @@ final class WebSocket
     /**
      * @throws ChromeProtocolError
      */
-    public static function connect(string $url, float $timeoutSeconds = 10.0): self
+    public static function connect(string $url, float $timeoutSeconds = 10.0, #[\SensitiveParameter] ?string $bearer = null): self
     {
         $parts = parse_url($url);
 
-        if (($parts['scheme'] ?? '') !== 'ws' || ! isset($parts['host'])) {
+        if (! isset($parts['host']) || ! in_array($parts['scheme'] ?? '', ['ws', 'wss'], true)) {
             throw new ChromeProtocolError("[{$url}] is not a WebSocket address this can open.");
         }
 
+        $secure = $parts['scheme'] === 'wss';
+        // Bearer credentials belong only to this fixed service over verified TLS.
+        // No custom host, port, query or redirect may carry the private key.
+        if ($secure) {
+            if ($parts['host'] !== 'api.cloudflare.com' || isset($parts['port']) || isset($parts['user']) || isset($parts['pass'])
+                || isset($parts['query']) || isset($parts['fragment'])
+                || preg_match('#^/client/v4/accounts/[a-f0-9]{32}/browser-run/devtools/browser$#D', $parts['path'] ?? '') !== 1
+                || $bearer === null || strlen($bearer) < 20 || strlen($bearer) > 4096
+                || preg_match('/[^\x21-\x7e]/', $bearer) === 1) {
+                throw new ChromeProtocolError('Cloud browser configuration is invalid.');
+            }
+        } elseif ($bearer !== null) {
+            throw new ChromeProtocolError('Browser credentials require the fixed secure service.');
+        }
         $host = $parts['host'];
-        $port = (int) ($parts['port'] ?? 80);
+        $port = (int) ($parts['port'] ?? ($secure ? 443 : 80));
+        $context = stream_context_create(['ssl' => [
+            'verify_peer' => true, 'verify_peer_name' => true,
+            'allow_self_signed' => false, 'peer_name' => $host, 'SNI_enabled' => true,
+        ]]);
         $path = ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : '');
 
         // Silenced by a handler and not by `@`: a refused connection is an
@@ -71,7 +90,8 @@ final class WebSocket
         set_error_handler(static fn (): bool => true);
 
         try {
-            $socket = stream_socket_client("tcp://{$host}:{$port}", $errno, $error, $timeoutSeconds);
+            $transport = $secure ? 'tls' : 'tcp';
+            $socket = stream_socket_client("{$transport}://{$host}:{$port}", $errno, $error, $timeoutSeconds, STREAM_CLIENT_CONNECT, $context);
         } finally {
             restore_error_handler();
         }
@@ -82,21 +102,41 @@ final class WebSocket
 
         $key = base64_encode(random_bytes(16));
 
-        fwrite($socket, implode("\r\n", [
+        $request = implode("\r\n", [
             "GET {$path} HTTP/1.1",
             "Host: {$host}:{$port}",
             'Upgrade: websocket',
             'Connection: Upgrade',
             "Sec-WebSocket-Key: {$key}",
             'Sec-WebSocket-Version: 13',
+            ...($bearer === null ? [] : ['Authorization: Bearer '.$bearer]),
             '', '',
-        ]));
+        ]);
+        stream_set_timeout($socket, max(1, (int) ceil($timeoutSeconds)));
+        $sent = 0;
+        while ($sent < strlen($request)) {
+            $written = @fwrite($socket, substr($request, $sent));
+            if ($written === false || $written === 0) {
+                fclose($socket);
+                throw new ChromeProtocolError('Browser handshake could not be sent.');
+            }
+            $sent += $written;
+        }
 
         $client = new self($socket);
-        $headers = $client->readHandshake(microtime(true) + $timeoutSeconds);
+        try {
+            $headers = $client->readHandshake(microtime(true) + $timeoutSeconds);
+        } catch (\Throwable $e) {
+            $client->close();
+            throw $e;
+        }
 
         if (! str_contains($headers, ' 101 ')) {
             $client->close();
+
+            if ($secure) {
+                throw new ChromeProtocolError('Cloud browser upgrade failed.', preg_match('#^HTTP/1\.[01] 429(?: |\r|\n)#', $headers) === 1 ? 429 : 0);
+            }
 
             throw new ChromeProtocolError('Chrome refused the WebSocket upgrade: '.trim(strtok($headers, "\r\n") ?: 'no response').'.');
         }
@@ -118,7 +158,7 @@ final class WebSocket
     /**
      * @throws ChromeProtocolError
      */
-    public function send(string $payload): void
+    public function send(string $payload, ?float $deadline = null): void
     {
         $length = strlen($payload);
 
@@ -139,17 +179,8 @@ final class WebSocket
         $masked = $payload ^ substr(str_repeat($mask, intdiv($length, 4) + 1), 0, $length);
 
         $frame = $header.$mask.$masked;
-        $written = 0;
+        $this->writeFrame($frame, $deadline ?? microtime(true) + 10);
 
-        while ($written < strlen($frame)) {
-            $n = @fwrite($this->socket, substr($frame, $written));
-
-            if ($n === false || $n === 0) {
-                throw new ChromeProtocolError('The connection to Chrome closed while sending a command.');
-            }
-
-            $written += $n;
-        }
     }
 
     /**
@@ -166,7 +197,7 @@ final class WebSocket
 
             switch ($opcode) {
                 case self::OP_PING:
-                    $this->sendControl(self::OP_PONG, $payload);
+                    $this->sendControl(self::OP_PONG, $payload, $deadline);
 
                     continue 2;
 
@@ -175,7 +206,6 @@ final class WebSocket
 
                 case self::OP_CLOSE:
                     throw new ChromeProtocolError('Chrome closed the DevTools connection.');
-
                 case self::OP_TEXT:
                 case self::OP_BINARY:
                 case self::OP_CONTINUATION:
@@ -196,8 +226,13 @@ final class WebSocket
     public function close(): void
     {
         if (is_resource($this->socket)) {
-            @$this->sendControl(self::OP_CLOSE, pack('n', 1000));
-            @fclose($this->socket);
+            try {
+                $this->sendControl(self::OP_CLOSE, pack('n', 1000), microtime(true) + 0.1);
+            } catch (\Throwable) {
+                // Closing must release a stalled socket even when its peer stopped reading.
+            } finally {
+                @fclose($this->socket);
+            }
         }
     }
 
@@ -231,7 +266,7 @@ final class WebSocket
         return [$fin, $opcode, $length === 0 ? '' : $this->readExactly($length, $deadline)];
     }
 
-    private function sendControl(int $opcode, string $payload): void
+    private function sendControl(int $opcode, string $payload, ?float $deadline = null): void
     {
         // A control frame carries at most 125 bytes, and the length goes in
         // seven bits. A longer payload would set the bit that means "read two
@@ -245,7 +280,43 @@ final class WebSocket
         $length = strlen($payload);
         $masked = $length === 0 ? '' : ($payload ^ substr(str_repeat($mask, intdiv($length, 4) + 1), 0, $length));
 
-        @fwrite($this->socket, chr(0x80 | $opcode).chr(0x80 | $length).$mask.$masked);
+        $this->writeFrame(chr(0x80 | $opcode).chr(0x80 | $length).$mask.$masked, $deadline ?? microtime(true) + 1);
+    }
+
+    /** A writable socket can still stall mid-frame. Include every write in the deadline. */
+    private function writeFrame(string $frame, float $deadline): void
+    {
+        $blocking = stream_get_meta_data($this->socket)['blocked'];
+        stream_set_blocking($this->socket, false);
+        $written = 0;
+        try {
+            while ($written < strlen($frame)) {
+                $remaining = $deadline - microtime(true);
+                if ($remaining <= 0) {
+                    throw new ChromeTimedOut('Chrome stopped reading before the command deadline.');
+                }
+                $read = $except = [];
+                $write = [$this->socket];
+                $seconds = (int) floor($remaining);
+                $micros = (int) (($remaining - $seconds) * 1000000);
+                $ready = @stream_select($read, $write, $except, $seconds, $micros);
+                if ($ready === false) {
+                    throw new ChromeProtocolError('The browser socket could not accept a command.');
+                }
+                if ($ready === 0) {
+                    continue;
+                }
+                $n = @fwrite($this->socket, substr($frame, $written, 65536));
+                if ($n === false || ($n === 0 && feof($this->socket))) {
+                    throw new ChromeProtocolError('The connection to Chrome closed while sending a command.');
+                }
+                $written += $n;
+            }
+        } finally {
+            if (is_resource($this->socket)) {
+                stream_set_blocking($this->socket, $blocking);
+            }
+        }
     }
 
     /**
@@ -266,7 +337,8 @@ final class WebSocket
                 throw new ChromeTimedOut('Chrome stopped answering: '.strlen($buffer)." of {$bytes} bytes arrived before the timeout.");
             }
 
-            stream_set_timeout($this->socket, max(1, (int) ceil($remaining)));
+            $seconds = (int) floor($remaining);
+            stream_set_timeout($this->socket, $seconds, max(1, (int) (($remaining - $seconds) * 1000000)));
             $chunk = @fread($this->socket, $bytes - strlen($buffer));
 
             // Asked before `feof`, and this order is the whole of it: PHP sets
@@ -311,6 +383,9 @@ final class WebSocket
             }
 
             $headers .= $chunk;
+            if (strlen($headers) > 32768) {
+                throw new ChromeProtocolError('Browser handshake headers are too large.');
+            }
         }
 
         return $headers;

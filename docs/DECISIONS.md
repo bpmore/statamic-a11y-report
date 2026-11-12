@@ -12,6 +12,18 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-11-12: Keep Cloud recovery while moving to the compatible 1.2.5 release
+
+Merge the stable release into the reviewed Cloud branch rather than replace it.
+Retain durable private report envelopes, Cloudflare browser transport and saved
+scan turns. Keep the upstream sandbox warning callback in its published argument
+position and append the Cloud browser option, preserving both APIs.
+
+Rejected: installing the unmodified stable release, which would discard the
+Cloud recovery protocol, or relaxing generic queue timeouts.
+
+---
+
 ## 2026-11-02: An address two entries share is read once, as the entry Statamic serves there
 
 Testing 1.2.4 on a scratch site, a script saved a page's slug twice and the
@@ -481,6 +493,59 @@ suite under 8.4 as before. Every file in `src/` and `database/` lints under
 own floor is 12.55. A real site on 8.2. And the CI job itself against a
 published 0.9.1, which cannot go green until that tag exists: the pull request
 is a draft until it does.
+
+---
+
+## 2026-10-31: Cloud uses the native browser protocol through a fixed external service
+
+Cloud cannot run the VPS's local browser setup. Add an opt-in Cloudflare Browser
+Run connection to the existing PHP WebSocket/DevTools engine, rather than replace
+axe with a static checker or add a second Node implementation of the engine.
+Local browser flags, bundled axe version, report evidence and metadata stay intact.
+The owner approved the browser-only key and the service's scan/report data use.
+
+Only the fixed Cloudflare WSS endpoint accepts a header token, with certificate
+and peer-name checks. Cached configuration supplies the key; effective settings
+strip it. Invalid settings and failed remote connections fail rather than silently
+substitute another engine. The Free plan stays unchanged, with a single bounded
+21-second retry on provider HTTP429. Shared production capacity is still open.
+
+Review caught a blocked-write gap: the protocol's old timeout began after send,
+so a browser that stopped reading could outlive cleanup. Writes now use a
+nonblocking deadline that is shared with reply reads. An unread socket test
+forces that case. Browser-level close has five seconds before bounded socket
+release. Tagged PDF and outline commands use the same self-contained report HTML,
+and the existing metadata pass is preserved. An actual fictional ReportWriter
+output passed the PDF/UA-1 profile in veraPDF 1.30.3.
+
+Checked and unchecked details are in `docs/CLOUD-BROWSER.md`. Tests caught
+intentional broken delay, short-key acceptance, and wrong-host acceptance. Local
+provider protocol and real-report output passed; Cloud deployment is still pending.
+
+---
+
+## 2026-10-31: Report files may live on a private disk and local copies are only a cache
+
+Had A Farm's Cloud containers lose local files between deployments. The scan
+records can already use MySQL, but their report HTML and JSON were local-only.
+An optional `files.disk` setting now writes each report before its database row
+can claim it exists. A failed durable write throws. Existing installs keep local
+storage when the setting is absent.
+
+R2 removes HTML objects. Each private file is therefore a JSON envelope with
+base64 bytes, byte count and SHA-256 digest, never a public HTML object. Reads
+verify the remote envelope before creating a private atomic local cache file.
+A missing or corrupt object cannot fall back to an old cached report. The
+controller and statement still receive ordinary local paths, preserving their
+existing access checks and rendering. Generated PDF bytes use the same store.
+
+Turned down: a public bucket, copying whole SQLite files between containers,
+and flushing files only after the HTTP response. The last can lose a report
+when the container dies after its database row was saved. No scan rules,
+conformance claims, templates, browser flags or permissions change.
+
+Checked: see the PR validation for local tests and the Had A Farm runtime
+checks. Browser PDF rendering and concurrent remote writes are separate checks.
 
 ---
 

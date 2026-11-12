@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bpmore\A11yReport\Commands;
 
 use Bpmore\A11yReport\Document\ReportWriter;
+use Bpmore\A11yReport\Document\ScanEvidence;
 use Bpmore\A11yReport\Models\Scan as ScanModel;
 use Bpmore\A11yReport\Storage\ReportDatabase;
 use Illuminate\Console\Command;
@@ -101,12 +102,13 @@ class Report extends Command
             return ScanModel::where('uuid', $id)->first();
         }
 
-        $query = ScanModel::where('status', ScanModel::COMPLETE)->orderByDesc('id');
+        // The same lookup the control panel's button and the worksheet use.
+        // This had a `where('site', ...)` of its own, which no scan of every
+        // site can match, so the README's own `--site=default` example found
+        // nothing on a fresh install while the button beside it found the
+        // scan. Two lookups for one question is two answers.
+        $site = $this->option('site');
 
-        if ($site = $this->option('site')) {
-            $query->where('site', $site);
-        }
-
-        return $query->first();
+        return ScanEvidence::latestScan(is_string($site) && $site !== '' ? $site : null);
     }
 }

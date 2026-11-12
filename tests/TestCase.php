@@ -15,7 +15,7 @@ use Statamic\Testing\Concerns\PreventsSavingStacheItemsToDisk;
  * A booted Statamic with both addons in it.
  *
  * Statamic's harness knows how to boot one addon: the one under test. This
- * addon depends on Accessibility Gate, whose provider finds its own manifest
+ * addon depends on A11y Gate, whose provider finds its own manifest
  * entry by namespace and fails to boot without one, so the gate is put into
  * the manifest and the provider list here, the same way the harness does it
  * for the addon under test.

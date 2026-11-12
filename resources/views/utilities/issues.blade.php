@@ -37,7 +37,7 @@
     $dueLabel = ['overdue' => 'Past target', 'expiring' => 'Acceptance runs out within '.$expiringWithin.' days', 'expired' => 'Acceptance has run out'];
 @endphp
 
-<ui-header title="Accessibility Report" icon="pulse" />
+<ui-header title="A11y Report" icon="pulse" />
 
 <div class="space-y-6">
 

@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use Bpmore\A11yReport\Storage\ReportDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Statamic\Facades\Site;
 
 it('creates every table on the configured connection, and the queue batch table beside them', function () {
     $database = app(ReportDatabase::class);
@@ -128,4 +131,83 @@ it('leaves a directory it did not create alone, ignore rules included', function
 
     array_map('unlink', glob($dir.'/{,.}[!.,!..]*', GLOB_BRACE) ?: []);
     @rmdir($dir);
+});
+
+it('names the site on scans from before 1.2.2 when the pages prove it, and leaves the rest alone', function () {
+    $database = app(ReportDatabase::class);
+    $database->install();
+
+    // As an upgrade meets it: tables 1.2.1 filled, and the migration that
+    // names the site not yet run. Installing above ran every migration on
+    // empty tables, so this forgets that one ran, fills the tables the way
+    // 1.2.1 left them, and installs again.
+    $db = DB::connection('a11y_testing');
+    $db->table('migrations')->where('migration', 'like', '%name_the_site_on_scans%')->delete();
+
+    $scan = fn (?string $site) => $db->table('a11y_scans')->insertGetId([
+        'uuid' => (string) Str::uuid(), 'site' => $site, 'trigger' => 'ci', 'status' => 'complete',
+        'engine' => 'php', 'engine_version' => '0', 'ruleset' => 'x', 'scope' => '{}', 'pages_total' => 1,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $page = fn (int $scanId, string $site) => $db->table('a11y_scan_pages')->insert([
+        'scan_id' => $scanId, 'entry_id' => 'e', 'collection' => 'pages', 'site' => $site, 'url' => 'http://localhost/',
+        'path' => '/', 'status' => 'read', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    // Rows as 1.2.1 left them on an install with one site: a scan of every
+    // site with no site on it, and a report of it the same.
+    $ours = $scan(null);
+    $page($ours, 'default');
+    $report = $db->table('a11y_reports')->insertGetId([
+        'uuid' => (string) Str::uuid(), 'scan_id' => $ours, 'site' => null, 'standard' => 'wcag22aa',
+        'generated_by' => 'x', 'generated_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    // A scan that read a page of a site this install no longer has. The
+    // install has one site now; the scan covered two, and must say so still.
+    $theirs = $scan(null);
+    $page($theirs, 'default');
+    $page($theirs, 'fr');
+
+    // Never listed its pages. The install's one site is the only site it
+    // could have been of.
+    $empty = $scan(null);
+
+    $database->install();
+
+    expect($db->table('a11y_scans')->where('id', $ours)->value('site'))->toBe('default');
+    expect($db->table('a11y_scans')->where('id', $empty)->value('site'))->toBe('default');
+    expect($db->table('a11y_scans')->where('id', $theirs)->value('site'))->toBeNull();
+    expect($db->table('a11y_reports')->where('id', $report)->value('site'))->toBe('default');
+
+    // Twice is the same as once.
+    $database->install();
+    expect($db->table('a11y_scans')->whereNull('site')->count())->toBe(1);
+});
+
+it('names nothing on an install with more than one site', function () {
+    Site::setSites([
+        'default' => ['name' => 'English', 'url' => 'http://localhost/', 'locale' => 'en_US'],
+        'fr' => ['name' => 'French', 'url' => 'http://localhost/fr/', 'locale' => 'fr_FR'],
+    ]);
+
+    $database = app(ReportDatabase::class);
+    $database->install();
+
+    $db = DB::connection('a11y_testing');
+    $db->table('migrations')->where('migration', 'like', '%name_the_site_on_scans%')->delete();
+
+    $id = $db->table('a11y_scans')->insertGetId([
+        'uuid' => (string) Str::uuid(), 'site' => null, 'trigger' => 'ci', 'status' => 'complete',
+        'engine' => 'php', 'engine_version' => '0', 'ruleset' => 'x', 'scope' => '{}', 'pages_total' => 1,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $db->table('a11y_scan_pages')->insert([
+        'scan_id' => $id, 'entry_id' => 'e', 'collection' => 'pages', 'site' => 'default', 'url' => 'http://localhost/',
+        'path' => '/', 'status' => 'read', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $database->install();
+
+    expect($db->table('a11y_scans')->where('id', $id)->value('site'))->toBeNull();
 });

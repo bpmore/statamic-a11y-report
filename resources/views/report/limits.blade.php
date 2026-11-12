@@ -32,6 +32,8 @@
         @endif
     </p>
 
+    <p><strong>Level AAA is not claimed.</strong> The conformance table and the two lists above are Level A and AA. One Level AAA criterion, 3.1.5 Reading Level, is reported in a section of its own after the table, because the scan grades the reading level of every page it reads and that is evidence toward it. It is outside the claim, it is "Not evaluated" unless a person has assessed it, and a page that reads above the level it names is not a failure of anything in this report.</p>
+
     <p><strong>What was read.</strong>
         @if ($r['scan']['engine'] === \Bpmore\A11yReport\Engine\AxeEngine::KEY)
             The automated checks opened each page in a browser and read the document the site served, with its stylesheets applied, on the pages listed under Evaluation methods. Where a check could not reach a determination it is recorded as such rather than as a pass, and how much of each page was decided is listed under Evaluation methods. A page the browser could not open, or that answered with an error rather than the page, is counted separately and never as clean.

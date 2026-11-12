@@ -12,6 +12,489 @@ more than a file that only ever describes the present.
 
 ---
 
+## 2026-11-12: Keep Cloud recovery while moving to the compatible 1.2.5 release
+
+Merge the stable release into the reviewed Cloud branch rather than replace it.
+Retain durable private report envelopes, Cloudflare browser transport and saved
+scan turns. Keep the upstream sandbox warning callback in its published argument
+position and append the Cloud browser option, preserving both APIs.
+
+Rejected: installing the unmodified stable release, which would discard the
+Cloud recovery protocol, or relaxing generic queue timeouts.
+
+---
+
+## 2026-11-02: An address two entries share is read once, as the entry Statamic serves there
+
+Testing 1.2.4 on a scratch site, a script saved a page's slug twice and the
+Stache kept the second file after it was deleted. `a11y:scan --sync` died on
+`UNIQUE constraint failed: a11y_issues.scan_id, a11y_issues.fingerprint`
+and the scan was cancelled. Every published entry gets a row, and an issue's
+fingerprint is its site and path, so two entries at one path wrote the same
+fingerprints into one scan. The unique index refused the second, the job
+threw, and on the sync connection the exception left the command. Queued, by
+the code, the job would be retried and then marked an error, with the address
+read under the other entry; that path was not run.
+
+**What changed.** `start()` groups the listed entries by site and path. Where
+a group has more than one, one is read and every other row is written
+`skipped` before anything is dispatched, with an error naming the entry that
+was read. The one read is the one `Entry::findByUri()` returns, because that
+is the page a visitor gets at the address. When that entry is not in the
+group (a draft, or out of this scan's scope), the lowest id is read, so a
+rerun picks the same one. `skipped` already means "this entry has no page of
+its own", which is true of an entry another entry's page shadows, and the
+document already says how many there were. Issue states only follow
+`scanned` rows, so the skipped row neither opens nor closes anything, and it
+still counts as met, so the address is not called removed.
+
+**Turned down.** Putting the entry id in the fingerprint, which would end the
+collision and break the one thing the fingerprint is for: an issue follows
+an address from scan to scan, and an entry id can change when a page is
+rebuilt under the same URL. Catching the constraint violation and marking the second
+row an error, which keeps a scan alive but calls one page unreadable when it
+was read, and depends on which job got there first. Reading both, under
+different fingerprints, which would report findings from markup no visitor
+is ever served. And refusing to start a scan while two entries share an
+address, which stops a whole site being scanned over one stale file.
+
+**Checked.** A test with two entries at one path sharing a finding, which
+throws the constraint violation on the unfixed code. Statamic serves the
+first saved, which the test gives the higher id, so it tells "the served
+entry" apart from "the lowest id". Mutation-tested: always taking the lowest
+id, skipping the grouping, and naming the wrong entry in the error each fail
+it. The whole suite. And the scratch site again, gate 0.11.0, with a second
+entry saved at `/bad`: the scan completes, the served entry's row has its 4
+issues, the other is `skipped` naming it, and the report says "Pages read 3
+of 4; 1 had no page of their own".
+
+**Not checked.** Multisite, where the path carries the site's prefix and the
+same grouping applies per site; the axe engine; and a queued scan with
+workers, where the duplicate is settled before any job exists and so cannot
+race.
+
+---
+
+## 2026-09-16: A scan of every site on a one-site install is that site's, and old rows are named where the pages prove it
+
+Statamic's marketplace guidelines ask, under Rule 06, that the release a
+customer receives be installed into a fresh site by its own instructions.
+Done for 1.2.1 the way the gate's was: a fresh `statamic/statamic` 6.33 in a
+scratch directory, `composer require` from Packagist, then every line of the
+README, on the command line and in the control panel. Nearly all of it held.
+The README's own `a11y:report --site=default` example did not: "There is no
+complete scan to report on", directly after the README's own `a11y:scan`. And
+the README's second widget form, `'site' => 'default'`, showed "10 open
+issues" and "No completed scan in the last 30 days" in one card.
+
+**Why.** `ScanScope::site()` named a site only when the scope listed exactly
+one, and the scope is `['*']` until somebody narrows it, so every scan on a
+single-site install had `site = null`. `Overview` filters scans by that column
+and issue states by theirs, which carry the entry's site; the widget's two
+numbers came from two columns that disagreed. The report command had a strict
+`where('site', ...)` of its own, while the button used `ScanEvidence` and
+fell back. The 0.3.0 entry had said saving the settings screen names the site
+on every later scan; it does not, because the screen saves `['*']`.
+
+**What changed.** A scope that names no site, on an install with exactly one
+site, is that site's; `ScanScope::site()` says so and the scope stays as
+written, because whether a scan was narrowed is what decides which issues it
+may close and "every site" on a one-site install is not narrowed. The command
+now uses `ScanEvidence::latestScan()`, and that lookup, asked for a site,
+takes the newest scan that covers it: named for it, or of every site. Never
+another site's alone, which the old fallback allowed and which on a multisite
+install put out a document wearing the wrong site's name from the button.
+
+**The backfill.** Without one, the first scan after upgrading finds no
+previous scan for the site and prints "first scan" into a history that is
+anything but, and a site-scoped widget sees nothing before today. A migration
+names `site` on the scans and reports already on disk, only on an install
+with one site, and only where no page the scan read belongs to another site.
+The pages are the proof: an install that once had two sites and now has one
+keeps its old scans anonymous, because a row must never claim less than it
+covered. It runs through `a11y:report:install` like every migration, and its
+`down()` does nothing, because a name it wrote is true and cannot be told
+from one a narrowed scan wrote.
+
+**Turned down.** Resolving `['*']` to the one handle inside the scope, which
+would have turned every full scan into a narrowed one and changed what it may
+close. Making `Overview` accept unnamed scans under a site's name, which the
+2026-09-02 entry refused for the right reason: a scan of every site under one
+site's name is a number with the wrong denominator on a multisite install. No
+backfill, for the "first scan" blip in a compliance history. A blind backfill
+of every null row on a one-site install, for the install that used to have
+two. And a config key naming the site, which is the setting the scope already
+is.
+
+**Also from the same pass.** `composer show a b` names a version constraint,
+not two packages, so the support section's line errored; the README referred
+to "the config file" five times without saying how it gets into a site; the
+reading band was spelled three ways for one string the engine prints as
+"Grade 9–10". All three corrected in the README and the config comment.
+
+**Checked.** Tests for the scope on one site and on two, the lookup's three
+cases on two sites, the README's exact command sequence through the artisan
+runner, the README's widget form, and the backfill as an upgrade meets it
+(tables filled by 1.2.1, then the migration), including the row it must
+leave alone and running twice. The whole suite. And the fresh site again,
+with this branch installed by path over the Packagist copy: the README's
+`--site=default` example writes the document, and the second widget form
+shows the scan.
+
+**Not checked.** An install that genuinely went from two sites to one, beyond
+the fixture that stands in for it. A multisite install in a browser.
+
+---
+
+## 2026-09-16: Chrome keeps its sandbox where it can, and says when it cannot
+
+`--no-sandbox` was in the flag list from the first browser this addon
+started, for the PDF and then for axe, copied from the recipe every Docker
+image and CI runner uses, with nothing written down about why. Statamic's
+marketplace review asked, under Rule 07, and there was no answer to give.
+
+The reason it matters is what the browser renders: the customer's own site,
+which means every third-party script the site embeds, every ad and embed and
+analytics tag, and whatever an author pasted into an entry. Chrome's sandbox
+is what stands between a renderer exploit in that page and the user the
+queue worker runs as, on the customer's server, with the site's `.env` in
+reach. On most hosts, a Forge box working the queue as `forge`, Herd, a
+VPS, the sandbox works and there was never a reason to turn it off.
+
+**On by default, given up only when Chrome refuses, and said.** Chrome will
+not run its sandbox as root, and cannot in a container that will not let it
+make namespaces; in both cases it says so on stderr and exits before it has
+written the port file. `DevTools` already watched for exactly that exit, in
+under fifty milliseconds, to tell a browser that died from one that is slow.
+So the exit at start is its own exception type, and the one thing done
+differently on catching it is to start once more without the sandbox, log a
+warning naming what was given up and the two hosts it happens on, and keep
+the flag off for the rest of the session so a browser replaced after a
+mid-scan crash starts the way the last one worked. The PDF printer, which
+already reads Chrome's stderr, does the same and puts what Chrome said in
+its warning. On a host where the sandbox works nothing changes but the
+flag; on a host where it does not, one refused start a session is the whole
+cost, and the scan and the PDF come out as they always did.
+
+**Turned down.** Keeping `--no-sandbox`, which is the state this reversed
+and the state every recipe would have it stay in. A config key, because a
+key whose wrong value stops every scan on one host and does nothing on
+another is exactly the kind of setting this addon refuses to add, and its
+default would have had to be one or the other. A root check, `posix_geteuid()
+=== 0`, which is cheap and precise for the commonest case and misses the
+container that is not root and still has no namespaces; Chrome already tells
+us the answer, in less time than the check saves. Retrying on any start
+failure rather than the exit at start, which would have turned a missing
+binary or a socket that never opened into two waits for the same answer.
+
+**Checked.** Seven tests drive both users through a shell script standing in
+for Chrome that records how it was called and either hands over to the real
+one or does what Chrome does as root. Each of seven mutations went red:
+the flag back in the list, the fallback removed, the retry with the sandbox
+still on, the flag reset on close, the browser counted before it was driven,
+the printer never retrying, the printer retrying without saying so. The
+whole suite, with Chrome and veraPDF, on the machine the sandbox works on.
+And the fallback as an actual root, in a Debian container with Chromium
+installed: `DevTools` driven to a page and back, and a PDF printed, each
+with one refused start, the warning, and the result. Chromium's own stderr
+there reads "Running as root without --no-sandbox is not supported", which
+the printer's warning now carries.
+
+**Not checked.** A container that is not root and has no user namespaces,
+which is the second host the warning names; the same exit is caught by the
+same code and the fake exercises it, but no such container was built. A
+long axe scan with the sandbox on, for memory: each renderer now lives in
+its own sandboxed process as Chrome intends, which is how every desktop
+Chrome runs and not a shape this addon had run before.
+
+---
+
+## 2026-09-16: `retention.scans` is gone, and a scan is never pruned
+
+`'retention' => ['scans' => 90]` shipped in the first release and was read
+by nothing, which is the same story as `scan.schedule` was on 2026-09-04.
+That one was implemented, because a scan that was promised weekly had to
+happen weekly. This one is removed, because the promise it made is one this
+product should not keep.
+
+A scan is the record. A report cites one by id and says who generated it
+and against which scan; the trend on the overview is the scans; an issue's
+first-seen date is the scan that first saw it; and the claim on the box is
+that the site is clean over time. A key that quietly deleted ninety-day-old
+scans would orphan every report older than that, cut the history the
+product exists to keep, and do it on a schedule nobody would connect to the
+report that stopped opening. A customer who set it was told something that
+was not true, and a customer who never set it was told it anyway, in a
+config file that is the addon's own documentation.
+
+**Turned down.** Implementing it with a guard for scans a report cites,
+which keeps the reports and still cuts the history under the trend and the
+first-seen dates. Pruning a scan's pages and findings while keeping its
+summary row, which is the right shape if disk ever forces the question,
+because the counts and the engine survive and the per-page evidence is what
+takes the space; it is noted here so the next person does not start from
+`retention.scans`. Neither is wanted until a real site's database says so,
+and none has.
+
+A published copy of the config file with the key still in it is harmless:
+nothing read it before and nothing reads it now. The settings-screen test
+that pins which keys are the developer's no longer lists it.
+
+---
+
+## 2026-09-15: The engine is reached on GitHub by tag, until Packagist lists it
+
+`bpmore/readability-core` now has a repository of its own,
+github.com/bpmore/readability-core, split from Plain's monorepo with its
+history, tagged `v0.1.0`. The manifest reaches it with a `vcs` repository
+rather than the path repository the entry of 2026-09-12 apologised for, so
+`composer install` resolves the engine on any machine, CI's runners included,
+without a sibling checkout. Turned down: waiting for the Packagist listing,
+which is a form only the owner can submit, and leaving the branch red until
+then. When Packagist lists the package the `repositories` block can come out
+of this manifest and nothing else changes; a `vcs` entry that stays does no
+harm beyond a slower resolve. Local development against an edited engine is
+the dev site's business, through its own path repository, not this package's.
+
+---
+
+## 2026-09-12: One sentence for a site with Plain installed too, on the overview, and nowhere else
+
+Plain and this addon share an engine and grade the same site from two sides
+of the publish button. Somebody meeting both readings for the first time can
+reasonably take one for a mistake, or think the site is being scanned twice.
+The overview's "What these numbers are" card gains one sentence when Plain is
+in the addon manifest, saying who owns which surface; Plain says the same on
+its Readability page. Turned down: a banner, which would be read every day by
+somebody who understood it on the first; and hiding either addon's numbers
+when the other is present, which would decide for the customer which reading
+they wanted. Detection is by the manifest and not by class, so a test can
+install the neighbour with one array. Checked: the sentence on and off, the
+page compiling with it, and both detections true on the dev site, where both
+are installed.
+
+---
+
+## 2026-09-12: SC 3.1.5 is a Level AAA row apart from the claim, with evidence and no verdict
+
+The one AAA criterion the scan can say anything about, and exactly how much
+it is allowed to say.
+
+**Why a row at all, when the catalogue refuses AAA.** The rule since the first
+document has been that a table listing AAA criteria invites a claim about
+them, and nothing here can support one. That rule stands: the table is Level
+A and AA and `Wcag::criteria()` never returns 3.1.5. But every scan now
+grades the reading level of every page, which is the first half of what
+3.1.5 asks ("text requires reading ability more advanced than the lower
+secondary education level after removal of proper names and titles"), and a
+reader who has that evidence should meet it under the criterion it speaks to
+rather than find it only on the overview. So the catalogue gained a second,
+separate list, `BEYOND_CLAIM`, and the document a section of its own after
+the table, under a heading that says what it is.
+
+**What the row can and cannot say.** The scan can count the pages whose band
+starts above Grade 9, which is where lower secondary education ends, with
+names already set aside because the engine drops them before it counts. It
+cannot see whether a simpler version or supplement is offered, which is the
+second half of the criterion and the only half that decides it. So the
+evidence sentence gives the count, names up to twenty of the pages, gives the
+median, and ends by saying what the criterion asks and that this is evidence
+and not a determination. The row is "Not evaluated" until a person assesses
+it on the worksheet, through the same merge as the table's rows with the
+engine's two rules (failures, coverage) unable to fire. Nothing here is a
+failure of anything: `issues_total` does not move, the limits statement says
+so in a sentence, and a test asserts the document never says "fails 3.1.5".
+
+**A band that straddles the line is not above it.** Grade 9 to 10 is not
+counted as above lower secondary; Grade 10 to 11 is. The formulas are not
+precise enough to split a band, and the honest direction of error for
+evidence toward a criterion the site has not claimed is under, not over.
+
+**Kept out of every count.** `criteria` still has 55 rows; `methods` lists
+no AAA number under automated, not evaluated or assessed by people; the
+coverage note's arithmetic is the table's alone. The JSON keeps the row under
+`beyond_claim` with its own `level` and `note`. Turned down: appending the
+row to `criteria` with a flag, which every reader adding up the table would
+have to know to subtract; and putting the evidence only in the remarks of a
+criterion in the table, which would attach a AAA measurement to an AA claim.
+
+**Turned down: a verdict from the numbers.** A row that said "Supports" when
+no page reads above the level was the obvious next step and would have been
+the first automated "Supports" in the product. It is not one: a site with
+every page at Grade 6 has met nothing, it has merely not triggered the
+condition, and the day it publishes one dense page the row would flip to
+"Does not support" on a measurement two grades wide. The evidence sentence
+for that case says what it can, that nothing on the site needs a simpler
+version on this evidence, and stops.
+
+**What was checked.** The whole suite (343 passed, the Chrome skip), six
+tests for the row (its place and its absence from the counts, the boundary
+by hand-written rows, the nothing-above and not-measured sentences, a person
+assessing it from the worksheet and the claim unmoved, the catalogue), the
+worksheet's counts raised by one and the PDF link description present. Not
+checked: the document in a browser or a PDF reader, and CI.
+
+---
+
+## 2026-09-12: The reading level is a dimension of the scan, kept the way the engine is
+
+Every scan now grades each page it read and rolls the site up as a median
+band. Two things had to be decided: what of a rendered page is the page, and
+where the numbers live.
+
+**The main content, not the page.** A scan reads a page as served, and a
+served page carries its navigation, banner, footer and sidebar. Graded with
+the prose, a two-paragraph notice on a site with a forty-link footer scores as
+the footer. The engine gained a `PageExtractor` that reads `<main>` (or
+`role="main"`) and, where a theme has neither, the body with the landmarks a
+browser would announce as navigation, banner, contentinfo and complementary
+taken out; a `<header>` or `<footer>` inside an article stays, which is the
+same rule the browser applies before calling one a landmark. Turned down:
+grading the whole page, for the reason above; and grading the entry's fields
+the way Plain does, because this addon reads served pages and has no field
+list, and a page assembled from three fields and a partial is graded as the
+reader meets it. The extractor lives in the engine rather than here so that
+Plain, or anything else that grades a served page, applies the same rule.
+
+**The record carries what it was measured with.** The scan row keeps, at
+creation, whether the dimension ran, the engine and its version, the locales
+and the target; every page is graded against that row and never against the
+config a worker holds when it picks the page up; and the finalise step writes
+the roll-up onto the same record. This is the rule the engine on a scan and
+the mark on a cover already follow, and the alternative, reading the target
+at report time, would have put a target nobody had chosen yet under numbers
+measured against another. A disabled dimension records `enabled: false`, and
+a scan from before the dimension has no record at all, so "not measured" and
+"older than the feature" never read the same.
+
+**A median, and the engine's own median.** The site's number is the median
+page's consensus grade, computed the way Plain's snapshot computes it, so the
+dashboard widget over there and the overview here agree to the band. On an
+even count that is the mean of the two middle pages, and with two pages, one
+easy and one that reads at 37, the mean lands at "Grade 17+". Considered and
+left: clamping grades to the open band's floor before the median, which
+would have been more honest for that pair and would have disagreed with
+Plain; the two products reading the same site differently is the worse
+fault. The band caps what a person sees either way.
+
+**On the screen: the target. Off it: the switch and the languages.** The
+settings-screen rule is that a wrong value which stops scans is the
+developer's and one that changes a sentence is the editor's. The grade a
+site writes for changes a sentence; the locale list, wrong, grades nothing.
+The pinned list of unreachable settings in the settings test names both.
+
+**Never a WCAG result, anywhere it is printed.** The overview, the config
+comment, the settings screen and the README each say it in a sentence: no
+Level A or AA criterion is about reading level, 3.1.5 is AAA and is met by a
+simpler version, and nothing fails a page for its grade. `ci.fail_above` has
+no key for it and a test asserts the keys. The 3.1.5 row in the document is
+the next step and is not here.
+
+**What was checked.** The whole suite (336 passed, the Chrome skip), eight
+feature tests for the dimension (the furniture left out, the target carried
+on the row and rebuilt from it, a French site refused, the switch off, an
+errored page kept out of the counts, the settings screen's target reaching
+the row, and the overview, history and command all saying the same sentence),
+and four for the sentence itself. Found on the way: two
+`expectsOutputToContain` on one line of command output cannot both pass,
+because Laravel's mock lets the first matching expectation consume the write;
+one expectation per line. Not checked: a real site, and CI, which cannot
+resolve the engine yet.
+
+---
+
+## 2026-09-12: Readability comes from an engine this addon depends on, not one it carries
+
+The first step of readability in the report: `bpmore/readability-core` is a
+dependency. Nothing reads it yet. The scan dimension, the SC 3.1.5 row and the
+notice for a site with Plain installed beside this addon each follow on their
+own, so that a dependency that turns out to be wrong is one commit to take
+back.
+
+**Why an engine, and why that one.** Readability is the same shape of claim as
+accessibility: a formula over a page, calibrated on English, that an audit can
+be asked to justify. Plain, the standalone readability addon, is built on the
+engine it split out for exactly this purpose, so the number a compliance
+officer reads in this report and the number an author sees on the publish form
+come from one code path. The gate's decision of 2026-09-02 is the same rule,
+and its cost: an engine that changes is a constraint to bump here.
+
+**Turned down.** Depending on `bpmore/statamic-plain` itself, which would pull
+a publish-form panel, a gate and a settings screen into a product that wants a
+scan dimension and a criterion row, and would make a paid addon a dependency of
+a paid addon, which the marketplace has no way to entitle. Copying the engine
+in, which is the forked-rules problem the gate's log spends several entries
+on, and would give Plain and this report two opinions of the same page. Making
+the engine a `suggest`, which would leave the customers this was meant for,
+the ones with the report and no Plain, without readability.
+
+**A path repository, for now, and what it costs.** The engine lives in Plain's
+repository under `packages/readability-core`, which is not on GitHub, and is
+not on Packagist. The manifest reaches it by path with a version pin
+(`versions: {bpmore/readability-core: 0.1.0}`), because a path package has no
+version of its own and `^0.1` must resolve against something. Locally and on
+the dev site this is what Plain and the site already do. **In CI it does not
+resolve**, and every job on this branch is red at `composer install` until the
+engine is published: a repository of its own from `git subtree split`, then
+Packagist, then this manifest drops the `repositories` block and nothing else
+changes. Turned down: making CI green by removing the dependency before
+install, which is what Plain does for Site Weather, because there Site Weather
+is a `require-dev` and the tests skip without it; here the engine is what the
+next three tasks are made of, and a green run that never loads it is a green
+that means nothing. Turned down: publishing the engine from this task, which is
+a repository and a listing under the owner's name and is the owner's to do.
+
+**What was checked.** The whole suite on the branch (325 passed, the usual
+Chrome-dependent skip), and three tests that grade with the engine and nothing
+booted: an easy page bands below a hard one, the hard one is `Grade 17+` and
+`above` a target of 8, proper names and a quotation are left out before
+counting, and `fr_FR` is refused with a sentence. Not checked: CI, for the
+reason above.
+
+---
+
+## 2026-09-11: The floor is PHP 8.2, and December 2026 is when to raise it
+
+The same change as the gate's, made second because a floor is only real if
+every dependency honours it. The gate's entry of the same date has the
+reasoning in full; what is specific to this addon is here.
+
+**Nothing here needed 8.4 either.** Every file lints under 8.2, and the two
+things that might have been suspected, the WebSocket client and the DevTools
+session, use nothing newer than string XOR and `pack('J')`, both years old.
+The `^8.4` was inherited from the gate's manifest when this one was written
+from it.
+
+**The gate constraint narrows to `^0.9.1`.** It was `^0.7 || ^0.8 || ^0.9`,
+which was hospitable and is now impossible: a lowest-dependencies job on 8.2
+would resolve gate 0.7.0, whose manifest refuses 8.2, and fail before a test
+ran. 0.9.1 is the gate release carrying its own floor. Turned down: keeping the
+wide constraint and running the lowest job on 8.4, which tests nothing the
+existing jobs do not; and ignoring platform requirements for the resolve, which
+would let Pest 4 and Testbench 11 install on 8.2 and fall over at runtime, a
+green that means nothing. An install on an older gate has to update it, and
+the changelog says so under Upgrading.
+
+**8.2, and 31 December 2026.** That is when 8.2 leaves security support, and
+it is the date to raise this to 8.3. Not before, or a supported Laravel 12
+site is refused for no reason; not after, or a product whose whole claim is
+that it can be trusted about what it claims runs on a PHP that no longer
+receives security fixes.
+
+**Checked.** The suite, 322 tests, under real PHP 8.2 with the oldest
+dependencies Composer would resolve: Laravel 12.61, Statamic 6.31, Pest 3.8,
+Testbench 10.11, and the gate at the commit carrying its floor, standing in
+for 0.9.1 through a path repository in a scratch copy. Headless Chrome, axe,
+the WebSocket client and veraPDF all ran there rather than skipping. The same
+suite under 8.4 as before. Every file in `src/` and `database/` lints under
+8.2.
+
+**Not checked.** PHP 8.3 itself. Laravel 12.40 exactly, since Testbench 10's
+own floor is 12.55. A real site on 8.2. And the CI job itself against a
+published 0.9.1, which cannot go green until that tag exists: the pull request
+is a draft until it does.
+
+---
 
 ## 2026-10-31: Cloud uses the native browser protocol through a fixed external service
 

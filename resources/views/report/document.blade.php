@@ -116,7 +116,7 @@
             <dt>Automated engine</dt>
             {{-- The engine's own name, not the config key it is chosen by: the
                  reader of a conformance document should be able to look it up. --}}
-            <dd>{{ $r['scan']['engine'] === \Bpmore\A11yReport\Engine\AxeEngine::KEY ? 'axe-core' : 'Accessibility Gate checker' }} {{ $r['scan']['engine_version'] }}, ruleset {{ $r['scan']['ruleset'] }}</dd>
+            <dd>{{ $r['scan']['engine'] === \Bpmore\A11yReport\Engine\AxeEngine::KEY ? 'axe-core' : 'A11y Gate checker' }} {{ $r['scan']['engine_version'] }}, ruleset {{ $r['scan']['ruleset'] }}</dd>
             <dt>Pages selected</dt>
             <dd>{{ $r['scan']['scope_text'] }}</dd>
             <dt>Pages read</dt>
@@ -174,6 +174,42 @@
                             @if ($c['contradicted'])<p class="contradicted"><strong>A person's assessment, kept over the automated result.</strong> The automated checks found failures under this criterion. The determination above is the assessor's and is what this report states; the evidence below is what the checks found.</p>@endif
                             @if ($c['remarks'] !== '')<p>{{ $c['remarks'] }}</p>@endif
                             <p class="evidence">{{ $c['evidence'] }}</p>
+                            @if ($c['assessed_by'])<p class="evidence">Assessed by {{ $c['assessed_by'] }}{{ $c['assessed_at'] ? ' on '.\Illuminate\Support\Carbon::parse($c['assessed_at'])->format('j F Y') : '' }}.</p>@endif
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </section>
+
+    <section id="beyond-claim" aria-labelledby="beyond-claim-heading">
+        <h2 id="beyond-claim-heading">Level AAA, reported apart from the claim</h2>
+        <p>{{ $r['beyond_claim']['note'] }}</p>
+        <table>
+            <caption>Level AAA success criteria with evidence, outside the conformance claim</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Criterion</th>
+                    <th scope="col">Level</th>
+                    <th scope="col">Result</th>
+                    <th scope="col">Method</th>
+                    <th scope="col">Remarks and evidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($r['beyond_claim']['criteria'] as $c)
+                    <tr>
+                        <th scope="row">@if (! empty($c['url']))<a href="{{ $c['url'] }}">{{ $c['number'] }} {{ $c['name'] }}</a>@else{{ $c['number'] }} {{ $c['name'] }}@endif</th>
+                        <td>{{ $c['level'] }}</td>
+                        <td class="status status-{{ $c['status'] }}">{{ \Bpmore\A11yReport\Document\AssessmentMerger::label($c['status']) }}</td>
+                        <td>{{ $c['locked'] ? ucfirst($c['method']).', locked' : ucfirst($c['method']) }}</td>
+                        <td>
+                            @if ($c['remarks'] !== '')<p>{{ $c['remarks'] }}</p>@endif
+                            <p class="evidence">{{ $c['evidence'] }}</p>
+                            @if (! empty($c['reading']['pages_above']))
+                                <p class="evidence">{{ count($c['reading']['pages_above']) < $c['reading']['above'] ? 'The first '.count($c['reading']['pages_above']).' of the '.$c['reading']['above'].' pages above the level' : ($c['reading']['above'] === 1 ? 'The page above the level' : 'The pages above the level') }}:
+                                    @foreach ($c['reading']['pages_above'] as $p){{ $p['path'] }} ({{ $p['label'] }}){{ $loop->last ? '.' : ', ' }}@endforeach</p>
+                            @endif
                             @if ($c['assessed_by'])<p class="evidence">Assessed by {{ $c['assessed_by'] }}{{ $c['assessed_at'] ? ' on '.\Illuminate\Support\Carbon::parse($c['assessed_at'])->format('j F Y') : '' }}.</p>@endif
                         </td>
                     </tr>

@@ -103,6 +103,26 @@ final class AssessmentMerger
         return self::row(CriterionAssessment::NOT_EVALUATED, $covered ? 'automated' : 'manual', '', $evidence, null, $covered);
     }
 
+    /**
+     * A row for a criterion reported beyond the claim: the person's
+     * assessment if there is one, "not evaluated" otherwise, with the
+     * scan's evidence toward it in place of the automated sentence.
+     *
+     * The engine never fails such a criterion and never covers it, so rules
+     * 2 and 3 cannot apply and nothing can be contradicted; rules 1, 4 and
+     * 5 are exactly the table's, run through the same code so the two
+     * cannot drift.
+     *
+     * @return array<string, mixed>
+     */
+    public static function mergeBeyondClaim(Criterion $criterion, ?CriterionAssessment $human, string $evidence): array
+    {
+        $row = self::merge($criterion, [], [], $human, 0);
+        $row['evidence'] = $evidence;
+
+        return $row;
+    }
+
     /** @return array<string, mixed> */
     private static function row(string $status, string $method, string $remarks, string $evidence, ?CriterionAssessment $human, bool $automated, bool $contradicted = false): array
     {

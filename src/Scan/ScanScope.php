@@ -6,6 +6,7 @@ namespace Bpmore\A11yReport\Scan;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
+use Statamic\Facades\Site;
 
 /**
  * Which pages a scan covers.
@@ -48,10 +49,32 @@ final class ScanScope
         );
     }
 
-    /** The one site this scan is about, or null when it spans more than one. */
+    /**
+     * The one site this scan is about, or null when it spans more than one.
+     *
+     * A scope that names no site covers every site, and on an install with
+     * one site that is one site. It used to be null all the same, so an
+     * install following the README, whose scope is `['*']` until somebody
+     * narrows it, never made a scan with a site on it: `a11y:report
+     * --site=default` said there was no scan, and a dashboard widget given
+     * `'site' => 'default'` said the same beside an open-issue count from
+     * the very scan it could not find. Found on a fresh site.
+     *
+     * The scope itself is left as written. Whether a scan was narrowed is
+     * what decides which issues it may close, and "every site" on a
+     * one-site install is not narrowed.
+     */
     public function site(): ?string
     {
-        return count($this->sites) === 1 ? $this->sites[0] : null;
+        if (count($this->sites) === 1) {
+            return $this->sites[0];
+        }
+
+        if ($this->sites === [] && Site::all()->count() === 1) {
+            return (string) Site::all()->first()->handle();
+        }
+
+        return null;
     }
 
     /**

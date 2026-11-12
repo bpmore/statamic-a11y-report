@@ -262,7 +262,7 @@ final class PdfMetadata
     {
         $e = fn (string $s) => htmlspecialchars($s, ENT_XML1 | ENT_QUOTES, 'UTF-8');
         $now = gmdate('Y-m-d\TH:i:s\Z');
-        $producer = $producer ?? 'Accessibility Report for Statamic';
+        $producer = $producer ?? 'A11y Report for Statamic';
 
         return '<?xpacket begin="'."\u{FEFF}".'" id="W5M0MpCehiHzreSzNTczkc9d"?>'."\n"
             .'<x:xmpmeta xmlns:x="adobe:ns:meta/">'."\n"

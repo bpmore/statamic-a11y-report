@@ -25,10 +25,10 @@ class CriteriaController extends CpController
         $site = $request->query('site');
         $site = is_string($site) && $site !== '' && Site::get($site) ? $site : null;
 
-        $sheet = $installed ? $worksheet->build($site) : ['site' => $site, 'scan' => null, 'standard' => 'wcag22aa', 'rows' => []];
+        $sheet = $installed ? $worksheet->build($site) : ['site' => $site, 'scan' => null, 'standard' => 'wcag22aa', 'rows' => [], 'beyond_claim' => []];
 
         return Inertia::render('utilities/Show', [
-            'title' => 'Accessibility Report: Criteria',
+            'title' => 'A11y Report: Criteria',
             'html' => view('a11y-report::utilities.criteria', [
                 'installed' => $installed,
                 'site' => $site,

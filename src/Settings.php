@@ -61,6 +61,8 @@ final class Settings
         'scan_sites' => 'scan.sites',
         'scan_exclude_urls' => 'scan.exclude_urls',
         'axe_best_practices' => 'axe.best_practices',
+        'readability_target_grade' => 'readability.target.grade',
+        'readability_target_tolerance' => 'readability.target.tolerance',
     ];
 
     /**

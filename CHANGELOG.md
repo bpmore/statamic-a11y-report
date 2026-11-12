@@ -8,6 +8,233 @@ it knows, leads its section.
 Versions are `MAJOR.MINOR.PATCH`. From 1.0 a breaking change raises the major.
 Before 1.0 it raised the minor, which is why 0.3.0 and 0.4.0 exist.
 
+## 1.2.5 - 2026-11-02
+
+### Fixed
+
+**Two entries at one address no longer end the scan.** When two published
+entries had the same URL (a script or import that saved a slug twice, or a
+Stache still holding a deleted file), both were read, and the second one's
+issues collided with the first one's in the database. The page's job threw,
+and `a11y:scan --sync` stopped with the scan cancelled, so no page in it
+counted. Now a scan reads each address once: the entry Statamic serves there.
+The other entry still gets a row, is counted under "had no page of their
+own", and the row names the entry that was read instead. Nothing to do on
+upgrade. Found while testing 1.2.4 on a scratch site; the same code is in
+every earlier release.
+
+## 1.2.4 - 2026-11-02
+
+### Changed
+
+**Works with A11y Gate 0.11.** A11y Report now takes
+`bpmore/statamic-a11y-gate` 0.10 or 0.11. Gate 0.11 lets other addons, such
+as Copydesk, be asked in the same publish. It changes nothing A11y Report
+uses: the renderer, the checker and the settings are the same, and a scan
+records the gate's version as before. Nothing to do on upgrade.
+
+## 1.2.3 - 2026-10-26
+
+### Changed
+
+**Works beside Copydesk.** A11y Report now takes `bpmore/readability-core`
+0.1 or 0.2. Copydesk needs 0.2, which adds positions in the text as written
+and changes nothing A11y Report reads, so a site can run both. Nothing to
+do on upgrade.
+
+**Plain is now called Copydesk.** The overview sentence that appears when
+both are installed now looks for `bpmore/statamic-copydesk` and says
+"Copydesk". Plain was never released under its old name, so no site loses
+the sentence.
+
+## 1.2.2 - 2026-09-16
+
+### Fixed
+
+**A scan of an install with one site is that site's scan, and the row says
+so.** The scope is `['*']` until somebody narrows it, and a scan of every site
+carried no site name even when every site was one. So on a fresh install
+following this README, `php please a11y:report --site=default` said there was
+no complete scan, and the dashboard widget given `'site' => 'default'` said
+"No completed scan in the last 30 days" beside an open-issue count from that
+very scan: the issues carried the site and the scan did not. The control
+panel's button found the scan because it looked differently. Found by
+installing 1.2.1 into a fresh site and following the README word for word,
+which is the check Statamic's marketplace guidelines ask for under Rule 06.
+
+Two things changed. A scan whose scope names no site, on an install with one
+site, is named for it; on an install with more it is still a scan of every
+site and says so, because a row must never claim less than it covered. And
+the command, the button and the worksheet now share one lookup: a scan named
+for the site, or one of every site, whichever is newer, and never another
+site's alone. That last part used to be possible from the button on a
+multisite install, and the document that came out wore the wrong site's name.
+
+**Upgrading:** `composer update`, then `php please a11y:report:install`. It
+names the site on the scans and reports already on disk, on an install with
+one site, where the pages the scan read prove it was that site's, so the
+"against the last scan" line and the site-scoped widget stay continuous across
+the upgrade. A scan that read a page of a site the install no longer has is
+left as it was.
+
+### Changed, with no difference to what is reported
+
+**The README says how to publish the config file** it refers to
+(`php artisan vendor:publish --tag=statamic-a11y-report-config`); a fresh
+install has no such file until then. **The support section's `composer show`
+line works**: it named two packages in one command, which Composer reads as a
+package and a version constraint. **The reading level's band is spelled the
+way the engine prints it**, "Grade 9–10", in the README and the config file,
+which had "Grade 9 to 10" and "Grade 9-10" for the same thing.
+
+## 1.2.1 - 2026-09-16
+
+### Changed, with no difference to what is reported
+
+**Chrome runs with its sandbox on.** Every browser this addon starts, for an
+axe scan or for a PDF, was started with `--no-sandbox`, the way every Docker
+recipe does it, with no reason recorded. The pages it renders are your site,
+with every third-party script your site embeds, and the sandbox is what
+stands between a bug in that page and the user your queue worker runs as.
+It is now on. Where Chrome refuses it, which is as root or in a container
+that cannot make namespaces, Chrome exits at once and says so; the addon
+catches that, starts once more without the sandbox, and logs a warning
+saying which host you have and that an ordinary user keeps the sandbox on.
+Once a session, not once a page. On a host where the sandbox works, and
+that is most of them, nothing changes but the flag. On a host where it does
+not, the scan and the PDF come out as they always did, one refused start
+later, with a line in the log. Raised by Statamic's marketplace review under
+its Rule 07.
+
+**`retention.scans` is gone from the config file.** It shipped in the first
+release, was read by nothing, and promised something this product should
+not do: a scan is the record a report cites, and a key that deleted old
+scans would orphan the reports and cut the history the product exists to
+keep. A published config file that still has the key is harmless, as it
+always was. Nothing is pruned, and nothing was.
+
+**Upgrading:** nothing to run. No tables changed and no setting has to be
+touched. If your queue worker runs as root, expect one warning per scan in
+the log from now on; the cure it names is a worker that is not root.
+
+## 1.2.0 - 2026-09-15
+
+### Added
+
+**Every scan grades each page's reading level.** With `bpmore/readability-core`,
+the engine Plain grades a page with on the publish form, so the two never
+disagree about a page. It reads the page's main content as served, with names,
+quotations, code, references and the site's own navigation and footer set
+aside, and records a band ("Grade 9 to 10", never a decimal) against the grade
+the site writes for: 8 with a tolerance of 1 by default, on the settings screen
+under Scanning. The overview, the scan history and the end of `a11y:scan
+--sync` say what the median page reads at and how many pages sit above the
+target. English only; a page on a site whose locale is not in
+`readability.locales` is recorded as not graded. `readability.enabled` in the
+config file leaves the dimension out, and the scan row says it was left out.
+
+**SC 3.1.5 Reading Level, as a Level AAA row apart from the claim.** The
+conformance table is still Level A and AA and the claim is unchanged. A
+section of its own after the table reports 3.1.5 with the scan's evidence
+toward it: how many pages read above lower secondary level once names and
+titles are set aside, which ones, and the median. The criterion is met by
+offering a simpler version or supplement, which no scan can see, so the row is
+"Not evaluated" until a person assesses it on the worksheet, where it has a
+table of its own under the 55. It is never in the table's counts, never a
+failure, and the limits statement says so. The JSON keeps it under
+`beyond_claim`.
+
+**One sentence when Plain is installed too**, on the overview, saying who owns
+which surface. Plain says the same on its own page.
+
+Nothing here is a WCAG result. Everywhere the reading level is printed it says
+it is evidence about the writing; `ci.fail_above` has no key for it and cannot
+be given one.
+
+**Upgrading:** `composer update`, then `php please a11y:report:install`, which
+adds the two columns the reading level is kept in. A site on its own database
+connection runs that on purpose, as ever. Scans from before this version show
+no reading level, which is a different answer from "not measured".
+
+## 1.1.3 - 2026-09-15
+
+### Changed, with no difference to what is reported
+
+**Needs A11y Gate 0.10 or newer.** 1.1.1 allowed 0.10 but kept 0.9.1 as the
+floor, and pinned with a test that a page which sends visitors to /login is
+recorded as skipped rather than as an error. That is 0.10 behaviour: on 0.9.x
+the gate reports the redirect as a page that could not be read, and this
+addon faithfully records the error. So the lowest-dependencies job, which
+installs 0.9.1, has failed on every run since, and a site on 0.9.x running
+1.1.1 or 1.1.2 counts its account page as an error. The constraint is now
+`^0.10`, which is what the test and the changelog entry always meant.
+**Upgrading:** `composer update bpmore/statamic-a11y-gate` first if you are on
+0.9.
+
+## 1.1.2 - 2026-09-15
+
+### Changed, with no difference to what is reported
+
+**The addon is "A11y Report" everywhere it names itself, and its dependency
+is "A11y Gate".** The Addons page, the Tools nav, the permission group, the
+three utility page headers, the dashboard widget, the scheduled scan's
+description and the PDF's producer and generator fields said "Accessibility
+Report", while the Marketplace listing and A11y Docs beside it in the same
+list already said "A11y". One name now, and the same for the gate where this
+addon mentions it. Handles, permissions, config keys and the package name are
+unchanged, so nothing has to be edited and nobody loses access. A report
+exported from now on carries the new producer string; earlier exports are
+what they were.
+
+## 1.1.1 - 2026-09-14
+
+### Changed, with no difference to what is reported
+
+**Allows Accessibility Gate 0.10.** On a 0.x package a caret pins the minor,
+so `^0.9.1` excluded 0.10, and a site running both addons could not take the
+gate release that stops refusing a page for signed-in visitors: composer
+refused the whole update and named this package as the reason.
+
+Nothing in 0.10 is breaking here. The gate now answers a page that redirects
+with a type under `EntryHasNoPage`, which this addon already records as
+skipped with the reason rather than as an error. So a site's account page,
+which sends a scan that is not signed in to the login page, lands as "skipped:
+the page sends visitors to /login" instead of failing the build. That is
+pinned by a test, so a later gate release cannot move it back without this
+suite noticing. Suite run against 0.10.0 rather than assumed: 320 passed.
+
+## 1.1.0 - 2026-09-11
+
+### Changed
+
+**Runs on PHP 8.2 and newer, and needs Accessibility Gate 0.9.1 or newer.**
+The manifest said 8.4 and nothing in the code needed it: the floor was the
+version the project started on. The real floor is Laravel's, 8.2 on Laravel
+12, and that is now what both addons declare. A job in CI installs the oldest
+version of everything the manifest allows, on 8.2, and runs the whole suite
+there, headless Chrome included, so the floor is a tested fact rather than a
+number in a file.
+
+The gate constraint narrows from `^0.7 || ^0.8 || ^0.9` to `^0.9.1`, because a
+floor is only real if every dependency honours it and 0.9.1 is the gate release
+that does. **Upgrading:** `composer update bpmore/statamic-a11y-gate` first if
+you are on an older gate.
+
+PHP 8.2 leaves security support at the end of December 2026. That is the date
+to raise this to 8.3, and it is in the decision log so nobody has to remember.
+
+## 1.0.6 - 2026-09-10
+
+### Changed, with no difference to what is reported
+
+**A11y Gate 0.9 is now allowed.** The constraint was `^0.7 || ^0.8`, and on a
+0.x package a caret pins the minor, so 0.9 was excluded. A site running this
+addon alongside A11y Gate and A11y Docs could not take the gate release that
+lets A11y Docs draw a refused publish in the panel: composer refused the whole
+update rather than any one part of it, and the reason named this package.
+
+Nothing here changed. 0.9 only adds to the panel seam this addon already uses.
+
 ## 1.0.5 - 2026-09-08
 
 ### Fixed, and it took a site down

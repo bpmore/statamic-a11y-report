@@ -30,6 +30,7 @@ final class ScanPage extends ReportModel
     protected $casts = [
         'coverage' => 'array',
         'scanned_at' => 'datetime',
+        'readability' => 'array',
     ];
 
     public function scan(): BelongsTo

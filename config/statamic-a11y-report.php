@@ -29,7 +29,7 @@ return [
     | Engine
     |---------------------------------------------------------------------------
     |
-    | What reads each page. 'php' is the same checker Accessibility Gate runs
+    | What reads each page. 'php' is the same checker A11y Gate runs
     | before a publish, run out of band across the whole site: it reads markup,
     | needs nothing installed, and can speak to six success criteria. 'axe'
     | runs axe-core in headless Chrome against the page as the site serves it,
@@ -126,8 +126,36 @@ return [
         'exclude_urls' => [],
     ],
 
-    'retention' => [
-        'scans' => 90,
+    /*
+    |---------------------------------------------------------------------------
+    | Reading level
+    |---------------------------------------------------------------------------
+    |
+    | Every scan also grades each page's reading level, with the engine Copydesk
+    | grades a page with on the publish form, so the two never disagree. It
+    | reads the page's main content as served, with names, quotations, code,
+    | references and the site's own navigation and footer set aside, and
+    | records a band ("Grade 9–10") against 'target': the grade the site
+    | writes for, and how far either side of it is fine. Grade 8 with a
+    | tolerance of 1 is where most plain-language guidance for the public
+    | lands.
+    |
+    | It is evidence about the writing and never a WCAG result. No Level A or
+    | AA success criterion is about reading level; the one that is, 3.1.5, is
+    | Level AAA and is satisfied by offering a simpler version, not by a
+    | score. Nothing here fails a page, a scan or a deploy for its grade.
+    |
+    | English only. The formulas were calibrated on English, and a page on a
+    | site whose locale is not in 'locales' is recorded as not graded rather
+    | than given a number that means nothing. Set 'enabled' to false to leave
+    | the dimension out of every scan; the scan row says it was left out.
+    |
+    */
+
+    'readability' => [
+        'enabled' => true,
+        'locales' => ['en'],
+        'target' => ['grade' => 8, 'tolerance' => 1],
     ],
 
     /*

@@ -1,27 +1,27 @@
-# Accessibility Report for Statamic
+# A11y Report: Accessibility Reporting for Statamic
 
-Accessibility Gate stops a bad entry. Accessibility Report proves the site is
+A11y Gate stops a bad entry. A11y Report proves the site is
 clean, over time, in a document a compliance officer can file.
 
-This addon depends on [Accessibility Gate](https://github.com/bpmore/statamic-a11y-gate)
-at 0.7 or later, which stays free. The report is a paid addon.
+This addon depends on [A11y Gate](https://github.com/bpmore/statamic-a11y-gate)
+at 0.10 or later, which stays free. The report is a paid addon. Both need
+Statamic 6.27 or newer and PHP 8.2 or newer.
 
-## Status
+## What it does
 
-Every pillar in the brief is built: the scan layer and both engines, the
-overview, the HTML and PDF conformance report, the accessibility statement,
-the remediation queue and its policy, the criteria worksheet, the recurring
-scan, and this page's open issues in the gate's own entry sidebar.
+A scan reads every published page on the queue, keeps every finding, records
+which engine read it and how much of it that engine could see, and follows
+each problem from one scan to the next by a fingerprint of rule, target, site
+and path. On top of that sit the overview, the HTML and PDF conformance
+report, the accessibility statement, the remediation queue and its policy,
+the criteria worksheet, the recurring scan, and this page's open issues in
+the gate's own entry sidebar.
 
-`php please a11y:scan` reads every published page on the queue, keeps every
-finding, records which engine read it and how much of it that engine could
-see, and follows each problem from one scan to the next by a fingerprint of
-rule, target, site and path.
-
-This is 0.4.1. What is in it is in the
-[changelog](CHANGELOG.md), and the reasoning behind the choices that are not
-obvious from the code is in the [decision log](docs/DECISIONS.md). Before 1.0,
-a breaking change raises the minor version.
+What changed in each release, and what to do about it, is in the
+[changelog](CHANGELOG.md). The reasoning behind the choices that are not
+obvious from the code is in the [decision log](docs/DECISIONS.md). A change
+that breaks an install, a stored scan, or the shape of a generated report
+raises the major version.
 
 ## Install
 
@@ -30,8 +30,8 @@ composer require bpmore/statamic-a11y-report
 php please a11y:report:install
 ```
 
-Accessibility Gate comes with it. It is on Packagist and needs nothing said
-about it here.
+A11y Gate comes with it: both are on Packagist, so there is nothing else
+to require.
 
 The second command creates the tables. By default they go in a SQLite file the
 addon creates for itself under `storage/a11y-report/`, so a flat-file site needs
@@ -47,11 +47,22 @@ report files stay local as before.
 If you skip the install and the addon is on its own SQLite file, the first scan
 runs the install itself. On any other connection it asks you to.
 
+The config file this README refers to, `config/statamic-a11y-report.php`, is
+the package's own until you publish it:
+
+```
+php artisan vendor:publish --tag=statamic-a11y-report-config
+```
+
+Most of what it holds is on the settings screen anyway. The database, the
+engine, the browser, the queue and the deploy thresholds are the parts that
+need the file.
+
 ## Engines
 
 Two, and a scan records which one ran, at what version, and with which rules.
 
-**`php`** is the default: the same checker Accessibility Gate runs before a
+**`php`** is the default: the same checker A11y Gate runs before a
 publish, run across the whole site. It reads markup, needs nothing installed,
 and can speak to six success criteria.
 
@@ -117,6 +128,32 @@ The queue needs Laravel's `job_batches` table. The install creates it through
 your site's own jobs migration when you have one, so `php artisan migrate`
 keeps working afterwards.
 
+### The reading level
+
+Every scan also grades what each page reads at, with the engine Copydesk grades a
+page with on the publish form (`bpmore/readability-core`), so the two never
+disagree about a page. It reads the page's main content as served, with names,
+quotations, code, references and the site's own navigation and footer set
+aside, and records a band ("Grade 9–10", never a decimal) against the grade
+the site writes for: 8 by default, with a tolerance of 1, on the settings
+screen. The overview, the history and the end of `a11y:scan --sync` say what
+the median page reads at and how many pages sit above the target.
+
+It is evidence about the writing and never a WCAG result. No Level A or AA
+success criterion is about reading level; the one that is, 3.1.5, is Level AAA
+and is met by offering a simpler version, not by a score. Nothing here fails a
+page, a scan or a deploy for its grade, and `ci.fail_above` has no key for it.
+English only: a page on a site whose locale is not in `readability.locales` is
+recorded as not graded rather than given a number that means nothing. Set
+`readability.enabled` to `false` to leave the dimension out; the scan row says
+it was left out. **Upgrading:** `php please a11y:report:install` adds the two
+columns the reading level is kept in.
+
+With Copydesk installed as well, the overview says in a sentence who owns which
+surface: Copydesk grades what an author writes, on the publish form, and owns
+the gate and the dictionary; this addon grades pages as served. They are two
+readings of the same site, not two scans of the same thing.
+
 ## On a schedule
 
 `scan.schedule` in the config file takes `daily`, `weekly` (Sunday), `monthly`
@@ -159,7 +196,7 @@ week is one whose mail stops being read.
 
 ## In the entry sidebar
 
-Accessibility Gate's panel on an entry screen shows this page's open issues
+A11y Gate's panel on an entry screen shows this page's open issues
 from the last scan beneath its own result, with a link into the queue
 filtered to the page, so the gate and the queue agree in the one place an
 author looks.
@@ -170,9 +207,7 @@ colour: the colour is checked against the white page a report is printed on,
 and no single colour reaches 4.5:1 against both of the control panel's themes,
 so a heading tinted with it would fail contrast in one of them. The mark is
 served from the control panel rather than embedded in the page, and a logo the
-report would refuse to print is one the panel does not wear either. It needs
-Accessibility Gate 0.8 or newer; an older gate ignores the mark, and the block
-is otherwise unchanged.
+report would refuse to print is one the panel does not wear either.
 
 ## Remediation targets and accepted issues
 
@@ -198,7 +233,7 @@ change them.
 
 ## Settings
 
-Addons, then Accessibility Report, then Settings. Not the same place as the
+Addons, then A11y Report, then Settings. Not the same place as the
 utility, which is under Tools, then Utilities: the settings screen is where
 the addon is configured, and the utility is where its numbers are read.
 
@@ -229,6 +264,17 @@ add remarks, an evaluator and a remediation plan in config, and you cannot
 remove it.
 Every criterion in the document, and the standard on its cover, links to the
 W3C's own text for it, and the PDF describes each link for a screen reader.
+
+**Level AAA, apart from the claim.** The claim is Level AA and the table is
+the whole of it. One Level AAA criterion, 3.1.5 Reading Level, has a section
+of its own after the table, because every scan grades each page's reading
+level and that is evidence toward it: how many pages read above lower
+secondary level once names and titles are set aside, and which. The
+criterion is met by offering a simpler version or supplement for such pages,
+which no scan can see, so the row is "Not evaluated" until a person assesses
+it on the worksheet, and nothing in it changes a row in the table. A page
+above the level is not a failure of anything. The section is never in the
+table's counts, and the JSON keeps it under `beyond_claim`.
 
 Reports can also be generated, listed and opened from the control panel, by
 anybody with the `generate accessibility reports` permission.
@@ -288,7 +334,7 @@ cache.
 
 ## In the control panel
 
-Tools, then Utilities, then Accessibility Report: what is open now by impact,
+Tools, then Utilities, then A11y Report: what is open now by impact,
 the last scan, a line of issues per scan over 90 days, and every scan so far.
 A button runs a scan on the queue; it needs the `run accessibility scans`
 permission, which is separate from seeing the page because it makes the site
@@ -334,7 +380,7 @@ A dashboard widget shows the open count by impact and a 30-day line. Add it to
 
 ## What it reads with
 
-The `php` engine is the same checker Accessibility Gate runs before a publish,
+The `php` engine is the same checker A11y Gate runs before a publish,
 with the same standard and the same opt-in checks, so a page the gate refuses
 and a page the scan flags are the same page for the same reason. It reads
 rendered HTML and cannot see anything a stylesheet decides, colour contrast
@@ -362,9 +408,9 @@ being scanned: nothing here phones home, so a support problem is never an
 outage.
 
 A useful report says which version of the addon and of Statamic you are on and
-which engine ran. `composer show bpmore/statamic-a11y-report statamic/cms`
-gives the first two, and the overview in the control panel names the engine of
-the last scan.
+which engine ran. `composer show bpmore/statamic-a11y-report` and `composer
+show statamic/cms` give the first two, and the overview in the control panel
+names the engine of the last scan.
 
 ## Licence
 

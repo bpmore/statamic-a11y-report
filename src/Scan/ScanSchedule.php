@@ -65,7 +65,7 @@ final class ScanSchedule
             // one. The command refuses to start a second scan as well, which
             // is the guard that works when the cache does not.
             ->withoutOverlapping()
-            ->description('Accessibility Report: scan every published page');
+            ->description('A11y Report: scan every published page');
     }
 
     /** The scan already on this schedule, if it is on it. */

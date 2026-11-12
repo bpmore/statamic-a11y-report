@@ -19,13 +19,14 @@
         }
     ],
     "require": {
-        "php": "^8.4",
-        "bpmore/statamic-a11y-gate": "^0.7 || ^0.8",
+        "php": "^8.2",
+        "bpmore/readability-core": "^0.1 || ^0.2",
+        "bpmore/statamic-a11y-gate": "^0.10 || ^0.11",
         "statamic/cms": "^6.27"
     },
     "require-dev": {
-        "orchestra/testbench": "^11.0",
-        "pestphp/pest": "^4.0"
+        "orchestra/testbench": "^10.11 || ^11.0",
+        "pestphp/pest": "^3.8 || ^4.0"
     },
     "autoload": {
         "psr-4": {
@@ -42,7 +43,7 @@
     },
     "extra": {
         "statamic": {
-            "name": "Accessibility Report",
+            "name": "A11y Report",
             "slug": "statamic-a11y-report"
         },
         "laravel": {

@@ -9,6 +9,7 @@ use Bpmore\A11yReport\Document\ScanEvidence;
 use Bpmore\A11yReport\Document\Wcag;
 use Bpmore\A11yReport\Models\CriterionAssessment;
 use Bpmore\A11yReport\Models\Scan;
+use Bpmore\A11yReport\Readability\CriterionEvidence;
 
 /**
  * The criteria worksheet: every success criterion for one site (or the
@@ -32,7 +33,7 @@ final class Worksheet
     public function __construct(private readonly ScanEvidence $evidence) {}
 
     /**
-     * @return array{site: ?string, scan: ?Scan, standard: string, rows: array<int, array<string, mixed>>}
+     * @return array{site: ?string, scan: ?Scan, standard: string, rows: array<int, array<string, mixed>>, beyond_claim: array<int, array<string, mixed>>}
      */
     public function build(?string $site): array
     {
@@ -74,7 +75,33 @@ final class Worksheet
             ];
         }
 
-        return ['site' => $site, 'scan' => $scan, 'standard' => $standard, 'rows' => $rows];
+        // Level AAA, apart from the claim and apart from the rows above, the
+        // way the document keeps it: the same merge, the scan's evidence
+        // toward the criterion in place of the automated sentence.
+        $beyond = [];
+
+        foreach (Wcag::beyondClaim() as $criterion) {
+            $own = $stored->get($criterion->number);
+            $evidence = $scan !== null && $criterion->number === CriterionEvidence::CRITERION ? CriterionEvidence::forScan($scan) : null;
+            $effective = AssessmentMerger::mergeBeyondClaim($criterion, $own ?? $inherited->get($criterion->number), $evidence['sentence'] ?? 'No complete scan yet, so no evidence toward this criterion.');
+
+            $beyond[] = [
+                'number' => $criterion->number,
+                'name' => $criterion->name,
+                'level' => $criterion->level,
+                'url' => $criterion->understandingUrl(Wcag::version($standard)),
+                'automated' => false,
+                'failure' => null,
+                'evidence' => $effective['evidence'],
+                'reading' => $evidence,
+                'effective_status' => $effective['status'],
+                'contradicted' => false,
+                'own' => $own,
+                'inherited' => $own === null ? $inherited->get($criterion->number) : null,
+            ];
+        }
+
+        return ['site' => $site, 'scan' => $scan, 'standard' => $standard, 'rows' => $rows, 'beyond_claim' => $beyond];
     }
 
     /**
@@ -97,7 +124,9 @@ final class Worksheet
             ->keyBy('criterion');
 
         foreach ($input as $number => $fields) {
-            $criterion = Wcag::find((string) $number);
+            // The table's criteria and the ones beyond the claim alike: a
+            // person may assess 3.1.5, and only a person may.
+            $criterion = Wcag::assessable((string) $number);
 
             if ($criterion === null || ! is_array($fields)) {
                 continue;

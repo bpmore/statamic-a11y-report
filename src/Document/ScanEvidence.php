@@ -86,30 +86,28 @@ final class ScanEvidence
         return $failures;
     }
 
-    /** The latest complete scan for a site, or for every site when there is none for it. */
+    /**
+     * The latest complete scan that covers a site: one named for it, or one
+     * of every site, whichever is newer. Never a scan of some other site.
+     *
+     * With no site asked for, the newest complete scan, whatever it covered.
+     * This used to prefer a scan of every site over a newer one of a named
+     * site, and a preference that beats recency is not a preference, it is
+     * a way to report on the wrong week. Recency wins here too: a scan of
+     * every site covers the one asked for, and a newer one of those is the
+     * newer evidence.
+     *
+     * With a site asked for and no scan named for it, this used to fall back
+     * to the newest scan of anything, which on a multisite install could be
+     * another site's alone, and the document that came out of it wore that
+     * other site's name. The one command-line path did not fall back at all
+     * and said there was no scan. Both now answer this one question.
+     */
     public static function latestScan(?string $site): ?Scan
     {
-        $query = Scan::where('status', Scan::COMPLETE)->orderByDesc('id');
-
-        if ($site !== null) {
-            $scan = (clone $query)->where('site', $site)->first();
-
-            if ($scan !== null) {
-                return $scan;
-            }
-        }
-
-        // With no site asked for, the newest complete scan, whatever it
-        // covered. This used to prefer a scan of every site over a newer one
-        // of a named site, and a preference that beats recency is not a
-        // preference, it is a way to report on the wrong week.
-        //
-        // A scan carries a site as soon as the scope names one, which the
-        // settings screen writes the moment anybody saves it. So on the
-        // ordinary single-site install every scan after that day is named,
-        // none of them was ever chosen, and the document came from whichever
-        // scan predated the save. Five hours out of date on the machine this
-        // was found on, with nothing on the screen to say which scan it was.
-        return $query->first();
+        return Scan::where('status', Scan::COMPLETE)
+            ->when($site !== null, fn ($q) => $q->where(fn ($q) => $q->where('site', $site)->orWhereNull('site')))
+            ->orderByDesc('id')
+            ->first();
     }
 }

@@ -74,7 +74,8 @@ it('never calls anything compliant or certified, and says what a clean scan prov
     page('one', '<p>Fine.</p>');
     runScan();
 
-    $text = strtolower(reportPage());
+    // Scope this claim to the report, not Statamic's control-panel translations.
+    $text = strtolower(pageText(utilityHtml()));
 
     expect(str_contains($text, 'compliant'))->toBeFalse('the report never uses the word compliant');
     expect(str_contains($text, 'certif'))->toBeFalse('the report never uses the word certified');
